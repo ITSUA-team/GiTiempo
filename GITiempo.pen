@@ -108740,6 +108740,2958 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "admin_time_entries_471",
+      "x": 4640,
+      "y": 24659,
+      "name": "Admin · Time Entries",
+      "context": "Issue #471. Project-scoped administrative time entry management.",
+      "width": 1920,
+      "height": 1050,
+      "fill": "#E4E4E7",
+      "cornerRadius": 24,
+      "layout": "none",
+      "children": [
+        {
+          "type": "frame",
+          "id": "te471_1069",
+          "x": 64,
+          "y": 184,
+          "name": "Admin Time Entries",
+          "clip": true,
+          "width": 1280,
+          "height": 800,
+          "fill": "$color-surface",
+          "layout": "vertical",
+          "children": [
+            {
+              "type": "frame",
+              "id": "te471_522",
+              "name": "topbar",
+              "width": "fill_container",
+              "height": 64,
+              "fill": "$color-surface",
+              "stroke": "$color-divider",
+              "strokeWidth": {
+                "bottom": 1
+              },
+              "strokeAlignment": "inner",
+              "strokeLinejoin": "round",
+              "padding": [
+                0,
+                24
+              ],
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_523",
+                  "name": "brand",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "te471_524",
+                      "name": "logo",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "$color-accent-tint",
+                      "cornerRadius": 10,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "te471_525",
+                          "fill": "$color-brand",
+                          "content": "GT",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_526",
+                      "name": "brandText",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "te471_527",
+                          "name": "appName",
+                          "fill": "#1A1A1A",
+                          "content": "GiTiempo Admin",
+                          "fontFamily": "Inter",
+                          "fontSize": 16,
+                          "fontWeight": "600"
+                        },
+                        {
+                          "type": "text",
+                          "id": "te471_528",
+                          "name": "crumbSeparator",
+                          "fill": "#999999",
+                          "content": "/",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "500"
+                        },
+                        {
+                          "type": "text",
+                          "id": "te471_529",
+                          "name": "pageName",
+                          "fill": "#1A1A1A",
+                          "content": "Time Entries",
+                          "fontFamily": "Inter",
+                          "fontSize": 13,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_530",
+                  "name": "right",
+                  "gap": 12,
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_531",
+                      "fill": "$color-text-muted",
+                      "content": "Workspace · Acme Studio",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "500"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_532",
+                      "name": "avatar",
+                      "width": 32,
+                      "height": 32,
+                      "fill": "$color-accent-tint",
+                      "cornerRadius": 16,
+                      "justifyContent": "center",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "te471_533",
+                          "fill": "$color-brand",
+                          "content": "AT",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "te471_883",
+              "name": "main",
+              "width": "fill_container",
+              "height": "fill_container",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_534",
+                  "name": "sidebar",
+                  "width": 60,
+                  "height": "fill_container",
+                  "fill": "$color-surface",
+                  "stroke": "$color-divider",
+                  "strokeWidth": {
+                    "right": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "layout": "vertical",
+                  "gap": 4,
+                  "padding": [
+                    16,
+                    0
+                  ],
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "te471_535",
+                      "name": "nav1",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_536",
+                          "name": "Dashboard icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "layout-dashboard",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_537",
+                      "name": "nav2",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_538",
+                          "name": "Reports icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "chart-column",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_551",
+                      "name": "Time Entries",
+                      "height": 44,
+                      "fill": "$color-accent-tint",
+                      "stroke": "$color-brand",
+                      "strokeWidth": {
+                        "left": 3
+                      },
+                      "strokeAlignment": "inner",
+                      "strokeLinejoin": "round",
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_550",
+                          "name": "clock",
+                          "icon": "clock",
+                          "library": "lucide",
+                          "width": 20,
+                          "height": 20,
+                          "fill": "$color-brand"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_547",
+                      "name": "Invoices",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_549",
+                          "name": "Invoices icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "receipt-text",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_541",
+                      "name": "nav4",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_542",
+                          "name": "Members icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "users",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_543",
+                      "name": "nav5",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_544",
+                          "name": "Projects icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "folder-kanban",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_545",
+                      "name": "nav6",
+                      "height": 44,
+                      "padding": [
+                        0,
+                        20
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_546",
+                          "name": "Settings icon",
+                          "width": 20,
+                          "height": 20,
+                          "icon": "settings",
+                          "library": "lucide",
+                          "fill": "$color-text-muted"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_711",
+                  "name": "content",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "fill": "$color-app-bg",
+                  "layout": "vertical",
+                  "gap": 24,
+                  "padding": 24,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "te471_553",
+                      "name": "Projects and time entries",
+                      "width": "fill_container",
+                      "gap": 20,
+                      "children": [
+                        {
+                          "type": "frame",
+                          "id": "te471_333",
+                          "name": "Projects",
+                          "context": "Show projects manageable in the current workspace. PMs see only explicit assignments.",
+                          "width": 208,
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 8,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "te471_329",
+                              "name": "Project heading",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "te471_328",
+                                  "fill": "$color-text-dark",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 23,
+                                  "content": "Projects",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                }
+                              ],
+                              "height": 36
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_312",
+                              "name": "Orion",
+                              "width": "fill_container",
+                              "height": 42,
+                              "fill": "$color-accent-tint",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "te471_313",
+                                  "name": "folder",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "folder",
+                                  "library": "lucide",
+                                  "fill": "$color-brand"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "te471_314",
+                                  "fill": "$color-brand",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 19,
+                                  "content": "Orion",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_316",
+                              "name": "Atlas",
+                              "width": "fill_container",
+                              "height": 42,
+                              "fill": "$color-surface",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "te471_317",
+                                  "name": "folder",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "folder",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "te471_318",
+                                  "fill": "$color-text-dark",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 19,
+                                  "content": "Atlas",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_320",
+                              "name": "Studio website",
+                              "width": "fill_container",
+                              "height": 42,
+                              "fill": "$color-surface",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "te471_321",
+                                  "name": "folder",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "folder",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "te471_322",
+                                  "fill": "$color-text-dark",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 19,
+                                  "content": "Studio website",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_324",
+                              "name": "Internal tools",
+                              "width": "fill_container",
+                              "height": 42,
+                              "fill": "$color-surface",
+                              "cornerRadius": 6,
+                              "gap": 8,
+                              "padding": [
+                                0,
+                                10
+                              ],
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "icon",
+                                  "id": "te471_325",
+                                  "name": "folder",
+                                  "width": 16,
+                                  "height": 16,
+                                  "icon": "folder",
+                                  "library": "lucide",
+                                  "fill": "$color-text-muted"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "te471_326",
+                                  "fill": "$color-text-dark",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 19,
+                                  "content": "Internal tools",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 13,
+                                  "fontWeight": "500"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "te471_399",
+                          "name": "Time entries",
+                          "context": "Time entries for the selected project. Only completed entries without an invoice can be edited or deleted here.",
+                          "width": "fill_container",
+                          "fill": "$color-surface",
+                          "cornerRadius": "$radius-lg",
+                          "stroke": "$color-divider",
+                          "strokeWidth": 1,
+                          "strokeAlignment": "inner",
+                          "layout": "vertical",
+                          "gap": 16,
+                          "padding": 16,
+                          "children": [
+                            {
+                              "type": "frame",
+                              "id": "te471_373",
+                              "name": "List header",
+                              "width": "fill_container",
+                              "height": 40,
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "te471_369",
+                                  "fill": "$color-text-dark",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 26,
+                                  "content": "Orion",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 18,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_367",
+                                  "name": "Search entries",
+                                  "width": 220,
+                                  "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 8,
+                                  "padding": [
+                                    8,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "te471_368",
+                                      "fill": "$color-text-dark",
+                                      "textGrowth": "fixed-width-height",
+                                      "width": "fill_container",
+                                      "height": 22,
+                                      "content": "Search entries",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_370",
+                                  "name": "New time entry",
+                                  "context": "Create a completed entry for an eligible member and task in the selected project.",
+                                  "width": 148,
+                                  "height": 38,
+                                  "fill": "$color-brand",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-brand",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 8,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "icon",
+                                      "id": "te471_371",
+                                      "name": "plus",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "plus",
+                                      "library": "lucide",
+                                      "fill": "#FFFFFF"
+                                    },
+                                    {
+                                      "type": "text",
+                                      "id": "te471_372",
+                                      "content": "New time entry",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "600",
+                                      "fill": "#FFFFFF"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_385",
+                              "name": "List filters",
+                              "width": "fill_container",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "te471_379",
+                                  "name": "All members",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 8,
+                                  "padding": [
+                                    8,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "te471_380",
+                                      "fill": "$color-text-dark",
+                                      "textGrowth": "fixed-width-height",
+                                      "width": "fill_container",
+                                      "height": 22,
+                                      "content": "All members",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "te471_381",
+                                      "name": "chevron-down",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_382",
+                                  "name": "Date range",
+                                  "width": "fill_container",
+                                  "height": 38,
+                                  "fill": "$color-surface",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 8,
+                                  "padding": [
+                                    8,
+                                    12
+                                  ],
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "te471_383",
+                                      "fill": "$color-text-dark",
+                                      "textGrowth": "fixed-width-height",
+                                      "width": "fill_container",
+                                      "height": 22,
+                                      "content": "Date range",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "normal"
+                                    },
+                                    {
+                                      "type": "icon",
+                                      "id": "te471_384",
+                                      "name": "chevron-down",
+                                      "width": 16,
+                                      "height": 16,
+                                      "icon": "chevron-down",
+                                      "library": "lucide",
+                                      "fill": "$color-text-muted"
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_219",
+                              "name": "Project time entries",
+                              "width": "fill_container",
+                              "cornerRadius": 6,
+                              "stroke": "$color-divider",
+                              "strokeWidth": 1,
+                              "strokeAlignment": "inner",
+                              "layout": "vertical",
+                              "children": [
+                                {
+                                  "type": "frame",
+                                  "id": "te471_13",
+                                  "name": "Table header",
+                                  "width": "fill_container",
+                                  "height": 42,
+                                  "fill": "$color-app-bg",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_2",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_1",
+                                          "content": "Task",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_4",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_3",
+                                          "content": "Member",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_6",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_5",
+                                          "content": "Date and time",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_8",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_7",
+                                          "content": "Duration",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_10",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_9",
+                                          "content": "Status",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_12",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_11",
+                                          "content": "Actions",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "600",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_49",
+                                  "name": "Review checkout flow",
+                                  "width": "fill_container",
+                                  "height": 66,
+                                  "fill": "$color-surface",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_43",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_31",
+                                          "content": "Review checkout flow",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_32",
+                                          "content": "Test payment retries",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_44",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_33",
+                                          "content": "Alex Turner",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_45",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_34",
+                                          "content": "23 Nov 2026",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_35",
+                                          "content": "10:15 – ongoing",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_46",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_36",
+                                          "content": "0h 24m",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_37",
+                                          "content": "Billable",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_47",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_39",
+                                          "name": "Running",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "te471_38",
+                                              "content": "Running",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "500",
+                                              "fill": "$color-status-active-text"
+                                            }
+                                          ],
+                                          "fill": "$color-status-active-bg",
+                                          "height": 24,
+                                          "cornerRadius": 6,
+                                          "padding": [
+                                            0,
+                                            8
+                                          ],
+                                          "alignItems": "center"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_40",
+                                          "content": "Stop timer to edit",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_48",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_42",
+                                          "name": "Read-only entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_41",
+                                              "name": "lock-keyhole",
+                                              "icon": "lock-keyhole",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Stop the timer before editing or deleting."
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "horizontal",
+                                      "justifyContent": "start",
+                                      "alignItems": "center",
+                                      "gap": 4
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_87",
+                                  "name": "Refine account settings",
+                                  "width": "fill_container",
+                                  "height": 66,
+                                  "fill": "$color-surface",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_81",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_68",
+                                          "content": "Refine account settings",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_69",
+                                          "content": "Update profile fields",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_82",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_70",
+                                          "content": "Maya Chen",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_83",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_71",
+                                          "content": "23 Nov 2026",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_72",
+                                          "content": "08:30 – 10:00",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_84",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_73",
+                                          "content": "1h 30m",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_74",
+                                          "content": "Billable",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_85",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_76",
+                                          "name": "Completed",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "te471_75",
+                                              "content": "Completed",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "500",
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ],
+                                          "fill": "$color-app-bg",
+                                          "height": 24,
+                                          "cornerRadius": 6,
+                                          "padding": [
+                                            0,
+                                            8
+                                          ],
+                                          "alignItems": "center"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_86",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_78",
+                                          "name": "Edit time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_77",
+                                              "name": "pencil",
+                                              "icon": "pencil",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-brand"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Edit time entry"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_80",
+                                          "name": "Delete time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_79",
+                                              "name": "trash-2",
+                                              "icon": "trash-2",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-destructive"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Delete time entry"
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "horizontal",
+                                      "justifyContent": "start",
+                                      "alignItems": "center",
+                                      "gap": 4
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_125",
+                                  "name": "Prepare release notes",
+                                  "width": "fill_container",
+                                  "height": 66,
+                                  "fill": "$color-surface",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_119",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_106",
+                                          "content": "Prepare release notes",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_107",
+                                          "content": "November release",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_120",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_108",
+                                          "content": "Sam Reed",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_121",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_109",
+                                          "content": "20 Nov 2026",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_110",
+                                          "content": "14:00 – 14:45",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_122",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_111",
+                                          "content": "0h 45m",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_112",
+                                          "content": "Non-billable",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_123",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_114",
+                                          "name": "Completed",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "te471_113",
+                                              "content": "Completed",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "500",
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ],
+                                          "fill": "$color-app-bg",
+                                          "height": 24,
+                                          "cornerRadius": 6,
+                                          "padding": [
+                                            0,
+                                            8
+                                          ],
+                                          "alignItems": "center"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_124",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_116",
+                                          "name": "Edit time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_115",
+                                              "name": "pencil",
+                                              "icon": "pencil",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-brand"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Edit time entry"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_118",
+                                          "name": "Delete time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_117",
+                                              "name": "trash-2",
+                                              "icon": "trash-2",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-destructive"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Delete time entry"
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "horizontal",
+                                      "justifyContent": "start",
+                                      "alignItems": "center",
+                                      "gap": 4
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_162",
+                                  "name": "Implement billing export",
+                                  "width": "fill_container",
+                                  "height": 66,
+                                  "fill": "$color-surface",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_156",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_144",
+                                          "content": "Implement billing export",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_145",
+                                          "content": "CSV column mapping",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_157",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_146",
+                                          "content": "Maya Chen",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_158",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_147",
+                                          "content": "19 Nov 2026",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_148",
+                                          "content": "09:00 – 11:15",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_159",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_149",
+                                          "content": "2h 15m",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_150",
+                                          "content": "Billable",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_160",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_152",
+                                          "name": "Invoiced",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "te471_151",
+                                              "content": "Invoiced",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "500",
+                                              "fill": "$color-brand"
+                                            }
+                                          ],
+                                          "fill": "$color-accent-tint",
+                                          "height": 24,
+                                          "cornerRadius": 6,
+                                          "padding": [
+                                            0,
+                                            8
+                                          ],
+                                          "alignItems": "center"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_153",
+                                          "content": "Included in invoice",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 11,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_161",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_155",
+                                          "name": "Read-only entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_154",
+                                              "name": "lock-keyhole",
+                                              "icon": "lock-keyhole",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Included in an invoice. Editing and deletion are unavailable for every invoice status."
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "horizontal",
+                                      "justifyContent": "start",
+                                      "alignItems": "center",
+                                      "gap": 4
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_200",
+                                  "name": "Review API permissions",
+                                  "width": "fill_container",
+                                  "height": 66,
+                                  "fill": "$color-surface",
+                                  "stroke": "$color-divider",
+                                  "strokeWidth": {
+                                    "bottom": 1
+                                  },
+                                  "strokeAlignment": "inner",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_194",
+                                      "name": "Task",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_181",
+                                          "content": "Review API permissions",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_182",
+                                          "content": "Workspace access review",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": "fill_container",
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_195",
+                                      "name": "Member",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_183",
+                                          "content": "Alex Turner",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-dark"
+                                        }
+                                      ],
+                                      "width": 112,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_196",
+                                      "name": "Date and time",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_184",
+                                          "content": "18 Nov 2026",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_185",
+                                          "content": "13:30 – 14:30",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 148,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_197",
+                                      "name": "Duration",
+                                      "children": [
+                                        {
+                                          "type": "text",
+                                          "id": "te471_186",
+                                          "content": "1h 00m",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 13,
+                                          "fontWeight": "500",
+                                          "fill": "$color-text-dark"
+                                        },
+                                        {
+                                          "type": "text",
+                                          "id": "te471_187",
+                                          "content": "Billable",
+                                          "fontFamily": "Inter",
+                                          "fontSize": 12,
+                                          "fontWeight": "normal",
+                                          "fill": "$color-text-muted"
+                                        }
+                                      ],
+                                      "width": 108,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_198",
+                                      "name": "Status",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_189",
+                                          "name": "Completed",
+                                          "children": [
+                                            {
+                                              "type": "text",
+                                              "id": "te471_188",
+                                              "content": "Completed",
+                                              "fontFamily": "Inter",
+                                              "fontSize": 12,
+                                              "fontWeight": "500",
+                                              "fill": "$color-text-muted"
+                                            }
+                                          ],
+                                          "fill": "$color-app-bg",
+                                          "height": 24,
+                                          "cornerRadius": 6,
+                                          "padding": [
+                                            0,
+                                            8
+                                          ],
+                                          "alignItems": "center"
+                                        }
+                                      ],
+                                      "width": 150,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "vertical",
+                                      "justifyContent": "center",
+                                      "alignItems": "start",
+                                      "gap": 4
+                                    },
+                                    {
+                                      "type": "frame",
+                                      "id": "te471_199",
+                                      "name": "Actions",
+                                      "children": [
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_191",
+                                          "name": "Edit time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_190",
+                                              "name": "pencil",
+                                              "icon": "pencil",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-brand"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Edit time entry"
+                                        },
+                                        {
+                                          "type": "frame",
+                                          "id": "te471_193",
+                                          "name": "Delete time entry",
+                                          "children": [
+                                            {
+                                              "type": "icon",
+                                              "id": "te471_192",
+                                              "name": "trash-2",
+                                              "icon": "trash-2",
+                                              "library": "lucide",
+                                              "width": 16,
+                                              "height": 16,
+                                              "fill": "$color-destructive"
+                                            }
+                                          ],
+                                          "width": 32,
+                                          "height": 32,
+                                          "alignItems": "center",
+                                          "justifyContent": "center",
+                                          "context": "Delete time entry"
+                                        }
+                                      ],
+                                      "width": 88,
+                                      "height": "fill_container",
+                                      "padding": [
+                                        0,
+                                        8
+                                      ],
+                                      "layout": "horizontal",
+                                      "justifyContent": "start",
+                                      "alignItems": "center",
+                                      "gap": 4
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "te471_395",
+                              "name": "Pagination",
+                              "width": "fill_container",
+                              "gap": 12,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "te471_396",
+                                  "fill": "$color-text-muted",
+                                  "textGrowth": "fixed-width-height",
+                                  "width": "fill_container",
+                                  "height": 17,
+                                  "content": "Showing 1–5 of 5",
+                                  "fontFamily": "Inter",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "te471_397",
+                                  "name": "1",
+                                  "context": "Action: 1. Use the matching accessible name/tooltip for icon-only controls.",
+                                  "width": 36,
+                                  "height": 38,
+                                  "fill": "$color-brand",
+                                  "cornerRadius": "$radius-sm",
+                                  "stroke": "$color-brand",
+                                  "strokeWidth": 1,
+                                  "strokeAlignment": "inner",
+                                  "gap": 8,
+                                  "padding": [
+                                    0,
+                                    12
+                                  ],
+                                  "justifyContent": "center",
+                                  "alignItems": "center",
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "te471_398",
+                                      "fill": "#FFFFFF",
+                                      "content": "1",
+                                      "fontFamily": "Inter",
+                                      "fontSize": 13,
+                                      "fontWeight": "500"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "te471_1569",
+          "x": 1450,
+          "y": 184,
+          "name": "Admin Time Entries — Mobile",
+          "context": "Select a project above the cards. The list scrolls to additional entries.",
+          "width": 375,
+          "fill": "$color-app-bg",
+          "cornerRadius": 12,
+          "layout": "vertical",
+          "gap": 12,
+          "padding": 16,
+          "children": [
+            {
+              "type": "frame",
+              "id": "te471_1268",
+              "name": "Mobile topbar",
+              "width": "fill_container",
+              "height": 48,
+              "gap": 12,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "te471_1269",
+                  "fill": "$color-text-dark",
+                  "textGrowth": "fixed-width-height",
+                  "width": "fill_container",
+                  "height": 20,
+                  "content": "GiTiempo / Time Entries",
+                  "fontFamily": "Inter",
+                  "fontSize": 14,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1270",
+                  "name": "Open account menu",
+                  "context": "Action: Open account menu. Accessible name and tooltip: Open account menu. Keyboard reachable; visible focus; restore focus when closing a dialog.",
+                  "width": 38,
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "te471_1271",
+                      "name": "circle-user-round",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "circle-user-round",
+                      "library": "lucide",
+                      "fill": "$color-brand"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "id": "te471_1557",
+              "content": "Project",
+              "fontFamily": "Inter",
+              "fontSize": 13,
+              "fontWeight": "600",
+              "fill": "$color-text-dark"
+            },
+            {
+              "type": "frame",
+              "id": "te471_1272",
+              "name": "Selected project",
+              "width": "fill_container",
+              "height": 38,
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-sm",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "gap": 8,
+              "padding": [
+                8,
+                12
+              ],
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "text",
+                  "id": "te471_1273",
+                  "fill": "$color-text-dark",
+                  "textGrowth": "fixed-width-height",
+                  "width": "fill_container",
+                  "height": 22,
+                  "content": "Orion",
+                  "fontFamily": "Inter",
+                  "fontSize": 13,
+                  "fontWeight": "normal"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1274",
+                  "name": "chevron-down",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "chevron-down",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "te471_1561",
+              "name": "Search and create",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_1555",
+                  "name": "Search entries",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1556",
+                      "fill": "$color-text-dark",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 22,
+                      "content": "Search entries",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1558",
+                  "name": "New time entry",
+                  "context": "Create a completed entry for an eligible member and task in the selected project.",
+                  "width": 148,
+                  "height": 38,
+                  "fill": "$color-brand",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-brand",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    12
+                  ],
+                  "justifyContent": "center",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "icon",
+                      "id": "te471_1559",
+                      "name": "plus",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "plus",
+                      "library": "lucide",
+                      "fill": "#FFFFFF"
+                    },
+                    {
+                      "type": "text",
+                      "id": "te471_1560",
+                      "content": "New time entry",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "600",
+                      "fill": "#FFFFFF"
+                    }
+                  ]
+                }
+              ],
+              "width": "fill_container",
+              "alignItems": "center",
+              "gap": 8
+            },
+            {
+              "type": "frame",
+              "id": "te471_1568",
+              "name": "Entry filters",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_1562",
+                  "name": "All members",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1563",
+                      "fill": "$color-text-dark",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 22,
+                      "content": "All members",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "te471_1564",
+                      "name": "chevron-down",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1565",
+                  "name": "Date range",
+                  "width": "fill_container",
+                  "height": 38,
+                  "fill": "$color-surface",
+                  "cornerRadius": "$radius-sm",
+                  "stroke": "$color-divider",
+                  "strokeWidth": 1,
+                  "strokeAlignment": "inner",
+                  "gap": 8,
+                  "padding": [
+                    8,
+                    12
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1566",
+                      "fill": "$color-text-dark",
+                      "textGrowth": "fixed-width-height",
+                      "width": "fill_container",
+                      "height": 22,
+                      "content": "Date range",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "icon",
+                      "id": "te471_1567",
+                      "name": "chevron-down",
+                      "width": 16,
+                      "height": 16,
+                      "icon": "chevron-down",
+                      "library": "lucide",
+                      "fill": "$color-text-muted"
+                    }
+                  ]
+                }
+              ],
+              "width": "fill_container",
+              "gap": 8
+            },
+            {
+              "type": "frame",
+              "id": "te471_1295",
+              "name": "Review checkout flow",
+              "context": "Time record in the selected project.",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-lg",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_1285",
+                  "name": "Task and status",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1282",
+                      "content": "Review checkout flow",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600",
+                      "fill": "$color-text-dark",
+                      "width": "fill_container",
+                      "textGrowth": "fixed-width"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_1284",
+                      "name": "Running",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "te471_1283",
+                          "content": "Running",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "fill": "$color-status-active-text"
+                        }
+                      ],
+                      "fill": "$color-status-active-bg",
+                      "height": 24,
+                      "cornerRadius": 6,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center"
+                    }
+                  ],
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "te471_1294",
+                  "content": "Test payment retries",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1289",
+                  "name": "Entry details",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1286",
+                      "content": "Alex Turner",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "text",
+                      "id": "te471_1287",
+                      "content": "23 Nov 2026 · 10:15 – ongoing",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "te471_1288",
+                      "content": "0h 24m · Billable",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted"
+                    }
+                  ],
+                  "layout": "vertical",
+                  "gap": 5,
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1293",
+                  "name": "Entry actions",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1290",
+                      "content": "Stop timer to edit",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted",
+                      "width": "fill_container",
+                      "textGrowth": "fixed-width"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_1292",
+                      "name": "Read-only entry",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_1291",
+                          "name": "lock-keyhole",
+                          "icon": "lock-keyhole",
+                          "library": "lucide",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$color-text-muted"
+                        }
+                      ],
+                      "width": 32,
+                      "height": 32,
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "context": "Stop the timer before editing or deleting."
+                    }
+                  ],
+                  "width": "fill_container",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "justifyContent": "end"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "te471_1432",
+              "name": "Refine account settings",
+              "context": "Time record in the selected project.",
+              "width": "fill_container",
+              "fill": "$color-surface",
+              "cornerRadius": "$radius-lg",
+              "stroke": "$color-divider",
+              "strokeWidth": 1,
+              "strokeAlignment": "inner",
+              "layout": "vertical",
+              "gap": 8,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "te471_1421",
+                  "name": "Task and status",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1418",
+                      "content": "Refine account settings",
+                      "fontFamily": "Inter",
+                      "fontSize": 14,
+                      "fontWeight": "600",
+                      "fill": "$color-text-dark",
+                      "width": "fill_container",
+                      "textGrowth": "fixed-width"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_1420",
+                      "name": "Completed",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "te471_1419",
+                          "content": "Completed",
+                          "fontFamily": "Inter",
+                          "fontSize": 12,
+                          "fontWeight": "500",
+                          "fill": "$color-text-muted"
+                        }
+                      ],
+                      "fill": "$color-app-bg",
+                      "height": 24,
+                      "cornerRadius": 6,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center"
+                    }
+                  ],
+                  "width": "fill_container",
+                  "gap": 8,
+                  "alignItems": "center"
+                },
+                {
+                  "type": "text",
+                  "id": "te471_1431",
+                  "content": "Update profile fields",
+                  "fontFamily": "Inter",
+                  "fontSize": 12,
+                  "fontWeight": "normal",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1425",
+                  "name": "Entry details",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "te471_1422",
+                      "content": "Maya Chen",
+                      "fontFamily": "Inter",
+                      "fontSize": 13,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-dark"
+                    },
+                    {
+                      "type": "text",
+                      "id": "te471_1423",
+                      "content": "23 Nov 2026 · 08:30 – 10:00",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted"
+                    },
+                    {
+                      "type": "text",
+                      "id": "te471_1424",
+                      "content": "1h 30m · Billable",
+                      "fontFamily": "Inter",
+                      "fontSize": 12,
+                      "fontWeight": "normal",
+                      "fill": "$color-text-muted"
+                    }
+                  ],
+                  "layout": "vertical",
+                  "gap": 5,
+                  "width": "fill_container"
+                },
+                {
+                  "type": "frame",
+                  "id": "te471_1430",
+                  "name": "Entry actions",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "te471_1427",
+                      "name": "Edit time entry",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_1426",
+                          "name": "pencil",
+                          "icon": "pencil",
+                          "library": "lucide",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$color-brand"
+                        }
+                      ],
+                      "width": 32,
+                      "height": 32,
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "context": "Edit time entry"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "te471_1429",
+                      "name": "Delete time entry",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "te471_1428",
+                          "name": "trash-2",
+                          "icon": "trash-2",
+                          "library": "lucide",
+                          "width": 16,
+                          "height": 16,
+                          "fill": "$color-destructive"
+                        }
+                      ],
+                      "width": 32,
+                      "height": 32,
+                      "alignItems": "center",
+                      "justifyContent": "center",
+                      "context": "Delete time entry"
+                    }
+                  ],
+                  "width": "fill_container",
+                  "gap": 6,
+                  "alignItems": "center",
+                  "justifyContent": "end"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "te471_1275",
+              "name": "Bottom navigation",
+              "width": "fill_container",
+              "height": 56,
+              "fill": "$color-surface",
+              "gap": 12,
+              "padding": 12,
+              "justifyContent": "space_between",
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "icon",
+                  "id": "te471_1276",
+                  "name": "layout-dashboard",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "layout-dashboard",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1277",
+                  "name": "chart-column",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "chart-column",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1281",
+                  "name": "clock",
+                  "icon": "clock",
+                  "library": "lucide",
+                  "width": 20,
+                  "height": 20,
+                  "fill": "$color-brand"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1278",
+                  "name": "receipt-text",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "receipt-text",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1279",
+                  "name": "users",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "users",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                },
+                {
+                  "type": "icon",
+                  "id": "te471_1280",
+                  "name": "settings",
+                  "width": 16,
+                  "height": 16,
+                  "icon": "settings",
+                  "library": "lucide",
+                  "fill": "$color-text-muted"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "te471_1655",
+          "x": 64,
+          "y": 40,
+          "name": "Admin · Time Entries — section heading",
+          "fill": "#27272A",
+          "content": "Admin · Time Entries",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": "600"
+        },
+        {
+          "type": "text",
+          "id": "te471_1656",
+          "x": 64,
+          "y": 84,
+          "name": "Admin Time Entries — canvas caption",
+          "fill": "#52525B",
+          "textGrowth": "fixed-width-height",
+          "width": 1280,
+          "height": 48,
+          "content": "#471 · Project time entries",
+          "lineHeight": 1.3,
+          "fontFamily": "Inter",
+          "fontSize": 18,
+          "fontWeight": "500"
+        }
+      ]
     }
   ],
   "variables": {
