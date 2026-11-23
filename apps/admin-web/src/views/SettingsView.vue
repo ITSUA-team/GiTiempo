@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { WorkspaceRoles } from '@gitiempo/shared';
 import { computed, shallowRef, watch } from 'vue';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -24,11 +25,13 @@ import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
 const { errorToast } = useToasts();
-const isAuthenticated = computed(() => Boolean(authStore.accessToken));
+const canManageSettings = computed(
+  () => authStore.isAuthenticated && authStore.profile?.role === WorkspaceRoles.Admin,
+);
 const scope = computed(() => getAdminServerStateScope(authStore.accessToken));
 const settingsForm = useAdminSettingsForm();
 const settingsData = useAdminSettingsData({
-  enabled: isAuthenticated,
+  enabled: canManageSettings,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -38,7 +41,7 @@ const settingsData = useAdminSettingsData({
   scope,
 });
 const settingsPersistence = useAdminSettingsPersistence({
-  enabled: isAuthenticated,
+  enabled: canManageSettings,
   onError(message, error) {
     errorToast(message, {
       error,
@@ -48,7 +51,7 @@ const settingsPersistence = useAdminSettingsPersistence({
   scope,
 });
 const githubConnection = useAdminSettingsGitHubConnection({
-  enabled: isAuthenticated,
+  enabled: canManageSettings,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -59,7 +62,7 @@ const githubConnection = useAdminSettingsGitHubConnection({
 });
 const canAddGitHubOrganization = computed(
   () =>
-    isAuthenticated.value &&
+    canManageSettings.value &&
     githubConnection.isConnected.value &&
     githubConnection.connection.value?.capabilities?.organizationDiscovery === 'ready' &&
     !githubConnection.loading.value &&
@@ -67,7 +70,7 @@ const canAddGitHubOrganization = computed(
 );
 const canLoadAvailableGitHubOrganizations = computed(
   () =>
-    isAuthenticated.value &&
+    canManageSettings.value &&
     githubConnection.isConnected.value &&
     githubConnection.connection.value?.capabilities?.organizationDiscovery ===
       'ready' &&
@@ -75,7 +78,7 @@ const canLoadAvailableGitHubOrganizations = computed(
 );
 const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
   availableOrganizationsEnabled: canLoadAvailableGitHubOrganizations,
-  enabled: isAuthenticated,
+  enabled: canManageSettings,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -89,7 +92,7 @@ const workspaceGitHubOrganizations = useAdminWorkspaceGitHubOrganizations({
 const workspaceGitHubInstallations = useAdminWorkspaceGitHubInstallations({
   organizations: workspaceGitHubOrganizations.items,
   canConfigure: canAddGitHubOrganization,
-  enabled: isAuthenticated,
+  enabled: canManageSettings,
   onError(message, error, action) {
     errorToast(message, {
       error,
@@ -200,14 +203,14 @@ watch(
 );
 
 watch(
-  isAuthenticated,
-  async (authenticated) => {
+  canManageSettings,
+  async (canManage) => {
     const callbackUrl = new URL(window.location.href);
     const state = callbackUrl.searchParams.get('state');
     const installationId = callbackUrl.searchParams.get('installation_id');
     if (
       handledInstallationCallback.value ||
-      !authenticated ||
+      !canManage ||
       !state ||
       !installationId
     ) {
@@ -229,7 +232,7 @@ watch(
 
 <template>
   <div class="flex flex-col gap-6">
-    <SettingsPageSkeleton v-if="loading && !initialLoaded" />
+    <SettingsPageSkeleton v-if="!canManageSettings || (loading && !initialLoaded)" />
 
     <template v-else>
       <div
