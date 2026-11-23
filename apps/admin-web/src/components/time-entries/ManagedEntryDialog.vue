@@ -1,0 +1,341 @@
+<script setup lang="ts">
+import { computed, ref, shallowRef, watch, onBeforeUnmount } from 'vue';
+import { type TimeEntryResponse } from '@gitiempo/shared';
+import { giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
+import { AppDialog, DatePickerButtonBar, getErrorMessage, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
+import { isApiErrorStatus } from '@gitiempo/web-shared/http';
+import Button from 'primevue/button';
+import Checkbox from 'primevue/checkbox';
+import DatePicker from 'primevue/datepicker';
+import InputText from 'primevue/inputtext';
+import Message from 'primevue/message';
+import Select from 'primevue/select';
+import Textarea from 'primevue/textarea';
+
+import RequestErrorCard from '@/components/RequestErrorCard.vue';
+import type {
+  AdminTimeEntriesClient,
+  ManagedEntryCreate,
+  ManagedEntryUpdate,
+  ManagementMember,
+  ManagementProject,
+  ManagementTask,
+} from '@/services/admin-time-entries-client';
+
+const props = defineProps<{
+  client: AdminTimeEntriesClient;
+  project: ManagementProject;
+  members: ManagementMember[];
+  entry?: TimeEntryResponse;
+  busy: boolean;
+  locked: boolean;
+  error: string;
+}>();
+
+const emit = defineEmits<{
+  close: [];
+  create: [input: ManagedEntryCreate];
+  update: [input: ManagedEntryUpdate];
+  scopeLost: [];
+}>();
+
+const visible = ref(true);
+const entry = props.entry;
+const userId = ref(entry?.userId);
+const taskId = ref(entry?.taskId);
+const start = ref<Date | null>(entry ? new Date(entry.startedAt) : null);
+const end = ref<Date | null>(entry?.endedAt ? new Date(entry.endedAt) : null);
+const startPicker = useDatePickerConfirmCancel<Date>();
+const endPicker = useDatePickerConfirmCancel<Date>();
+const dateFieldPt = {
+  ...giTiempoDatePickerPt,
+  pcInputText: {
+    root: { ...giTiempoDatePickerPt.pcInputText.root, 'aria-required': true },
+  },
+};
+const description = ref(entry?.description ?? '');
+const isBillable = ref(entry?.isBillable ?? false);
+const tasks = shallowRef<ManagementTask[]>([]);
+const tasksLoading = ref(false);
+const tasksError = ref('');
+const validation = ref('');
+let taskRequest = 0;
+
+const displayedTasks = computed(() => {
+  if (!entry || tasks.value.some(task => task.id === entry.taskId)) return tasks.value;
+  return [entry.task, ...tasks.value];
+});
+const memberOptions = computed(() => props.members.map(member => ({
+  ...member, label: member.displayName || member.email,
+})));
+
+async function loadTasks() {
+  const request = ++taskRequest;
+  const selectedUser = userId.value;
+  const current = () => request === taskRequest && selectedUser === userId.value;
+  tasks.value = [];
+  tasksError.value = '';
+  tasksLoading.value = Boolean(selectedUser && props.project.isActive);
+  if (!selectedUser || !props.project.isActive) return;
+  try {
+    const result = await props.client.tasks(props.project.id, selectedUser, current);
+    if (current()) tasks.value = result;
+  } catch (error) {
+    if (!current()) return;
+    if (isApiErrorStatus(error, [401, 403, 404])) emit('scopeLost');
+    else if (!(entry && isApiErrorStatus(error, [422]))) {
+      tasksError.value = getErrorMessage(error, 'Unable to load eligible tasks.');
+    }
+  } finally {
+    if (current()) tasksLoading.value = false;
+  }
+}
+
+watch(userId, () => {
+  taskId.value = undefined;
+  isBillable.value = false;
+  void loadTasks();
+});
+watch(() => props.members, (members) => {
+  if (!entry && userId.value && !members.some(member => member.id === userId.value)) {
+    userId.value = undefined;
+  }
+});
+onBeforeUnmount(() => { taskRequest += 1; });
+void loadTasks();
+
+function selectTask(value: string) {
+  taskId.value = value;
+  if (!entry) {
+    isBillable.value = tasks.value.find(task => task.id === value)?.defaultBillableForTimeEntries ?? false;
+  }
+}
+
+function submit() {
+  if (props.busy || props.locked) return;
+  validation.value = '';
+  if (!userId.value || !taskId.value) {
+    validation.value = 'Select a member and a task.';
+    return;
+  }
+  if (!start.value || !end.value || !(end.value.getTime() > start.value.getTime())) {
+    validation.value = 'Enter a start and an end time. The end must be later than the start.';
+    return;
+  }
+  const startedAt = start.value.toISOString();
+  const endedAt = end.value.toISOString();
+  const notes = description.value || null;
+  if (!entry) {
+    emit('create', { userId: userId.value, taskId: taskId.value, startedAt, endedAt, description: notes, isBillable: isBillable.value });
+    return;
+  }
+
+  const input: ManagedEntryUpdate = {};
+  if (taskId.value !== entry.taskId) input.taskId = taskId.value;
+  if (start.value.getTime() !== Date.parse(entry.startedAt)) input.startedAt = startedAt;
+  if (end.value.getTime() !== Date.parse(entry.endedAt ?? '')) input.endedAt = endedAt;
+  if (description.value !== (entry.description ?? '')) input.description = notes;
+  if (isBillable.value !== entry.isBillable) input.isBillable = isBillable.value;
+  if (Object.keys(input).length === 0) {
+    visible.value = false;
+    return;
+  }
+  emit('update', input);
+}
+</script>
+
+<template>
+  <AppDialog
+    v-model:visible="visible"
+    :header="entry ? 'Edit time entry' : 'New time entry'"
+    :closable="!busy"
+    :close-on-escape="!busy"
+    :dismissable-mask="!busy"
+    modal
+    class="w-xl"
+    @after-hide="emit('close')"
+  >
+    <form
+      id="managed-entry-form"
+      class="flex flex-col gap-4"
+      @submit.prevent="submit"
+    >
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label
+          for="managed-entry-project"
+          class="flex min-w-0 flex-col gap-1.5 text-sm font-medium"
+        >
+          Project
+          <InputText
+            id="managed-entry-project"
+            :model-value="project.name"
+            readonly
+            fluid
+          />
+        </label>
+        <label
+          for="managed-entry-member"
+          class="flex min-w-0 flex-col gap-1.5 text-sm font-medium"
+        >
+          Member
+          <InputText
+            v-if="entry"
+            id="managed-entry-member"
+            :model-value="entry.user.displayName || entry.user.email"
+            readonly
+            fluid
+          />
+          <Select
+            v-else
+            v-model="userId"
+            input-id="managed-entry-member"
+            aria-label="Member"
+            :pt="{ label: { 'aria-required': true } }"
+            :options="memberOptions"
+            option-label="label"
+            option-value="id"
+            placeholder="Select a member"
+            empty-message="No eligible members"
+            :disabled="busy"
+            fluid
+            filter
+          />
+        </label>
+      </div>
+      <label
+        for="managed-entry-task"
+        class="flex flex-col gap-1.5 text-sm font-medium"
+      >
+        Task
+        <Select
+          input-id="managed-entry-task"
+          aria-label="Task"
+          :pt="{ label: { 'aria-required': true } }"
+          :model-value="taskId"
+          :options="displayedTasks"
+          option-label="title"
+          option-value="id"
+          placeholder="Select a task"
+          empty-message="No eligible tasks"
+          :loading="tasksLoading"
+          :disabled="!userId || busy || locked"
+          fluid
+          filter
+          @update:model-value="selectTask"
+        />
+      </label>
+      <RequestErrorCard
+        v-if="tasksError"
+        title="Failed to load tasks"
+        :message="tasksError"
+        @retry="loadTasks"
+      />
+      <div class="grid gap-4 sm:grid-cols-2">
+        <label
+          for="managed-entry-start"
+          class="flex min-w-0 flex-col gap-1.5 text-sm font-medium"
+        >
+          Start
+          <DatePicker
+            :ref="startPicker.datePickerRef"
+            v-model="start"
+            input-id="managed-entry-start"
+            placeholder="Start date and time"
+            date-format="dd M yy"
+            :pt="dateFieldPt"
+            :manual-input="false"
+            show-button-bar
+            show-icon
+            icon-display="input"
+            show-time
+            show-seconds
+            hour-format="24"
+            :disabled="busy || locked"
+            fluid
+            @show="startPicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="startPicker.handleCancel"
+                @confirm="startPicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
+        </label>
+        <label
+          for="managed-entry-end"
+          class="flex min-w-0 flex-col gap-1.5 text-sm font-medium"
+        >
+          End
+          <DatePicker
+            :ref="endPicker.datePickerRef"
+            v-model="end"
+            input-id="managed-entry-end"
+            placeholder="End date and time"
+            date-format="dd M yy"
+            :pt="dateFieldPt"
+            :manual-input="false"
+            show-button-bar
+            show-icon
+            icon-display="input"
+            show-time
+            show-seconds
+            hour-format="24"
+            :disabled="busy || locked"
+            fluid
+            @show="endPicker.handleShow"
+          >
+            <template #buttonbar>
+              <DatePickerButtonBar
+                @cancel="endPicker.handleCancel"
+                @confirm="endPicker.handleConfirm"
+              />
+            </template>
+          </DatePicker>
+        </label>
+      </div>
+      <label
+        for="managed-entry-description"
+        class="flex flex-col gap-1.5 text-sm font-medium"
+      >
+        Description
+        <Textarea
+          id="managed-entry-description"
+          v-model="description"
+          maxlength="2000"
+          rows="2"
+          :disabled="busy || locked"
+          fluid
+        />
+      </label>
+      <label
+        for="managed-entry-billable"
+        class="flex items-center gap-2 text-sm"
+      >
+        <Checkbox
+          v-model="isBillable"
+          input-id="managed-entry-billable"
+          :disabled="busy || locked"
+          binary
+        />
+        Billable
+      </label>
+      <Message
+        v-if="error || validation"
+        severity="error"
+      >
+        {{ error || validation }}
+      </Message>
+    </form>
+    <template #footer>
+      <Button
+        :label="entry ? 'Save changes' : 'Create time entry'"
+        type="submit"
+        form="managed-entry-form"
+        class="w-full sm:w-auto"
+        :disabled="locked"
+        :loading="busy"
+      />
+    </template>
+  </AppDialog>
+</template>

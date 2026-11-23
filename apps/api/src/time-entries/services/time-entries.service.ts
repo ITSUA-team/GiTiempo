@@ -139,6 +139,34 @@ export class TimeEntriesService {
     return this.listEntries(this.db, conditions, query.page, query.limit);
   }
 
+  listManagedProjectEntries(
+    db: QueryExecutor,
+    workspaceId: string,
+    projectId: string,
+    query: TimeEntryListQuery & { userId?: string },
+  ): Promise<TimeEntryListResponse> {
+    const conditions = this.buildListConditions(workspaceId, {
+      ...query,
+      projectId,
+    });
+    if (query.userId !== undefined) {
+      conditions.push(eq(timeEntries.userId, query.userId));
+    }
+    return this.listEntries(db, conditions, query.page, query.limit, true);
+  }
+
+  getManagedEntryResponse(
+    db: QueryExecutor,
+    workspaceId: string,
+    projectId: string,
+    entryId: string,
+  ): Promise<TimeEntryResponse> {
+    return this.requireEntryResponse(db, entryId, [
+      eq(timeEntries.workspaceId, workspaceId),
+      eq(tasksTable.projectId, projectId),
+    ]);
+  }
+
   async createManualEntry(
     user: AuthUser,
     input: CreateManualTimeEntryInput,
@@ -907,7 +935,7 @@ export class TimeEntriesService {
     if (query.search !== undefined) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
       conditions.push(
-        sql`${tasksTable.title} ILIKE ${searchPattern} ESCAPE '\'`,
+        sql`${tasksTable.title} ILIKE ${searchPattern} ESCAPE '!'`,
       );
     }
     return conditions;
@@ -918,6 +946,7 @@ export class TimeEntriesService {
     conditions: SQL[],
     page: number,
     limit: number,
+    stableOrder = false,
   ): Promise<TimeEntryListResponse> {
     const where = and(...conditions);
     const offset = (page - 1) * limit;
@@ -938,7 +967,11 @@ export class TimeEntriesService {
         ),
       )
       .where(where)
-      .orderBy(desc(timeEntries.startedAt), desc(timeEntries.createdAt))
+      .orderBy(
+        desc(timeEntries.startedAt),
+        desc(timeEntries.createdAt),
+        ...(stableOrder ? [desc(timeEntries.id)] : []),
+      )
       .limit(limit)
       .offset(offset);
 
@@ -1198,5 +1231,5 @@ export class TimeEntriesService {
 }
 
 function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+  return value.replace(/[!%_]/g, '!$&');
 }

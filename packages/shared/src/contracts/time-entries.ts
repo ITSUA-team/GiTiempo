@@ -73,7 +73,7 @@ export const currentTimeEntryResponseSchema = z.object({
   timeEntry: timeEntryResponseSchema.nullable(),
 });
 
-export const timeEntryListQuerySchema = z
+const timeEntryListQueryBaseSchema = z
   .object({
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -83,12 +83,19 @@ export const timeEntryListQuerySchema = z
     taskId: z.uuid().optional(),
     search: optionalSearchSchema,
   })
-  .strict()
+  .strict();
+
+function hasIncreasingDateRange(data: { dateFrom?: string; dateTo?: string }) {
+  return (
+    data.dateFrom === undefined ||
+    data.dateTo === undefined ||
+    new Date(data.dateTo).getTime() > new Date(data.dateFrom).getTime()
+  );
+}
+
+export const timeEntryListQuerySchema = timeEntryListQueryBaseSchema
   .refine(
-    (data) =>
-      data.dateFrom === undefined ||
-      data.dateTo === undefined ||
-      new Date(data.dateTo).getTime() > new Date(data.dateFrom).getTime(),
+    hasIncreasingDateRange,
     {
       message: 'dateTo must be later than dateFrom',
       path: ['dateTo'],
@@ -158,6 +165,57 @@ export const updateTimeEntrySchema = z
       path: ['endedAt'],
     },
   );
+
+export const managementProjectsQuerySchema = timeEntryListQueryBaseSchema.pick({
+  page: true,
+  limit: true,
+});
+
+export const managementTimeEntryMembersQuerySchema =
+  managementProjectsQuerySchema.extend({ purpose: z.enum(['filter', 'create']) });
+
+export const managementTimeEntryTasksQuerySchema =
+  managementProjectsQuerySchema.extend({ userId: z.uuid() });
+
+export const managementTimeEntriesQuerySchema = timeEntryListQueryBaseSchema
+  .omit({ projectId: true, taskId: true })
+  .extend({ userId: z.uuid().optional() })
+  .refine(hasIncreasingDateRange, {
+    message: 'dateTo must be later than dateFrom',
+    path: ['dateTo'],
+  });
+
+export const managementProjectsResponseSchema = z.object({
+  items: z.array(timeEntryProjectSummarySchema.extend({ isActive: z.boolean() })),
+  meta: timeEntryListMetaSchema,
+});
+
+export const managementTimeEntryMembersResponseSchema = z.object({
+  items: z.array(timeEntryUserSummarySchema.omit({ avatarUrl: true })),
+  meta: timeEntryListMetaSchema,
+});
+
+export const managementTimeEntryTasksResponseSchema = z.object({
+  items: z.array(
+    timeEntryTaskSummarySchema.extend({
+      defaultBillableForTimeEntries: z.boolean(),
+    }),
+  ),
+  meta: timeEntryListMetaSchema,
+});
+
+export const createManagedTimeEntrySchema = createManualTimeEntrySchema.safeExtend({
+  userId: z.uuid(),
+});
+
+export const updateManagedTimeEntrySchema = updateTimeEntrySchema;
+
+export const managedTimeEntryConflictSchema = z.object({
+  statusCode: z.literal(409),
+  error: z.string(),
+  message: z.string(),
+  code: z.enum(['time_entry_running', 'time_entry_invoiced']),
+});
 
 export const startTimerSchema = z
   .object({

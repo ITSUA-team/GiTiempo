@@ -127,6 +127,14 @@ The shared example includes Dashboard UX 17h (10h + 7h; 2h excluded) and Invoice
 - Invoices nav item is visible for Admin and PM roles, except PMs with `canViewInvoices = false`, for whom the nav item is hidden from the sidebar and mobile bottom navigation.
 - Invoice defaults (currency, default hourly rate, rounding step) are loaded from `GET /invoices/defaults`, which is accessible to Admin and PMs with `canViewInvoices = true`. The admin-only `GET /workspace/settings` endpoint is NOT called on the invoices page.
 
+## Time Entries Page
+
+- The protected `/time-entries` route and its accessible **Time Entries** navigation link are available to Admins and PMs. Admins see all projects in the active workspace. PMs see only projects to which they are explicitly assigned, including public ones. The page uses its own project lookup independently of invoice access.
+- The desktop layout follows **Admin · Time Entries** in `GITiempo.pen` (frame `te471_1069`). A 208 px sidebar uses 16 px text for the project list beside the selected project's listing. The table follows Invoices styling and shows task and description, member, date and time, duration and billability, status, and actions. The toolbar shows the project name, task-title search, and an icon-only plus button with the accessible name **New time entry**. Member and date filters sit above the table. Below 640 px a project selector and the same search, filters and create action sit above stacked cards (frame `te471_1569`).
+- Changing project clears the previous project rows and member filter, resets pagination and closes the previous editor. Distinguish loading, request failure, no manageable projects and no matching entries. Historical contributors remain selectable in the member filter.
+- The creation dialog starts in the selected project. The manager chooses an eligible member, one of that member's trackable tasks, a completed interval, description and billability. Editing shows the fixed project and owner and allows changing the task within that project. The original task remains visible for historical corrections. Deletion requires confirmation.
+- Running and invoiced entries explain why edit and delete are unavailable in both layouts. Show any server conflict alongside the action and refresh the entry data. If project access is lost, clear its data and reload the permitted projects.
+
 ## Members Page
 
 - Successful assignment, invoice-permission, member removal, initial invitation, and invitation cancellation update the existing rows/counters and form state without redundant success toasts. Destructive confirmations and error/retry feedback remain. Resending an invitation retains its acknowledgement without claiming email delivery.

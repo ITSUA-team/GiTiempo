@@ -1,0 +1,202 @@
+import type { TimeEntryListResponse } from '@gitiempo/shared';
+import { getErrorMessage } from '@gitiempo/web-shared';
+import { isApiErrorStatus } from '@gitiempo/web-shared/http';
+import { computed, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue';
+
+import type { AdminTimeEntriesClient, ManagementMember, ManagementProject } from '@/services/admin-time-entries-client';
+
+export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: AdminTimeEntriesClient) {
+  const projects = shallowRef<ManagementProject[]>([]);
+  const members = shallowRef<ManagementMember[]>([]);
+  const eligibleMembers = shallowRef<ManagementMember[]>([]);
+  const eligibleMembersError = ref('');
+  const memberError = ref('');
+  const list = shallowRef<TimeEntryListResponse>();
+  const projectId = ref<string>();
+  const memberId = ref<string>();
+  const search = ref('');
+  const dates = ref<(Date | null)[] | null>(null);
+  const page = ref(1);
+  const loadingProjects = ref(false);
+  const loadingEntries = ref(false);
+  const projectError = ref('');
+  const entriesError = ref('');
+  let projectRequest = 0;
+  let memberRequest = 0;
+  let listRequest = 0;
+  let eligibleMembersRequest = 0;
+  let recheckedProjectId: string | undefined;
+
+  const project = computed(() => projects.value.find(option => option.id === projectId.value));
+  const dateFrom = computed(() => {
+    const start = dates.value?.[0];
+    if (!start) return undefined;
+    return new Date(start.getFullYear(), start.getMonth(), start.getDate()).toISOString();
+  });
+  const dateTo = computed(() => {
+    const end = dates.value?.[1];
+    if (!end) return undefined;
+    return new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1).toISOString();
+  });
+
+  const entryQuery = computed(() => ({
+    selected: projectId.value,
+    scope: scope.value,
+    page: page.value,
+    filters: {
+      userId: memberId.value ?? undefined,
+      search: search.value.trim() || undefined,
+      dateFrom: dateFrom.value,
+      dateTo: dateTo.value,
+    },
+  }));
+
+  async function loadProjects() {
+    const request = ++projectRequest;
+    const current = () => request === projectRequest;
+    loadingProjects.value = Boolean(scope.value);
+    projectError.value = '';
+    if (!scope.value) return;
+    try {
+      const items = await client.projects(current);
+      if (!current()) return;
+      projects.value = items;
+      if (!items.some(item => item.id === projectId.value)) projectId.value = items[0]?.id;
+    } catch (error) {
+      if (current()) projectError.value = getErrorMessage(error, 'Unable to load projects.');
+    } finally {
+      if (current()) loadingProjects.value = false;
+    }
+  }
+
+  function clearProjects() {
+    projects.value = [];
+    projectId.value = undefined;
+  }
+
+  function reloadScope() {
+    clearProjects();
+    return loadProjects();
+  }
+
+  function retryProjects() {
+    recheckedProjectId = undefined;
+    return loadProjects();
+  }
+
+  function handleReadFailure(error: unknown, target: Ref<string>, fallback: string) {
+    if (!isApiErrorStatus(error, [401, 403, 404])) {
+      target.value = getErrorMessage(error, fallback);
+      return;
+    }
+    if (recheckedProjectId === projectId.value) {
+      clearProjects();
+      projectError.value = getErrorMessage(error, 'Unable to access the selected project.');
+      return;
+    }
+    recheckedProjectId = projectId.value;
+    void reloadScope();
+  }
+
+  async function loadMembers() {
+    const request = ++memberRequest;
+    const selected = projectId.value;
+    const current = () => request === memberRequest && selected === projectId.value;
+    memberError.value = '';
+    if (!selected) return;
+    try {
+      const items = await client.members(selected, 'filter', current);
+      if (current()) members.value = items;
+    } catch (error) {
+      if (current()) handleReadFailure(error, memberError, 'Unable to load member filters.');
+    }
+  }
+
+  async function loadEligibleMembers() {
+    const request = ++eligibleMembersRequest;
+    const selected = project.value;
+    const current = () => request === eligibleMembersRequest && selected?.id === projectId.value;
+    eligibleMembersError.value = '';
+    if (!selected?.isActive) return;
+    try {
+      const items = await client.members(selected.id, 'create', current);
+      if (current()) eligibleMembers.value = items;
+    } catch (error) {
+      if (current()) handleReadFailure(error, eligibleMembersError, 'Unable to load eligible members.');
+    }
+  }
+
+  async function loadEntries() {
+    const request = ++listRequest;
+    const query = entryQuery.value;
+    const { selected } = query;
+    const current = () => request === listRequest && query === entryQuery.value;
+    loadingEntries.value = Boolean(selected);
+    if (!selected) return;
+    try {
+      const result = await client.list(selected, query.page, query.filters);
+      if (!current()) return;
+      if (page.value > Math.max(1, result.meta.totalPages)) {
+        page.value = Math.max(1, result.meta.totalPages);
+        return;
+      }
+      list.value = result;
+    } catch (error) {
+      if (!current()) return;
+      list.value = undefined;
+      handleReadFailure(error, entriesError, 'Unable to load time entries.');
+    } finally {
+      if (current()) loadingEntries.value = false;
+    }
+  }
+
+  function refresh() {
+    recheckedProjectId = undefined;
+    entriesError.value = '';
+    void loadMembers();
+    void loadEligibleMembers();
+    void loadEntries();
+  }
+
+  watch(projectId, () => {
+    list.value = undefined;
+    members.value = [];
+    eligibleMembers.value = [];
+    memberId.value = undefined;
+    page.value = 1;
+    entriesError.value = '';
+    void loadMembers();
+    void loadEligibleMembers();
+  }, { flush: 'sync' });
+  watch([memberId, search, dateFrom, dateTo], () => { page.value = 1; }, { flush: 'sync' });
+  watch(entryQuery, () => {
+    entriesError.value = '';
+    void loadEntries();
+  });
+  watch(scope, () => {
+    recheckedProjectId = undefined;
+    listRequest += 1;
+    memberRequest += 1;
+    eligibleMembersRequest += 1;
+    list.value = undefined;
+    members.value = [];
+    memberId.value = undefined;
+    search.value = '';
+    dates.value = null;
+    void reloadScope();
+  }, { immediate: true, flush: 'sync' });
+
+  onScopeDispose(() => {
+    projectRequest += 1;
+    memberRequest += 1;
+    eligibleMembersRequest += 1;
+    listRequest += 1;
+  });
+
+  return {
+    projects, project, projectId, members, memberId, search, dates, page, list,
+    loadingProjects, loadingEntries, projectError, entriesError, memberError,
+    eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
+    retryProjects, reloadScope, refresh,
+  };
+}
