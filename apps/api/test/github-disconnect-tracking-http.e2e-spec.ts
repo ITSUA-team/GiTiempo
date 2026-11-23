@@ -232,7 +232,7 @@ describe('manual HTTP acceptance: Disconnect preserves installation tracking', (
     await app.close();
   });
 
-  it('keeps installation-backed tracking and assignment enforcement after full personal Disconnect', async () => {
+  it('keeps installation-backed tracking and applies project visibility after full personal Disconnect', async () => {
     const personalAccess = vi.spyOn(connections, 'getValidAccessToken');
     const workspaceRecords = () =>
       Promise.all([
@@ -318,6 +318,20 @@ describe('manual HTTP acceptance: Disconnect preserves installation tracking', (
       .set('Authorization', assigned)
       .send({ expectedTimerId: second.body.id })
       .expect(200);
+    const publicStart = await request(app.getHttpServer())
+      .post('/time-entries/timer/start-from-github')
+      .set('Authorization', unassigned)
+      .send({ githubRepo: 'TrackingOrg/private', issueNumber: 3 })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/time-entries/timer/stop')
+      .set('Authorization', unassigned)
+      .send({ expectedTimerId: publicStart.body.id })
+      .expect(200);
+    await db
+      .update(projects)
+      .set({ visibility: 'private' })
+      .where(eq(projects.id, projectId));
     const beforeDenied = (
       await db
         .select()
@@ -331,7 +345,7 @@ describe('manual HTTP acceptance: Disconnect preserves installation tracking', (
     const denied = await request(app.getHttpServer())
       .post('/time-entries/timer/start-from-github')
       .set('Authorization', unassigned)
-      .send({ githubRepo: 'TrackingOrg/private', issueNumber: 3 })
+      .send({ githubRepo: 'TrackingOrg/private', issueNumber: 4 })
       .expect(403);
     expect(denied.body.code).toBe('project_assignment_required');
     expect(

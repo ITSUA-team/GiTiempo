@@ -86,14 +86,13 @@ export class TimeEntriesController {
 
   @Post('time-entries/timer/start')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Start timer for an existing task' })
+  @ApiOperation({
+    summary: 'Start timer for an existing task',
+    description:
+      'Active workspace members can track active open tasks in active public projects without a project assignment, including GitHub-linked tasks.',
+  })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
   @ApiConflictResponse({ description: 'Timer already running' })
-  @ApiForbiddenResponse({
-    description:
-      'An ordinary member is not assigned to the saved GitHub task project',
-    type: GitHubTrackingErrorResponseDto,
-  })
   @ApiNotFoundResponse({ description: 'Task not found' })
   @ApiUnprocessableEntityResponse({ description: 'Task or project inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
@@ -110,7 +109,7 @@ export class TimeEntriesController {
     summary: 'Start timer from GitHub issue data',
     description: [
       'Verifies repository and issue through the workspace GitHub App installation.',
-      'Requires an existing mapped project and ordinary-member assignment, including public projects.',
+      'Requires an existing mapped project. Public projects are available to active workspace members. Private projects require existing project access.',
       'Rechecks membership, installation, organization policy and project access before task/time writes.',
       'Uses GitHub canonical metadata; never creates projects or assignments and needs no personal GitHub connection.',
     ].join(' '),

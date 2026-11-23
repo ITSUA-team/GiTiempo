@@ -129,7 +129,10 @@ function handleSave({
         data-testid="project-edit-form-layout"
         class="flex flex-col gap-3"
       >
-        <div class="flex min-w-0 flex-col gap-1.5">
+        <div
+          v-show="($form.visibility?.value ?? initialValues.visibility) === 'private'"
+          class="flex min-w-0 flex-col gap-1.5"
+        >
           <label
             for="edit-members"
             class="text-text-dark font-sans text-[12px] leading-none font-medium"

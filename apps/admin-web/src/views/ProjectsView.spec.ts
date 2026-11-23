@@ -454,6 +454,42 @@ describe('ProjectsView', () => {
     wrapper.unmount();
   });
 
+  it.each([null, 'new-manager'])(
+    'keeps public member assignments separate from manager edit %s',
+    async (managerUserId) => {
+      const project = {
+        ...createProject(),
+        visibility: 'private' as const,
+        members: [
+          { avatarUrl: null, displayName: 'Member', email: 'member@example.com', role: 'member' as const, userId: 'member' },
+        ],
+      };
+      testMocks.listProjects.mockResolvedValue([project]);
+      const wrapper = mountProjectsView();
+      await flushPromises();
+      await wrapper.get('[data-testid="project-edit-intent"]').trigger('click');
+
+      wrapper.getComponent(ProjectEditFormStub).vm.$emit('save', {
+        defaultBillableForTasks: project.defaultBillableForTasks,
+        timeRoundingStepMinutes: null,
+        visibility: 'public',
+        memberIds: ['new-manager', 'hidden-member-edit'],
+        managerUserId,
+      });
+      await flushPromises();
+
+      expect(testMocks.updateProject).toHaveBeenCalledWith(
+        project.id,
+        expect.objectContaining({ visibility: 'public' }),
+      );
+      expect(testMocks.assignMember.mock.calls).toEqual(
+        managerUserId ? [[project.id, managerUserId]] : [],
+      );
+      expect(testMocks.removeAssignment).not.toHaveBeenCalled();
+      wrapper.unmount();
+    },
+  );
+
   it.each(['patch', 'assignment'] as const)(
     'finishes member and manager writes after same-workspace navigation during %s',
     async (phase) => {

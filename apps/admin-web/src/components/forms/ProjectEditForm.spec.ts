@@ -1,5 +1,7 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import { Form } from '@primevue/forms';
+import PrimeVue from 'primevue/config';
 import { nextTick } from 'vue';
 import type {
   ProjectResponse,
@@ -201,7 +203,7 @@ describe('ProjectEditForm', () => {
   }
 
   it('keeps project settings controls at the same edit-form height', async () => {
-    const wrapper = mountProjectEditForm();
+    const wrapper = mountProjectEditForm({ project: { visibility: 'private' } });
 
     // The members field gets the full panel width like Member settings; only
     // visibility and the billable default share a row.
@@ -334,6 +336,58 @@ describe('ProjectEditForm', () => {
     // The save action stays the default primary button (no severity override).
     expect(saveButton?.attributes('severity')).toBeUndefined();
     expect(saveButton?.attributes('type')).toBe('submit');
+  });
+
+  it('toggles the member dropdown with draft visibility and preserves its values', async () => {
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    const wrapper = mount(ProjectEditForm, {
+      props: { project, allMembers: members, workspaceRoundingStepMinutes: 5 },
+      global: { plugins: [PrimeVue, createPinia()], stubs: { teleport: true } },
+      attachTo: document.body,
+    });
+    const form = wrapper.getComponent(Form).vm as unknown as {
+      setFieldValue: (field: string, value: unknown) => void;
+    };
+    const selectVisibility = async (value: 'private' | 'public') => {
+      form.setFieldValue('visibility', value);
+      await flushPromises();
+    };
+
+    try {
+      expect(wrapper.get('label[for="edit-members"]').isVisible()).toBe(false);
+      expect(wrapper.get('#edit-project-manager').isVisible()).toBe(true);
+      await selectVisibility('private');
+      expect(wrapper.get('label[for="edit-members"]').isVisible()).toBe(true);
+      expect(wrapper.get('#edit-members').element.closest('.p-autocomplete')?.textContent)
+        .toContain('Pat PM');
+
+      await selectVisibility('public');
+      expect(wrapper.get('label[for="edit-members"]').isVisible()).toBe(false);
+      await wrapper.get('form').trigger('submit');
+      await flushPromises();
+      expect(wrapper.emitted('save')?.[0]).toEqual([
+        expect.objectContaining({ visibility: 'public', memberIds: ['user-2'] }),
+      ]);
+
+      await selectVisibility('private');
+      expect(wrapper.get('label[for="edit-members"]').isVisible()).toBe(true);
+      await wrapper.get('form').trigger('submit');
+      await flushPromises();
+      expect(wrapper.emitted('save')?.[1]).toEqual([
+        expect.objectContaining({ visibility: 'private', memberIds: ['user-2'] }),
+      ]);
+
+      await wrapper.get('[data-footer-actions="primary"] button[type="button"]').trigger('click');
+      expect(wrapper.emitted('cancelled')).toHaveLength(1);
+      expect(wrapper.emitted('save')).toHaveLength(2);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('emits the status-specific action from the inline project settings panel', async () => {
