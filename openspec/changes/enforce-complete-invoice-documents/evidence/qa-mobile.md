@@ -1,0 +1,27 @@
+# Mobile real-page acceptance
+
+Date: 2026-11-17. Base revision: `30e90c09`, with the current uncommitted #537 implementation. The final amounts-visibility patch landed between the Bank save and Other/copy scenarios; source was frozen for the remaining scenarios. No implementation files were edited during QA.
+
+Environment: actual admin SPA `http://127.0.0.1:5175`, compiled API `http://127.0.0.1:3001`, isolated local database `gitiempo_e2e_537`. Chromium session `issue537-mobile`, viewport **390 × 844**. Authenticated with the local test admin; no auth tokens were recorded. All form changes used rendered controls and the real API, with no mocked transport or internal Vue-state changes.
+
+| Scenario | Result | Actual observation and evidence |
+| --- | --- | --- |
+| Empty required fields and first-error focus | PASS | Save remained reachable. Missing period/title/party/services/payment fields showed inline errors and `aria-invalid`. Focus moved to `invoice-create-date-range`, the first invalid control. [Screenshot](mobile-required-errors.png). |
+| PDF semantic order and mobile layout | PASS | DOM order was Issue date, Due date, billing period, secondary title/group, From, Bill to, services/project/pricing, work, totals/discount, payment and notes. Sections stacked without horizontal overflow: `innerWidth=390`, document scroll width `390`. Footer save and close remained reachable. |
+| Invalid email and independent error clearing | PASS | `bad-email` and an HTTP Card link both showed errors. Save focused recipient email; correcting it cleared that error while the Card link stayed invalid. [Email error](mobile-invalid-email.png). |
+| HTTPS Card link validation and focus | PASS | `http://pay.example.com/mobile` blocked saving and focused `invoice-payment-paymentUrl`. Its inline explanation stayed visible. Correcting to HTTPS allowed saving. [Link error](mobile-invalid-https-link.png). |
+| Complete zero-value Card invoice | PASS | Saved INV-143 with no entries, rate `0`, zero totals, no due date, Tax IDs, terms, instructions, notes or logo. Detail showed Card and Pay online. [Saved Card](mobile-card-saved.png). |
+| Method switching preserves hidden edits | PASS | In the editor, Card → Bank → Card → Bank preserved beneficiary `Mobile beneficiary`, account `UA123456789`, and SWIFT `MOBLUA22`. An invalid HTTP Card URL retained in local state did not block the Bank save. [Restored bank fields](mobile-bank-restored.png). |
+| Saved Bank edit and status change | PASS | Saved Bank fields appeared on detail. Draft → Sent succeeded with zero totals and no linked entries. [Bank/Sent detail](mobile-bank-sent.png). |
+| Other required details and optional omissions | PASS | Cleared beneficiary/provider/account; Save blocked and focused Payment details. Filling only `payment.account` allowed saving with blank beneficiary, provider and instructions. [Saved Other](mobile-other-saved.png). |
+| Create from existing invoice | PASS | Reviewed new period 20–21 Nov 2026 using the calendar and Confirm. Copy inherited business fields, set today's Issue date, left Due date blank, and saved as a fresh Draft reference INV-146 rather than copying Sent status. [Saved copy](mobile-copy-saved.png). |
+| Invalid optional Due date | PASS | Due date 16 Nov with Issue date 17 Nov blocked saving, displayed the date-order explanation, and focused `invoice-due-date`. Cancel preserved the saved revision. Issue date exposed `aria-required=true`. [Date error](mobile-invalid-due-date.png). |
+| Real PDF generation/download | PASS | Downloaded real PDFs through the detail action: [Other / INV-143](mobile-other.pdf), [Card / INV-146](mobile-card.pdf). Both requests succeeded; parent owns rendered PDF/text review. |
+| Historical incomplete read/status guard | PASS | Parent changed only INV-146 sender email to blank directly in the isolated local database. Reload still displayed the invoice. Selecting Sent retained Draft and showed completion guidance with an editor action. [Blocked status](mobile-historical-status-blocked.png). |
+| Historical save guard and repair | PASS | The completion editor opened. Save focused blank sender email and displayed its required error. Correcting the email allowed saving; a subsequent Sent transition succeeded and removed completion guidance. [Required email](mobile-historical-email-error.png), [repaired status](mobile-historical-repaired.png). |
+
+Final QA records: INV-143 (`446c61ab-1c3a-487d-891f-a4dc3bd13778`) is Sent/Other; copied INV-146 (`4a4bb94a-0f7a-41e5-b8a3-bef6c39faff3`) is repaired, Sent/Card. No production or staging data was touched.
+
+Limits: missing Issue date cannot be produced through the normal picker, which starts populated and has no clear control; this session verified required semantics and date-order error behavior, not an artificially empty Issue date. New custom method names have no free-entry selector in the current UI, so Other was exercised manually and custom-name policy remains covered by contract tests. Exact `.pen` parity is **BLOCKED** by the already reported Pencil plan quota; no workaround was used. This session did not simulate server 422 transport responses or unavailable-entry races.
+
+Design follow-up: after this runtime session the user authorized a local `.pen` JSON update. See [design-parity.md](design-parity.md) for the completed source/local-layout review and the remaining native-render limitation. The original runtime scenarios and observations above are unchanged.

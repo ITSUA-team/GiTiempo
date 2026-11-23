@@ -15,6 +15,30 @@ it('publishes the invoice PDF download and billing error contracts', async () =>
       app,
       new DocumentBuilder().build(),
     );
+    for (const operation of [
+      doc.paths['/invoices']?.post,
+      doc.paths['/invoices/{id}']?.patch,
+    ]) {
+      expect(operation?.responses['422']).toMatchObject({
+        content: {
+          'application/json': {
+            schema: {
+              anyOf: [
+                { $ref: '#/components/schemas/InvoiceDocumentIncompleteDto' },
+                { $ref: '#/components/schemas/InvoiceLogoInvalidDto' },
+                {
+                  required: ['statusCode', 'code', 'error', 'message'],
+                  properties: {
+                    code: { type: 'string' },
+                    error: { enum: ['DomainError'] },
+                  },
+                },
+              ],
+            },
+          },
+        },
+      });
+    }
     const responses = doc.paths['/invoices/{id}/pdf']?.get?.responses;
     expect(responses).toMatchObject({
       '200': {

@@ -1,7 +1,8 @@
 import { mount } from "@vue/test-utils";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nextTick } from "vue";
+import PrimeVue from "primevue/config";
 
 import TopBarTimerTaskDialog from "./TopBarTimerTaskDialog.vue";
 import { TOP_BAR_TIMER_NEW_TASK_ID } from "@/lib/top-bar-timer-helpers";
@@ -58,8 +59,9 @@ const alertTask = {
 
 type DialogProps = Partial<InstanceType<typeof TopBarTimerTaskDialog>["$props"]>;
 
-function mountDialog(overrides: DialogProps = {}) {
+function mountDialog(overrides: DialogProps = {}, { useRealAutoComplete = false } = {}) {
   return mount(TopBarTimerTaskDialog, {
+    attachTo: useRealAutoComplete ? document.body : undefined,
     props: {
       createTaskErrorMessage: null,
       createTaskTitle: "Write release checklist",
@@ -94,8 +96,9 @@ function mountDialog(overrides: DialogProps = {}) {
       ...overrides,
     },
     global: {
+      plugins: useRealAutoComplete ? [[PrimeVue, { unstyled: true }]] : [],
       stubs: {
-        AutoComplete: {
+        AutoComplete: useRealAutoComplete ? false : {
           name: "AutoComplete",
           props: [
             "appendTo",
@@ -122,7 +125,7 @@ function mountDialog(overrides: DialogProps = {}) {
             },
           },
           template:
-            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+            '<input :class="$attrs.class" :data-append-to="appendTo ?? \'\'" :data-dropdown="String(dropdown !== undefined && dropdown !== false)" :data-fluid="String(fluid !== undefined && fluid !== false)" :data-force-selection="String(forceSelection !== undefined && forceSelection !== false)" :data-loading="String(loading !== undefined && loading !== false)" :disabled="disabled" :value="displayValue" @focus="$emit(\'complete\', { originalEvent: $event, query: displayValue })" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         Button: {
           props: ["disabled", "fluid", "label", "loading", "severity", "size", "variant"],
@@ -140,7 +143,7 @@ function mountDialog(overrides: DialogProps = {}) {
           template:
             '<div v-if="$attrs.visible !== false" data-testid="timer-task-dialog" :data-block-scroll="String(blockScroll)" :data-closable="String(closable)" :data-content-class="pt.content" :data-root-class="pt.root"><slot name="header" /><button v-if="closable" data-testid="timer-task-dialog-close" type="button" @click="$emit(\'update:visible\', false)">Close</button><slot /></div>',
         },
-        InputText: {
+        InputText: useRealAutoComplete ? false : {
           props: ["modelValue", "disabled", "invalid"],
           emits: ["update:modelValue"],
           template:
@@ -191,12 +194,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(autoCompletes[0]?.props("minLength")).toBe(0);
     expect(autoCompletes[1]?.props("dropdownMode")).toBe("blank");
     expect(autoCompletes[1]?.props("minLength")).toBe(0);
+    expect(autoCompletes[0]?.attributes("data-append-to")).toBe("self");
+    expect(autoCompletes[1]?.attributes("data-append-to")).toBe("body");
     for (const autoComplete of autoCompletes) {
       expect(autoComplete.classes()).toContain("w-full");
       expect(autoComplete.classes()).toContain("max-w-full");
       expect(autoComplete.classes()).toContain("min-w-0");
       expect(autoComplete.attributes("data-dropdown")).toBe("true");
-      expect(autoComplete.attributes("data-append-to")).toBe("self");
       expect(autoComplete.attributes("data-fluid")).toBe("true");
       expect(autoComplete.attributes("data-force-selection")).toBe("true");
     }
@@ -304,6 +308,57 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(runningWrapper, "Stop timer")?.attributes("data-loading")).toBe("false");
   });
 
+  it("shows all projects on focus and only filters after typing", async () => {
+    const wrapper = mountDialog(
+      {
+        projectOptions: [projectOrion, internalOpsProject],
+        githubProjectOptions: [{ id: "PVT_board", title: "Ops roadmap" }],
+      },
+      { useRealAutoComplete: true },
+    );
+
+    try {
+      const input = wrapper.get<HTMLInputElement>("#top-bar-timer-project");
+      const optionLabels = () => wrapper
+        .findAll('[role="option"][aria-label]')
+        .map((option) => option.text());
+
+      expect(input.element.value).toBe("Project Orion");
+      input.element.focus();
+      await nextTick();
+      expect(input.attributes("aria-expanded")).toBe("true");
+      expect(optionLabels()).toEqual(["Project Orion", "Internal Ops", "Ops roadmap"]);
+
+      vi.useFakeTimers();
+      input.element.value = "ops";
+      await input.trigger("input");
+      await vi.runOnlyPendingTimersAsync();
+      expect(optionLabels()).toEqual(["Internal Ops", "Ops roadmap"]);
+    } finally {
+      wrapper.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps the Task list outside the scrollable dialog and contains its scrolling", async () => {
+    const wrapper = mountDialog({}, { useRealAutoComplete: true });
+
+    try {
+      const input = wrapper.get<HTMLInputElement>("#top-bar-timer-task");
+      input.element.focus();
+      await nextTick();
+
+      const overlay = document.getElementById(input.attributes("aria-controls") ?? "");
+      expect(overlay).not.toBeNull();
+      expect(wrapper.element.contains(overlay)).toBe(false);
+      const listContainer = overlay?.querySelector('[data-pc-section="listcontainer"]');
+      expect(listContainer?.classList.contains("overscroll-y-contain")).toBe(true);
+      expect(listContainer?.querySelector('[role="option"]:last-child')?.textContent).toBe("New task");
+    } finally {
+      wrapper.unmount();
+    }
+  });
+
   it("filters predictive search suggestions by typed text", async () => {
     const wrapper = mountDialog({
       projectOptions: [projectOrion, internalOpsProject],
@@ -311,7 +366,10 @@ describe("TopBarTimerTaskDialog", () => {
     });
     const autoCompletes = wrapper.findAllComponents({ name: "AutoComplete" });
 
-    await autoCompletes[0]?.vm.$emit("complete", { query: "ops" });
+    await autoCompletes[0]?.vm.$emit("complete", {
+      originalEvent: new Event("input"),
+      query: "ops",
+    });
     await autoCompletes[1]?.vm.$emit("complete", { query: "alert" });
     await nextTick();
 
@@ -544,8 +602,9 @@ describe("TopBarTimerTaskDialog", () => {
     expect(wrapper.text()).toContain(
       "Stop the running timer before starting or changing tasks in this workspace.",
     );
-    expect(wrapper.get('[data-testid="top-bar-timer-dialog-workspace-label"]').text()).toBe(
-      "Running in Workspace Alpha",
+    const crossWorkspaceState = wrapper.get('[data-testid="top-bar-timer-cross-workspace-state"]');
+    expect(crossWorkspaceState.text().replace(/\s+/g, " ")).toContain(
+      "Running in Workspace Alpha. GiTiempo tracks one timer at a time.",
     );
     expect(wrapper.findAllComponents({ name: "AutoComplete" })).toHaveLength(0);
     expect(wrapper.find("textarea").exists()).toBe(false);
@@ -619,12 +678,13 @@ describe("TopBarTimerTaskDialog", () => {
     expect(findButtonByLabel(wrapper, "Cancel")).toBeUndefined();
     expect(wrapper.findAll("select")).toHaveLength(0);
     expect(predictiveFields).toHaveLength(2);
+    expect(predictiveFields[0]?.attributes("data-append-to")).toBe("self");
+    expect(predictiveFields[1]?.attributes("data-append-to")).toBe("body");
     for (const predictiveField of predictiveFields) {
       expect(predictiveField.classes()).toContain("min-w-0");
       expect(predictiveField.classes()).toContain("max-w-full");
       expect(predictiveField.classes()).toContain("w-full");
       expect(predictiveField.attributes("data-dropdown")).toBe("true");
-      expect(predictiveField.attributes("data-append-to")).toBe("self");
       expect(predictiveField.attributes("data-fluid")).toBe("true");
       expect(predictiveField.attributes("data-force-selection")).toBe("true");
     }

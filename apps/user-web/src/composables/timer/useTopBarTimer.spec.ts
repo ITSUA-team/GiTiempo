@@ -254,6 +254,7 @@ function createClientMock(): TimeEntriesClient & {
       createTask(TEST_IDS.task, TEST_IDS.project, 'GitHub issue'),
     ),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    getTask: vi.fn(),
     listGitHubOwners: vi.fn(),
     listGitHubProjectIssues: vi.fn(),
     listGitHubProjects: vi.fn(),

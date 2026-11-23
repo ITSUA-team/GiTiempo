@@ -26,6 +26,30 @@ import {
 import { ADMIN_EMAIL, ADMIN_UID, bearer, login } from './helpers/auth';
 import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
 
+const completeDocument = {
+  sender: {
+    name: 'Issuer',
+    address: 'Kyiv',
+    email: 'issuer@example.com',
+    taxId: '',
+  },
+  recipient: {
+    name: 'Client',
+    address: 'Berlin',
+    email: 'client@example.com',
+    taxId: '',
+  },
+  services: 'Development',
+  payment: {
+    method: 'Bank transfer',
+    beneficiary: 'Issuer',
+    provider: 'Bank',
+    account: 'ACCOUNT',
+    terms: '',
+    instructions: '',
+  },
+};
+
 const DATE_FROM = '2027-06-01';
 const DATE_TO = '2027-06-30';
 const ISO_FROM = '2027-06-01T00:00:00.000Z';
@@ -337,6 +361,289 @@ describe('Invoices (e2e)', () => {
     return row?.step ?? null;
   }
 
+  describe('complete saved invoice documents', () => {
+    const completeInput = {
+      ...completeDocument,
+      title: 'Complete document acceptance',
+      dateFrom: '2099-10-01',
+      dateTo: '2099-10-31',
+      hourlyRate: 0,
+      currency: 'USD',
+      timeEntryIds: [],
+    };
+
+    it.each([
+      ['sender', { sender: null }],
+      ['recipient', { recipient: null }],
+      [
+        'sender.address',
+        { sender: { ...completeDocument.sender, address: '   ' } },
+      ],
+      [
+        'recipient.email',
+        { recipient: { ...completeDocument.recipient, email: '' } },
+      ],
+      ['services', { services: '  ' }],
+      [
+        'payment.account',
+        { payment: { ...completeDocument.payment, account: '' } },
+      ],
+      [
+        'payment.provider',
+        { payment: { ...completeDocument.payment, provider: '' } },
+      ],
+      [
+        'payment.paymentUrl',
+        {
+          payment: {
+            ...completeDocument.payment,
+            method: 'Card',
+            paymentUrl: '',
+          },
+        },
+      ],
+    ])(
+      'rejects direct incomplete creation at %s without inserting a row',
+      async (path, override) => {
+        const before = await db
+          .select({ id: invoices.id })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, workspaceId));
+        const result = await request(app.getHttpServer())
+          .post('/invoices')
+          .set('Authorization', bearer(adminToken))
+          .send({ ...completeInput, projectId: publicProjectId, ...override });
+        expect(result.status).toBe(422);
+        expect(result.body).toMatchObject({
+          code: 'invoice_document_incomplete',
+          details: { fieldErrors: { [path as string]: expect.any(String) } },
+        });
+        const after = await db
+          .select({ id: invoices.id })
+          .from(invoices)
+          .where(eq(invoices.workspaceId, workspaceId));
+        expect(after).toEqual(before);
+      },
+    );
+
+    it.each(['sender', 'payment'] as const)(
+      'rejects explicit null %s despite a valid billing profile without inserting a row',
+      async (field) => {
+        const settingsScope = eq(workspaceSettings.workspaceId, workspaceId);
+        const [original] = await db
+          .select({ billingProfile: workspaceSettings.billingProfile })
+          .from(workspaceSettings)
+          .where(settingsScope);
+        const title = `Explicit null ${field} with billing defaults`;
+        const invoiceScope = and(
+          eq(invoices.workspaceId, workspaceId),
+          eq(invoices.title, title),
+        );
+
+        try {
+          await request(app.getHttpServer())
+            .patch('/workspace/settings')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              billingProfile: {
+                sender: completeDocument.sender,
+                payment: completeDocument.payment,
+                logo: null,
+                invoicePrefix: 'NULL-OVERRIDE',
+              },
+            })
+            .expect(200);
+
+          const result = await request(app.getHttpServer())
+            .post('/invoices')
+            .set('Authorization', bearer(adminToken))
+            .send({
+              ...completeInput,
+              title,
+              projectId: publicProjectId,
+              [field]: null,
+            });
+
+          expect(result.status).toBe(422);
+          expect(result.body).toMatchObject({
+            code: 'invoice_document_incomplete',
+            details: { fieldErrors: { [field]: expect.any(String) } },
+          });
+          expect(
+            await db
+              .select({ id: invoices.id })
+              .from(invoices)
+              .where(invoiceScope),
+          ).toEqual([]);
+        } finally {
+          await db
+            .update(workspaceSettings)
+            .set({ billingProfile: original.billingProfile })
+            .where(settingsScope);
+          await db.delete(invoices).where(invoiceScope);
+        }
+      },
+    );
+
+    it.each([
+      completeDocument.payment,
+      {
+        ...completeDocument.payment,
+        method: 'Card',
+        provider: 'Stripe',
+        beneficiary: '',
+        account: '',
+        paymentUrl: 'https://pay.example.com/invoice',
+      },
+      {
+        ...completeDocument.payment,
+        method: 'Other',
+        beneficiary: '',
+        provider: '',
+        account: 'Contact our billing team',
+      },
+      {
+        ...completeDocument.payment,
+        method: 'Custom method',
+        beneficiary: '',
+        provider: '',
+        account: 'Custom details',
+      },
+    ])(
+      'saves and exports a complete zero-entry Draft for $method',
+      async (payment) => {
+        const result = await request(app.getHttpServer())
+          .post('/invoices')
+          .set('Authorization', bearer(adminToken))
+          .send({ ...completeInput, projectId: publicProjectId, payment });
+        expect(result.status).toBe(201);
+        try {
+          expect(result.body).toMatchObject({
+            status: 'draft',
+            totalHours: 0,
+            totalAmount: 0,
+            hourlyRate: 0,
+            timeEntries: [],
+            payment: { method: payment.method },
+          });
+          const pdf = await request(app.getHttpServer())
+            .get(`/invoices/${result.body.id}/pdf`)
+            .set('Authorization', bearer(adminToken));
+          expect(pdf.status).toBe(200);
+          expect(pdf.headers['content-type']).toContain('application/pdf');
+          const revised = await request(app.getHttpServer())
+            .patch(`/invoices/${result.body.id}`)
+            .set('Authorization', bearer(adminToken))
+            .send({
+              notes: 'Reviewed',
+              expectedRevision: result.body.revision,
+            });
+          expect(revised.status).toBe(200);
+          expect(revised.body).toMatchObject({
+            status: 'draft',
+            notes: 'Reviewed',
+            sender: completeDocument.sender,
+            recipient: completeDocument.recipient,
+          });
+        } finally {
+          await db.delete(invoices).where(eq(invoices.id, result.body.id));
+        }
+      },
+    );
+
+    it('keeps historical reads and preview available but requires completion for every document/status write', async () => {
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({ ...completeInput, projectId: publicProjectId });
+      expect(created.status).toBe(201);
+      const id: string = created.body.id;
+      try {
+        const [row] = await db
+          .select()
+          .from(invoices)
+          .where(eq(invoices.id, id));
+        await db
+          .update(invoices)
+          .set({
+            document: {
+              ...row.document,
+              recipient: { ...completeDocument.recipient, email: '' },
+            },
+          })
+          .where(eq(invoices.id, id));
+        const detail = await request(app.getHttpServer())
+          .get('/invoices/' + id)
+          .set('Authorization', bearer(adminToken));
+        expect(detail.status).toBe(200);
+        expect(detail.body.recipient.email).toBe('');
+        const preview = await request(app.getHttpServer())
+          .post('/invoices/preview')
+          .set('Authorization', bearer(adminToken))
+          .send({
+            invoiceId: id,
+            title: completeInput.title,
+            projectId: publicProjectId,
+            dateFrom: completeInput.dateFrom,
+            dateTo: completeInput.dateTo,
+            hourlyRate: 0,
+            currency: 'USD',
+            timeEntryIds: [],
+          });
+        expect(preview.status).toBe(201);
+        for (const patch of [
+          { status: 'draft' },
+          { status: 'sent' },
+          { timeDisplayMode: 'tasks' },
+          { notes: 'Needs correction', groupId: null },
+        ]) {
+          const rejected = await request(app.getHttpServer())
+            .patch('/invoices/' + id)
+            .set('Authorization', bearer(adminToken))
+            .send({ ...patch, expectedRevision: created.body.revision });
+          expect(rejected.status).toBe(422);
+          expect(rejected.body.details.fieldErrors['recipient.email']).toEqual(
+            expect.any(String),
+          );
+        }
+        const invalidPdf = await request(app.getHttpServer())
+          .get(`/invoices/${id}/pdf`)
+          .set('Authorization', bearer(adminToken));
+        expect(invalidPdf.status).toBe(422);
+        expect(invalidPdf.body.details.fieldErrors['recipient.email']).toEqual(
+          expect.any(String),
+        );
+        const [unchanged] = await db
+          .select()
+          .from(invoices)
+          .where(eq(invoices.id, id));
+        expect(unchanged).toMatchObject({
+          revision: row.revision,
+          status: row.status,
+          notes: row.notes,
+          totalHours: row.totalHours,
+          totalAmount: row.totalAmount,
+        });
+        const completed = await request(app.getHttpServer())
+          .patch('/invoices/' + id)
+          .set('Authorization', bearer(adminToken))
+          .send({
+            recipient: completeDocument.recipient,
+            expectedRevision: row.revision,
+          });
+        expect(completed.status).toBe(200);
+        const changed = await request(app.getHttpServer())
+          .patch('/invoices/' + id)
+          .set('Authorization', bearer(adminToken))
+          .send({ status: 'sent', expectedRevision: completed.body.revision });
+        expect(changed.status).toBe(200);
+        expect(changed.body.status).toBe('sent');
+      } finally {
+        await db.delete(invoices).where(eq(invoices.id, id));
+      }
+    });
+  });
+
   // ── Authorization ─────────────────────────────────────────────────────
 
   it('rejects members on list, create, get, update, and delete', async () => {
@@ -350,7 +657,12 @@ describe('Invoices (e2e)', () => {
     const createRes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(memberToken))
-      .send({ title: 'Test', dateFrom: DATE_FROM, dateTo: DATE_TO });
+      .send({
+        ...completeDocument,
+        title: 'Test',
+        dateFrom: DATE_FROM,
+        dateTo: DATE_TO,
+      });
     expect(createRes.status).toBe(403);
 
     const getRes = await request(app.getHttpServer())
@@ -376,6 +688,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'PM Delete Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -403,6 +716,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Platform Invoice',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -432,6 +746,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Platform Invoice 2',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -464,6 +779,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Running Entry Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -490,6 +806,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(pmToken))
       .send({
+        ...completeDocument,
         title: 'Probe Invoice',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -505,6 +822,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(pmToken))
       .send({
+        ...completeDocument,
         title: 'Client Invoice by PM',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -521,6 +839,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(pmToken))
       .send({
+        ...completeDocument,
         title: 'Public Invoice by PM',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -547,6 +866,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(pmToken))
       .send({
+        ...completeDocument,
         title: 'Workspace-wide Invoice via PM',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -561,6 +881,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Default Rate Invoice',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -581,6 +902,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Bad',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -592,6 +914,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Bad Discount',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -604,6 +927,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Reversed',
         dateFrom: DATE_TO,
         dateTo: DATE_FROM,
@@ -631,7 +955,7 @@ describe('Invoices (e2e)', () => {
               const created = await request(app.getHttpServer())
                 .post('/invoices')
                 .set('Authorization', bearer(adminToken))
-                .send(input);
+                .send({ ...completeDocument, ...input });
               expect(created.status).toBe(201);
               invoiceId = created.body.id;
             }
@@ -685,6 +1009,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Discount Probe',
         dateFrom: '2027-07-01',
         dateTo: '2027-07-31',
@@ -712,6 +1037,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Currency Probe',
         dateFrom: '2099-06-01',
         dateTo: '2099-06-30',
@@ -735,21 +1061,35 @@ describe('Invoices (e2e)', () => {
     const withNotes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
-      .send({ title: 'Notes Probe', ...base, notes: 'Preliminary notes' });
+      .send({
+        ...completeDocument,
+        title: 'Notes Probe',
+        ...base,
+        notes: 'Preliminary notes',
+      });
     expect(withNotes.status).toBe(201);
     expect(withNotes.body.notes).toBe('Preliminary notes');
 
     const omittedNotes = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
-      .send({ title: 'Notes Omitted Probe', ...base });
+      .send({
+        ...completeDocument,
+        title: 'Notes Omitted Probe',
+        ...base,
+      });
     expect(omittedNotes.status).toBe(201);
     expect(omittedNotes.body.notes).toBeNull();
 
     const explicitNull = await request(app.getHttpServer())
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
-      .send({ title: 'Notes Null Probe', ...base, notes: null });
+      .send({
+        ...completeDocument,
+        title: 'Notes Null Probe',
+        ...base,
+        notes: null,
+      });
     expect(explicitNull.status).toBe(201);
     expect(explicitNull.body.notes).toBeNull();
 
@@ -795,6 +1135,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Public Scope Invoice',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -867,6 +1208,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Status Filter Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -906,6 +1248,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'MixedCase Probe Alpha',
         dateFrom: '2099-08-01',
         dateTo: '2099-08-31',
@@ -959,6 +1302,7 @@ describe('Invoices (e2e)', () => {
           .post('/invoices')
           .set('Authorization', bearer(adminToken))
           .send({
+            ...completeDocument,
             title,
             dateFrom: '2099-09-01',
             dateTo: '2099-09-30',
@@ -1001,6 +1345,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Date Bound A',
         dateFrom: '2099-01-05',
         dateTo: '2099-01-10',
@@ -1011,6 +1356,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Date Bound B',
         dateFrom: '2099-02-15',
         dateTo: '2099-02-20',
@@ -1050,6 +1396,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Combined Probe',
         dateFrom: '2099-03-10',
         dateTo: '2099-03-20',
@@ -1099,6 +1446,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title,
           dateFrom: '2099-04-01',
           dateTo: '2099-04-30',
@@ -1383,6 +1731,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'PM destination',
         projectId: publicProjectId,
         dateFrom: DATE_FROM,
@@ -1413,6 +1762,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Group race',
         projectId: publicProjectId,
         dateFrom: DATE_FROM,
@@ -1477,6 +1827,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'PM destination race',
         projectId: publicProjectId,
         dateFrom: DATE_FROM,
@@ -1540,6 +1891,78 @@ describe('Invoices (e2e)', () => {
     }
   });
 
+  it('isolates workspace timezone reads when multiple workspace settings exist', async () => {
+    const [other] = await db
+      .insert(workspaces)
+      .values({ name: 'Invoice timezone isolation' })
+      .returning();
+    const [original] = await db
+      .select()
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    let invoiceId: string | undefined;
+    try {
+      await db
+        .insert(workspaceSettings)
+        .values({ workspaceId: other.id, timeZone: 'Pacific/Honolulu' });
+      await db
+        .update(workspaceSettings)
+        .set({ timeZone: 'Pacific/Kiritimati' })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const created = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...completeDocument,
+          title: 'Workspace timezone isolation',
+          dateFrom: '2099-11-01',
+          dateTo: '2099-11-30',
+          hourlyRate: 0,
+          currency: 'USD',
+          timeEntryIds: [],
+        });
+      expect(created.status).toBe(201);
+      invoiceId = created.body.id;
+      expect(created.body.issueDate).toBe(
+        new Intl.DateTimeFormat('sv-SE', {
+          timeZone: 'Pacific/Kiritimati',
+        }).format(new Date()),
+      );
+      const detail = await request(app.getHttpServer())
+        .get('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken));
+      expect(detail.status).toBe(200);
+      expect(detail.body.issueDate).toBe(created.body.issueDate);
+      const list = await request(app.getHttpServer())
+        .get('/invoices')
+        .query({ search: 'Workspace timezone isolation' })
+        .set('Authorization', bearer(adminToken));
+      expect(list.status).toBe(200);
+      expect(list.body.items).toContainEqual(
+        expect.objectContaining({
+          id: invoiceId,
+          issueDate: created.body.issueDate,
+        }),
+      );
+      const updated = await request(app.getHttpServer())
+        .patch('/invoices/' + invoiceId)
+        .set('Authorization', bearer(adminToken))
+        .send({
+          notes: 'Timezone read validated',
+          expectedRevision: created.body.revision,
+        });
+      expect(updated.status).toBe(200);
+    } finally {
+      if (invoiceId)
+        await db.delete(invoices).where(eq(invoices.id, invoiceId));
+      await db
+        .update(workspaceSettings)
+        .set({ timeZone: original!.timeZone })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      await db.delete(workspaces).where(eq(workspaces.id, other.id));
+    }
+  });
+
   it.each(['Pacific/Kiritimati', 'America/Los_Angeles'])(
     'defaults omitted issueDate using workspace %s',
     async (timeZone) => {
@@ -1570,6 +1993,7 @@ describe('Invoices (e2e)', () => {
             workspaceId,
           },
           {
+            ...completeDocument,
             title: 'Timezone default',
             projectId: publicProjectId,
             dateFrom: DATE_FROM,
@@ -1609,6 +2033,7 @@ describe('Invoices (e2e)', () => {
         .post(endpoint)
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Explicit conflict',
           projectId: probeProjectId,
           dateFrom: DATE_FROM,
@@ -1637,6 +2062,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'PM Patch Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -1664,6 +2090,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Workspace-wide Probe',
         dateFrom: '2099-05-01',
         dateTo: '2099-05-31',
@@ -1695,6 +2122,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Transition Probe sent-to-draft',
         dateFrom: '2099-06-01',
         dateTo: '2099-06-30',
@@ -1728,6 +2156,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Transition Probe paid-to-draft',
         dateFrom: '2099-07-01',
         dateTo: '2099-07-31',
@@ -1760,6 +2189,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Transition Probe paid-to-sent',
         dateFrom: '2099-08-01',
         dateTo: '2099-08-31',
@@ -1790,6 +2220,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Transition Probe draft-to-paid',
         dateFrom: '2099-09-01',
         dateTo: '2099-09-30',
@@ -1828,6 +2259,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Concurrent status probe',
           projectId: probeProjectId,
           dateFrom: '2027-06-28',
@@ -1928,6 +2360,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Sent Invoice No Delete',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -1962,6 +2395,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Paid Invoice No Delete',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -1989,6 +2423,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Concurrent Delete Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -2048,6 +2483,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Delete Probe Invoice',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -2101,6 +2537,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Re-bill Probe',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,
@@ -2159,6 +2596,7 @@ describe('Invoices (e2e)', () => {
 
     // Fire two concurrent create requests targeting the same entry.
     const body = {
+      ...completeDocument,
       title: 'Concurrent Probe',
       dateFrom: DATE_FROM,
       dateTo: DATE_TO,
@@ -2174,7 +2612,11 @@ describe('Invoices (e2e)', () => {
       request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
-        .send({ ...body, title: 'Concurrent Probe 2' }),
+        .send({
+          ...completeDocument,
+          ...body,
+          title: 'Concurrent Probe 2',
+        }),
     ]);
 
     // Both should return 201 (both create invoices), but the entry should
@@ -2433,6 +2875,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Stats Workspace-wide Probe',
         dateFrom: '2099-11-01',
         dateTo: '2099-11-30',
@@ -2477,6 +2920,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Stats PM Assigned Probe',
         dateFrom: '2099-10-01',
         dateTo: '2099-10-31',
@@ -2643,6 +3087,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Rounded Invoice',
         dateFrom: '2099-09-01',
         dateTo: '2099-09-30',
@@ -2714,6 +3159,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Override Step Invoice',
         dateFrom: '2099-11-04',
         dateTo: '2099-11-28',
@@ -2758,6 +3204,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Project Step Invoice',
         dateFrom: '2099-10-02',
         dateTo: '2099-10-29',
@@ -2807,6 +3254,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Inherit Step Invoice',
           dateFrom: '2099-11-04',
           dateTo: '2099-11-28',
@@ -2875,6 +3323,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Workspace Step Invoice',
           dateFrom: '2099-08-01',
           dateTo: '2099-08-31',
@@ -2927,6 +3376,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(pmToken))
         .send({
+          ...completeDocument,
           title: 'PM Project Step Invoice',
           dateFrom: '2099-11-01',
           dateTo: '2099-11-30',
@@ -2965,6 +3415,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Invalid Step',
           dateFrom: DATE_FROM,
           dateTo: DATE_TO,
@@ -3142,6 +3593,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Rounding Snapshot Immutability Invoice',
           dateFrom: '2099-12-01',
           dateTo: '2099-12-31',
@@ -3178,6 +3630,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Revision acceptance',
         projectId: publicProjectId,
         dateFrom: '2098-01-01',
@@ -3190,14 +3643,19 @@ describe('Invoices (e2e)', () => {
           email: 'billing@example.com',
           taxId: '',
         },
-        recipient: { name: 'Customer', address: '', email: '', taxId: '' },
+        recipient: {
+          name: 'Customer',
+          address: 'Berlin',
+          email: 'customer@example.com',
+          taxId: '',
+        },
         services: 'Development',
         payment: {
           method: 'Bank transfer',
           account: 'DEMO',
           terms: '',
-          beneficiary: '',
-          provider: '',
+          beneficiary: 'Issuer',
+          provider: 'Bank',
           instructions: '',
         },
       });
@@ -3532,15 +3990,15 @@ describe('Invoices (e2e)', () => {
       roundingStepMinutes: 15,
       discountPercent: 10,
       timeEntryIds: entries.slice(0, 2).map((line) => line.id),
-      sender: { name: 'Issuer', address: '', email: '', taxId: '' },
-      recipient: { name: 'Client', address: '', email: '', taxId: '' },
+      sender: completeDocument.sender,
+      recipient: completeDocument.recipient,
       services: 'Development',
       payment: {
         method: 'Bank transfer',
         terms: '',
-        beneficiary: '',
-        provider: '',
-        account: '',
+        beneficiary: 'Issuer',
+        provider: 'Bank',
+        account: 'ACCOUNT',
         instructions: '',
       },
     };
@@ -3569,7 +4027,11 @@ describe('Invoices (e2e)', () => {
       const created = await request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(pmToken))
-        .send({ ...scope, timeDisplayMode: 'tasks' });
+        .send({
+          ...completeDocument,
+          ...scope,
+          timeDisplayMode: 'tasks',
+        });
       expect(created.status).toBe(201);
       invoiceId = created.body.id;
       expect(created.body).toMatchObject({
@@ -3730,7 +4192,12 @@ describe('Invoices (e2e)', () => {
       const inaccessible = await request(app.getHttpServer())
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
-        .send({ ...scope, projectId: probeProjectId, timeEntryIds: [] });
+        .send({
+          ...completeDocument,
+          ...scope,
+          projectId: probeProjectId,
+          timeEntryIds: [],
+        });
       expect(inaccessible.status).toBe(201);
       privateInvoiceId = inaccessible.body.id;
       expect(inaccessible.body.timeDisplayMode).toBe('entries');
@@ -3787,6 +4254,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           title: 'Selection revision',
           dateFrom: '2097-01-01',
           dateTo: '2097-01-31',
@@ -3823,6 +4291,22 @@ describe('Invoices (e2e)', () => {
         totalAmount: 90,
         currency: 'USD',
       });
+      const [completeRow] = await db
+        .select()
+        .from(invoices)
+        .where(eq(invoices.id, invoiceId!));
+      await db
+        .update(invoices)
+        .set({
+          document: {
+            ...completeRow.document,
+            sender: null,
+            recipient: null,
+            services: null,
+            payment: null,
+          },
+        })
+        .where(eq(invoices.id, invoiceId!));
       const missing = await request(app.getHttpServer())
         .get('/invoices/' + invoiceId + '/pdf')
         .set('Authorization', bearer(adminToken));
@@ -3838,6 +4322,10 @@ describe('Invoices (e2e)', () => {
         'application/pdf',
       );
 
+      await db
+        .update(invoices)
+        .set({ document: completeRow.document })
+        .where(eq(invoices.id, invoiceId!));
       await db
         .update(timeEntries)
         .set({
@@ -3875,11 +4363,11 @@ describe('Invoices (e2e)', () => {
         timeEntryIds: [entryId],
         notes: 'Send with receipt',
         payment: {
-          method: '',
+          method: 'Other',
           terms: '',
-          beneficiary: '',
-          provider: '',
-          account: '',
+          beneficiary: 'Issuer',
+          provider: 'Bank',
+          account: 'Payment details',
           instructions: 'Use {{invoiceReference}}',
         },
       };
@@ -3961,6 +4449,7 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(adminToken))
         .send({
+          ...completeDocument,
           ...scope,
           hourlyRate: 10,
           currency: 'USD',
@@ -4011,6 +4500,104 @@ describe('Invoices (e2e)', () => {
       if (invoiceId)
         await db.delete(invoices).where(eq(invoices.id, invoiceId));
       await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+    }
+  });
+  it('rolls back creation when reference expansion exceeds payment instructions limits', async () => {
+    const [original] = await db
+      .select()
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspaceId));
+    const [entry] = await db
+      .insert(timeEntries)
+      .values({
+        workspaceId,
+        taskId: probeTaskId,
+        userId: bobUserId,
+        source: 'manual',
+        isBillable: true,
+        startedAt: new Date('2095-01-07T10:00:00Z'),
+        endedAt: new Date('2095-01-07T11:00:00Z'),
+        durationSeconds: 3600,
+      })
+      .returning({ id: timeEntries.id });
+    const title = 'Reference expansion rollback';
+    try {
+      await db
+        .update(workspaceSettings)
+        .set({
+          billingProfile: {
+            sender: completeDocument.sender,
+            payment: completeDocument.payment,
+            logo: null,
+            invoicePrefix: 'P'.repeat(40),
+          },
+        })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
+      const placeholder = '{{invoiceReference}}';
+      const payload = {
+        ...completeDocument,
+        title,
+        projectId: probeProjectId,
+        dateFrom: '2095-01-01',
+        dateTo: '2095-01-31',
+        hourlyRate: 10,
+        currency: 'USD',
+        timeEntryIds: [entry.id],
+        payment: {
+          ...completeDocument.payment,
+          instructions: 'x'.repeat(5000 - placeholder.length) + placeholder,
+        },
+      };
+      const rejected = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send(payload);
+      expect(rejected.status).toBe(422);
+      expect(rejected.body).toMatchObject({
+        code: 'invoice_document_incomplete',
+        details: {
+          fieldErrors: { 'payment.instructions': expect.any(String) },
+        },
+      });
+      expect(
+        await db
+          .select()
+          .from(invoices)
+          .where(
+            and(
+              eq(invoices.workspaceId, workspaceId),
+              eq(invoices.title, title),
+            ),
+          ),
+      ).toEqual([]);
+      const [unchangedEntry] = await db
+        .select({ invoiceId: timeEntries.invoiceId })
+        .from(timeEntries)
+        .where(eq(timeEntries.id, entry.id));
+      expect(unchangedEntry.invoiceId).toBeNull();
+      const retried = await request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          ...payload,
+          payment: { ...payload.payment, instructions: 'Use ' + placeholder },
+        });
+      expect(retried.status).toBe(201);
+      expect(retried.body.payment.instructions).toBe(
+        'Use ' + retried.body.reference,
+      );
+      expect(retried.body.timeEntryCount).toBe(1);
+    } finally {
+      await db
+        .delete(invoices)
+        .where(
+          and(eq(invoices.workspaceId, workspaceId), eq(invoices.title, title)),
+        );
+      await db.delete(timeEntries).where(eq(timeEntries.id, entry.id));
+      await db
+        .update(workspaceSettings)
+        .set({ billingProfile: original.billingProfile })
+        .where(eq(workspaceSettings.workspaceId, workspaceId));
     }
   });
   it('limits defaults access and preserves historical billing identity after Admin replacement', async () => {
@@ -4102,6 +4689,8 @@ describe('Invoices (e2e)', () => {
         .post('/invoices')
         .set('Authorization', bearer(pmToken))
         .send({
+          recipient: completeDocument.recipient,
+          services: completeDocument.services,
           title: 'Saved billing identity',
           projectId: publicProjectId,
           dateFrom: '2094-01-01',
@@ -4163,6 +4752,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Scope race',
         projectId: probeProjectId,
         dateFrom: '2093-01-01',
@@ -4219,6 +4809,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Status matrix',
         dateFrom: '2096-01-01',
         dateTo: '2096-01-31',
@@ -4265,6 +4856,7 @@ describe('Invoices (e2e)', () => {
       .post('/invoices')
       .set('Authorization', bearer(adminToken))
       .send({
+        ...completeDocument,
         title: 'Invoice dates regression',
         dateFrom: DATE_FROM,
         dateTo: DATE_TO,

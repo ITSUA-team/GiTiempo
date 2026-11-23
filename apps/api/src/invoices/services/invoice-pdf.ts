@@ -6,33 +6,21 @@ import {
   groupInvoiceTimeByTask,
   type InvoiceResponse,
 } from '@gitiempo/shared';
-import { HttpException } from '@nestjs/common';
+import { requireCompleteInvoiceDocument } from './invoice-document-validation';
 import { COLOR } from '../../reports/services/report-pdf-theme';
 
 export async function renderInvoicePdf(
   invoice: InvoiceResponse,
+  timeZone = 'UTC',
 ): Promise<Buffer> {
-  if (
-    !invoice.sender?.name ||
-    !invoice.recipient?.name ||
-    !invoice.services ||
-    !invoice.payment?.method
-  ) {
-    const missingFields = [
-      ...(!invoice.sender?.name ? ['sender'] : []),
-      ...(!invoice.recipient?.name ? ['recipient'] : []),
-      ...(!invoice.services ? ['services'] : []),
-      ...(!invoice.payment?.method ? ['payment'] : []),
-    ];
-    throw new HttpException(
-      {
-        code: 'invoice_document_incomplete',
-        message: 'Complete the missing billing sections before export',
-        details: { missingFields },
-      },
-      422,
-    );
-  }
+  const documentFields = requireCompleteInvoiceDocument({
+    ...invoice,
+    issueDate:
+      invoice.issueDate ??
+      new Intl.DateTimeFormat('sv-SE', { timeZone }).format(
+        new Date(invoice.createdAt),
+      ),
+  });
   const fontPath = (weight: string) =>
     join(__dirname, '../../reports/assets', `Inter-${weight}.ttf`);
   const regular = fontPath('Regular');
@@ -51,10 +39,10 @@ export async function renderInvoicePdf(
       bolditalics: semibold,
     },
   });
-  const sender = invoice.sender;
-  const services = invoice.services;
-  const recipient = invoice.recipient;
-  const payment = invoice.payment;
+  const sender = documentFields.sender;
+  const services = documentFields.services;
+  const recipient = documentFields.recipient;
+  const payment = documentFields.payment;
   const subtotal = computeInvoiceAmount(invoice.totalHours, invoice.hourlyRate);
   const seconds = invoice.timeEntries.reduce(
     (sum, e) => sum + e.roundedDurationSeconds,
@@ -304,7 +292,7 @@ export async function renderInvoicePdf(
           identification('Invoice number', invoice.reference ?? invoice.id, 12),
           identification(
             'Issue date',
-            dateFormat.format(new Date(invoice.issueDate ?? invoice.createdAt)),
+            dateFormat.format(new Date(documentFields.issueDate)),
           ),
           ...(invoice.dueDate
             ? [

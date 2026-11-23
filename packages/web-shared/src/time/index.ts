@@ -1,5 +1,6 @@
 import {
   addDays,
+  addMonths,
   differenceInMinutes,
   differenceInSeconds,
   format,
@@ -9,6 +10,7 @@ import {
   parse,
   parseISO,
   startOfDay,
+  startOfMonth,
   startOfWeek,
 } from 'date-fns';
 
@@ -237,6 +239,24 @@ export function startOfUtcIsoWeek(date: Date): Date {
 
 export function startOfLocalIsoWeek(date: Date): Date {
   return startOfWeek(date, { weekStartsOn: 1 });
+}
+
+export function startOfLocalMonth(date: Date): Date {
+  return startOfMonth(date);
+}
+
+export function nextLocalMonthStart(date: Date): Date {
+  return addMonths(startOfLocalMonth(date), 1);
+}
+
+export function getLocalMonthRange(now = new Date()): {
+  dateFrom: string;
+  dateTo: string;
+} {
+  return {
+    dateFrom: startOfLocalMonth(now).toISOString(),
+    dateTo: nextLocalMonthStart(now).toISOString(),
+  };
 }
 
 export function addUtcDays(date: Date, days: number): Date {

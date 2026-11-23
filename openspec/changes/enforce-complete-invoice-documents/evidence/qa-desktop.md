@@ -1,0 +1,26 @@
+# Desktop real-page acceptance
+
+Date: 2026-11-17. Base revision `30e90c09`, current uncommitted implementation on `spec/537-complete-invoice-documents`; final implementation fingerprint is in `verification.md`.
+
+Environment: real admin SPA at `http://127.0.0.1:5175`, compiled API at `http://127.0.0.1:3001`, isolated local PostgreSQL database `gitiempo_e2e_537`, Chromium viewport **1440 × 1000**. Authentication used the local test admin. API requests were real; no Vue state or transport mocks were used. Only newly created QA invoices were changed. No email was sent.
+
+| Scenario | Result | Actual observation / evidence |
+| --- | --- | --- |
+| Missing and invalid fields | PASS | Empty fields produced simultaneous inline errors and first-error focus. Invalid sender email retained all other party, service and payment inputs. Correcting the email allowed retry. [Email error](desktop-email-error.png). |
+| Issue date regression | PASS, visual probe | Clearing the input through the browser fill command and attempting Save focused Issue date and produced `aria-invalid=true`, `p-invalid`, and an actual red input border `rgb(248, 113, 113)`. Moving to recipient email dismissed the calendar while retaining the error. [Clean error screenshot](desktop-validation.png). The normal picker is prepopulated and has no clear control, so this is a visual state probe rather than a normal calendar entry path. The unsaved probe was discarded. |
+| PDF semantic order and required semantics | PASS | Issue/Due dates and billing period lead, followed by secondary title/group, From then Bill to with name/address/email/Tax ID, services/project/pricing, work, subtotal/discount/total, payment and notes. Required controls expose accessible required state. One primary Create/Save action remains. No horizontal document overflow at 1440px. |
+| Complete Bank transfer Draft, zero work/rate | PASS | Created INV-144 with rate 0, no entries, all core party/service/date fields and beneficiary/bank/account. Tax IDs, due date, terms, SWIFT, instructions, notes and logo were omitted. Saved status Draft, hours 0 and total USD 0.00. [Saved Draft](desktop-bank-draft.png). |
+| Edit and time display | PASS | Reopened INV-144, verified persisted fields and changed title and time display to Task. Save preserved Draft and changed detail to Included tasks. Both time display modes exported successfully. |
+| Status separate from Save | PASS | INV-144 Draft → Sent succeeded. A later notes edit saved while retaining Sent. The ordinary edit action did not send email. |
+| Create from | PASS | Copied Sent INV-144 into a new 3–4 Nov period through calendar selection/Confirm. Fields were prefilled; Save created separate INV-145 as Draft, preserving the source invoice's Sent status. |
+| Historical read and blocked status | PASS | Converted only the new QA copy INV-145 into a legacy fixture by blanking `document.sender.email` directly in the verified isolated DB. Reload remained readable. Selecting Paid kept Draft and showed the missing Sender email plus Complete invoice details action. [Blocked status](desktop-legacy-status-blocked.png). |
+| Historical save and repair | PASS | Completion action opened the editor. Save blocked and focused `invoice-sender-email`; other values were retained. Filling the email saved successfully and removed completion guidance. A subsequent Draft → Paid transition succeeded. |
+| Other payment | PASS | Switched repaired INV-145 to Other and cleared beneficiary/provider/account. Save blocked and focused Payment details. Filling only details allowed Save; blank beneficiary/provider/instructions were accepted and Paid was retained. |
+| Card payment and independent errors | PASS | Switched INV-145 to Card with blank provider and HTTP link. Both errors appeared; Save first focused provider. Correcting provider left the URL error and moved the next Save focus to the URL. HTTPS correction saved and retained Paid. [HTTPS error](desktop-card-https-error.png). |
+| Real PDF field/order review | PASS | Downloaded [Bank / Time entry](bank-time-entry.pdf) and [Bank / Task](bank-task.pdf) through actual detail buttons while INV-144 was Draft. Rendered both plus the mobile Card/Other PDFs with Poppler and inspected every page. Parties, dates, period, services, zero totals and active payment fields matched the editor. Task mode changed the work column; inactive Card bank fields and omitted optional fields did not leak. No clipped or overlapping text. |
+
+QA invoice identifiers: INV-144 `1cc68d8f-fba7-4166-b614-50d48b79f300`; INV-145 `e293b6f8-292c-4577-b84c-36858db43928`. These are disposable local fixtures, not product data.
+
+Limits: exact approved `.pen` frame inspection/update/parity is BLOCKED by the Pencil plan quota. Custom method names are covered by shared/API tests and existing-name preservation, since the selector has no free-entry custom-name control. Server 422 focus/mapping and unavailable-entry races are covered by automated tests rather than mocked manual scenarios.
+
+Design follow-up: after this runtime session the user authorized a local `.pen` JSON update. See [design-parity.md](design-parity.md) for the completed source/local-layout review and the remaining native-render limitation. The original runtime scenarios and observations above are unchanged.

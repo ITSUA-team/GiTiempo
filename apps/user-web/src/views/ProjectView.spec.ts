@@ -139,6 +139,7 @@ function createClientMock(): TimeEntriesClient & {
       throw new Error("unused");
     }),
     getCurrentTimer: vi.fn(async () => ({ timeEntry: null })),
+    getTask: vi.fn(),
     listGitHubOwners: vi.fn(),
     listGitHubProjectIssues: vi.fn(),
     listGitHubProjects: vi.fn(),

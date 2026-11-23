@@ -19,6 +19,26 @@
 - Optional MVP stats row: 3 summary cards.
 - When another task or workspace owns the running timer, Dashboard provides the same stop-first guidance as Time Entries, preserving disabled pending/loading states, authoritative current-state and access checks, conflict handling, and duplicate-start/stop protection.
 
+### Dashboard Card Navigation
+
+- Each dashboard information card is a navigable link to the corresponding Time Entries scope. The whole card area is clickable and navigates to the Time Entries page with the card's scope encoded as URL filter state.
+- Card destinations: `Today` navigates to Time Entries filtered to today's browser-local day boundaries; `This Week` navigates to the current browser-local week; `Projects This Week` navigates to the current week without a project filter (the card counts projects with tracked time, not all active projects); the `Top Focus` section navigates to the period selected in its period selector; `Top Project` and `Top Task` navigate to the selected period scoped to the winning project or task ID; `Recent Time Entries` navigates to unfiltered Time Entries. Empty Top Project/Top Task cards navigate to the selected period without an entity filter.
+- Card destinations use browser-local calendar boundaries with an inclusive start and exclusive end, matching the `dateFrom`/`dateTo` semantics documented for the Time Entries URL parameters.
+- Each card navigates as a page push (not a URL replace) so Back/Forward history works naturally; the destination URL is a deep link whose filters restore on reload.
+- Nested controls inside cards are independent and never trigger card navigation: the Recent-entry `Start timer`/`Stop timer` actions, the task-name edit action, the GitHub issue external-link icons, and the Top Focus period selector stop event propagation so activation performs only the control's own action.
+- Card navigation is discoverable through a hover affordance (elevated card surface) and a visible keyboard focus indicator. Cards use semantic links with accessible destination names describing the target scope (for example `View time entries for this week`), and support standard new-tab opening via Ctrl/Cmd+click and middle-click.
+
+### Top Focus Period Selector
+
+- The Top Focus section includes a PrimeVue `<Select>` offering `Day`, `Week`, and `Month`. `Week` is the default selection.
+- Selecting a period updates the Top Focus card content without a page reload: `Top Project`, `Top Task`, tracked durations, entry counts, relative-share percentages, empty-state copy, and the heading/description text (for example `Top Focus Today` / `Top Focus This Week` / `Top Focus This Month`).
+- The period selector is scoped to Top Focus only. The `Today`, `This Week`, `Projects This Week`, and `Recent Time Entries` cards retain their own fixed scopes regardless of the selected Top Focus period.
+
+### Dashboard URL Filter State
+
+- The selected Top Focus period is encoded in the Dashboard URL as `?focusPeriod=day|week|month`. The default `week` may be omitted or normalized to the default.
+- The selected period survives Back/Forward navigation: the browser URL is updated when the selection changes, and re-entering the route restores the period and all period-dependent Top Focus values from the URL.
+
 - Successful recent-entry timer actions update the running row and timer state without a success toast. Errors and recovery guidance remain visible.
 
 ## Global Top-Bar Timer
@@ -90,6 +110,15 @@
 - On a same-workspace refresh, keep populated rows, filters, focus, and valid dialogs mounted. Mark the stable page region with `aria-busy` instead of adding a visible refresh message or replacing content with the initial-load skeleton. While filter or page results are retained as a temporary previous result, keep totals tied to the committed rows and disable row mutations and pagination until the requested result arrives. A transient refresh failure keeps the populated content visible with a scoped retry; a first-load failure still uses the request-error state.
 
 - Successful manual entry create, edit, delete, and inline task creation update the existing list or selection and close the appropriate dialog without success toasts. Direct row timer actions are also quiet; errors and retry controls remain.
+
+### Time Entries URL Query Parameters And Filter State
+
+- The Time Entries route accepts validated URL query parameters: `dateFrom` and `dateTo` as ISO timestamps with inclusive start and exclusive end boundaries, `projectId` and `taskId` as UUIDs, and `page` as a positive integer.
+- Filters initialize from the URL before the first list request is sent. Direct links with filter parameters, page reloads, and Back/Forward navigation all restore the filter state from the URL before any entries load.
+- Visible controls (date range picker, project autocomplete, task autocomplete, paginator) stay synchronized with the URL. Control-driven filter changes update the URL in place; dashboard card navigation deep links into the page with the card's filter parameters preserved.
+- Invalid URL parameters are discarded or clamped to valid defaults: non-UUID project/task IDs are ignored, out-of-range page values fall back to the first page, and reversed date ranges are discarded. Valid parameters in the same URL are still applied, so a single invalid value does not reject the whole filter set.
+- URL filter values use stable resource IDs rather than project or task names. Renaming a project or task does not break the URL; display labels are resolved separately from the ID when hydrating.
+- Filters revalidate when workspace/access changes or a referenced resource disappears. When a selected project or task is no longer visible or valid, the invalid filter is cleared and the URL is updated. The page never silently shows all records while retaining an invalid selected label.
 
 ## Projects Page
 

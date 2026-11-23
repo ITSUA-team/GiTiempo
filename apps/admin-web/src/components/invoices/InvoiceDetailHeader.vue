@@ -9,6 +9,7 @@ import InvoiceGroupSelect from './InvoiceGroupSelect.vue';
 
 const props = defineProps<{
   invoice: InvoiceResponse;
+  statusRevision?: number;
   groups: Array<{ id: string; name: string }>;
   groupsLoading: boolean;
   groupsFailed: boolean;
@@ -97,6 +98,7 @@ const actions = computed(() => {
           class="text-text-dark text-[13px] font-medium"
         >Status</label>
         <Select
+          :key="statusRevision"
           input-id="detail-status"
           aria-label="Invoice status"
           :model-value="invoice.status"
