@@ -355,7 +355,11 @@ describe('Installation tracking authorization (real PostgreSQL)', () => {
       'verified',
     );
   });
-  it('denies an unassigned public-project member without task/time/assignment side effects', async () => {
+  it('denies an unassigned private-project member without task/time/assignment side effects', async () => {
+    await db
+      .update(projects)
+      .set({ visibility: 'private' })
+      .where(eq(projects.id, projectId));
     await db
       .delete(projectAssignments)
       .where(eq(projectAssignments.projectId, projectId));

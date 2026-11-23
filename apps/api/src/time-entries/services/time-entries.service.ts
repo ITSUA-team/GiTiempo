@@ -431,7 +431,9 @@ export class TimeEntriesService {
         if (!project) throw new NotFoundException('Project not found');
         if (!project.isActive)
           throw new UnprocessableEntityException('Project is inactive');
-        if (!this.isManagedProjectAuthorized(membership.role, project, false)) {
+        if (
+          !this.hasImplicitProjectAccess(membership.role, project.visibility)
+        ) {
           const [assignment] = await tx
             .select({ id: projectAssignments.id })
             .from(projectAssignments)
@@ -443,13 +445,7 @@ export class TimeEntriesService {
               ),
             )
             .for('update');
-          if (
-            !this.isManagedProjectAuthorized(
-              membership.role,
-              project,
-              assignment !== undefined,
-            )
-          ) {
+          if (!assignment) {
             if (membership.role === 'member') {
               throw new DomainError(
                 'project_assignment_required',
@@ -650,6 +646,7 @@ export class TimeEntriesService {
       return this.trackingCapability(hasProjectAccess ? 'project' : 'own-time');
     }
 
+    let verifiedProject: ProjectRow;
     try {
       const verified = await this.installations.prepareIssue(
         user,
@@ -658,16 +655,16 @@ export class TimeEntriesService {
         input.issueNumber,
       );
       const verifiedIssueKey = `${verified.repository.fullName}#${verified.issue.number}`;
-      const verifiedProject = await this.githubTasks.findExistingIssueProject(
+      const currentProject = await this.githubTasks.findExistingIssueProject(
         this.db,
         user.workspaceId,
         verified.repository.fullName,
         verifiedIssueKey,
       );
       if (
-        !verifiedProject ||
-        verifiedProject.id !== project.id ||
-        !verifiedProject.isActive ||
+        !currentProject ||
+        currentProject.id !== project.id ||
+        !currentProject.isActive ||
         !(await this.isExistingReferenceTaskTrackable(
           user.workspaceId,
           verifiedIssueKey,
@@ -675,16 +672,18 @@ export class TimeEntriesService {
       ) {
         return this.deniedTrackingCapability();
       }
+      verifiedProject = currentProject;
     } catch (error) {
       return this.deniedTrackingCapability(
         this.trackingCapabilityErrorReason(error),
       );
     }
 
-    const canUseManagedProject = this.isManagedProjectAuthorized(
+    const canUseManagedProject = await this.hasFullProjectAccess(
+      user,
+      verifiedProject.id,
+      verifiedProject.visibility,
       membership.role,
-      project,
-      await this.hasProjectAssignment(user, project.id),
     );
     return canUseManagedProject
       ? this.trackingCapability('project')
@@ -839,20 +838,6 @@ export class TimeEntriesService {
       throw new NotFoundException('Project not found');
     }
 
-    const [githubIssue] = await db
-      .select({ id: taskExternalRefs.id })
-      .from(taskExternalRefs)
-      .where(
-        and(
-          eq(taskExternalRefs.workspaceId, user.workspaceId),
-          eq(taskExternalRefs.projectId, project.id),
-          eq(taskExternalRefs.taskId, taskId),
-          eq(taskExternalRefs.provider, 'github'),
-          eq(taskExternalRefs.externalType, 'issue'),
-        ),
-      )
-      .limit(1);
-
     const hasOwnExternalTaskEntry =
       project.trackingMode === 'external-reference' &&
       (
@@ -869,11 +854,10 @@ export class TimeEntriesService {
           .limit(1)
       )[0] !== undefined;
 
-    const requiresAssignment =
-      membership.role !== 'admin' &&
-      (project.visibility === 'private' ||
-        (membership.role === 'member' && Boolean(githubIssue)));
-    if (requiresAssignment && !hasOwnExternalTaskEntry) {
+    if (
+      !this.hasImplicitProjectAccess(membership.role, project.visibility) &&
+      !hasOwnExternalTaskEntry
+    ) {
       const [assignment] = await db
         .select({ id: projectAssignments.id })
         .from(projectAssignments)
@@ -885,16 +869,7 @@ export class TimeEntriesService {
           ),
         )
         .for('update');
-      if (!assignment) {
-        if (project.visibility === 'private') {
-          throw new NotFoundException('Project not found');
-        }
-        throw new DomainError(
-          'project_assignment_required',
-          githubTrackingErrorMessages.project_assignment_required,
-          githubTrackingErrorStatuses.project_assignment_required,
-        );
-      }
+      if (!assignment) throw new NotFoundException('Project not found');
     }
 
     const task = await this.requireTaskRowForUpdate(
@@ -1182,20 +1157,15 @@ export class TimeEntriesService {
     visibility: 'public' | 'private',
     role: 'admin' | 'pm' | 'member',
   ): Promise<boolean> {
-    if (role === 'admin' || visibility === 'public') return true;
+    if (this.hasImplicitProjectAccess(role, visibility)) return true;
     return this.hasProjectAssignment(user, projectId);
   }
 
-  private isManagedProjectAuthorized(
+  private hasImplicitProjectAccess(
     role: 'admin' | 'pm' | 'member',
-    project: Pick<ProjectRow, 'visibility'>,
-    hasAssignment: boolean,
+    visibility: 'public' | 'private',
   ): boolean {
-    return (
-      role === 'admin' ||
-      (role === 'pm' && project.visibility === 'public') ||
-      hasAssignment
-    );
+    return role === 'admin' || visibility === 'public';
   }
 
   private async hasProjectAssignment(

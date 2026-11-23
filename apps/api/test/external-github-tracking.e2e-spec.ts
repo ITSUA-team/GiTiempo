@@ -403,28 +403,44 @@ describe('External GitHub extension tracking (e2e)', () => {
     expect(await workspaceRecordCounts()).toEqual(before);
   });
 
-  it('denies an unassigned member for a verified managed mapping without writing records', async () => {
-    const { managedRepo } = await createManagedProject('public');
-    installations.prepareIssue.mockResolvedValueOnce({
-      repository: { fullName: managedRepo },
-      issue: { number: 73 },
-    } as never);
-    const before = await workspaceRecordCounts();
+  it.each([
+    {
+      visibility: 'public',
+      expected: {
+        canStartTracking: true,
+        accessScope: 'project',
+        reason: null,
+      },
+    },
+    {
+      visibility: 'private',
+      expected: {
+        canStartTracking: false,
+        accessScope: null,
+        reason: githubTrackingErrorMessages.project_assignment_required,
+      },
+    },
+  ] as const)(
+    'checks a verified $visibility managed mapping for an unassigned member without writing records',
+    async ({ visibility, expected }) => {
+      const { managedRepo } = await createManagedProject(visibility);
+      installations.prepareIssue.mockResolvedValueOnce({
+        repository: { fullName: managedRepo },
+        issue: { number: 73 },
+      } as never);
+      const before = await workspaceRecordCounts();
 
-    const response = await request(app.getHttpServer())
-      .post('/time-entries/timer/capability')
-      .set('Authorization', bearer(memberToken))
-      .send(issue(73, managedRepo, 'Managed issue'));
+      const response = await request(app.getHttpServer())
+        .post('/time-entries/timer/capability')
+        .set('Authorization', bearer(memberToken))
+        .send(issue(73, managedRepo, 'Managed issue'));
 
-    expect(response.status).toBe(200);
-    expect(response.body).toEqual({
-      canStartTracking: false,
-      accessScope: null,
-      reason: githubTrackingErrorMessages.project_assignment_required,
-    });
-    expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
-    expect(await workspaceRecordCounts()).toEqual(before);
-  });
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(expected);
+      expect(installations.prepareIssue).toHaveBeenCalledTimes(1);
+      expect(await workspaceRecordCounts()).toEqual(before);
+    },
+  );
 
   it('allows an authorized managed mapping without writing records', async () => {
     const { managedRepo } = await createManagedProject('private');
