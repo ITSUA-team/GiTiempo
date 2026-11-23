@@ -3096,14 +3096,34 @@
               }
             }
           },
+          "403": {
+            "description": "Project assignment, GitHub App access or permissions, or organization policy denies tracking for the managed target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Project or task not available"
           },
           "409": {
-            "description": "Timer already running"
+            "description": "Timer already running, or the managed target requires an installation or has a missing or ambiguous project mapping"
           },
           "422": {
             "description": "Project or task inactive"
+          },
+          "503": {
+            "description": "GitHub provider unavailable for the managed target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GitHubTrackingErrorResponseDto"
+                }
+              }
+            }
           }
         },
         "security": [

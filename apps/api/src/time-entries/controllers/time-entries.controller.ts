@@ -148,8 +148,20 @@ export class TimeEntriesController {
       'Records validated browser issue context without GitHub API access for external-reference projects. Existing managed projects use the installation-verified route.',
   })
   @ApiCreatedResponse({ type: TimeEntryResponseDto })
-  @ApiConflictResponse({ description: 'Timer already running' })
+  @ApiConflictResponse({
+    description:
+      'Timer already running, or the managed target requires an installation or has a missing or ambiguous project mapping',
+  })
+  @ApiForbiddenResponse({
+    description:
+      'Project assignment, GitHub App access or permissions, or organization policy denies tracking for the managed target',
+    type: GitHubTrackingErrorResponseDto,
+  })
   @ApiNotFoundResponse({ description: 'Project or task not available' })
+  @ApiServiceUnavailableResponse({
+    description: 'GitHub provider unavailable for the managed target',
+    type: GitHubTrackingErrorResponseDto,
+  })
   @ApiUnprocessableEntityResponse({ description: 'Project or task inactive' })
   @ZodSerializerDto(TimeEntryResponseDto)
   startTimerFromGitHubReference(
