@@ -102,9 +102,9 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
 <template>
   <SurfaceCard
     body-class="flex flex-col gap-3"
-    padding-class="p-6"
+    padding-class="p-6 max-sm:px-2"
   >
-    <div class="grid gap-3 xl:grid-cols-[220px_220px_minmax(0,1fr)]">
+    <div class="grid gap-3 xl:grid-cols-[288px_220px_minmax(0,1fr)]">
       <div class="flex flex-col gap-1">
         <label
           for="time-entries-date-range"
@@ -116,6 +116,7 @@ function updateTaskValue(value: TaskLookupValue | undefined): void {
           :ref="datePicker.datePickerRef"
           date-format="M d, yy"
           icon-display="input"
+          input-class="max-[360px]:text-xs"
           input-id="time-entries-date-range"
           placeholder="Select date range"
           :manual-input="false"

@@ -386,6 +386,31 @@ describe('InvoicesTable', () => {
     ]);
   });
 
+  it('shows both years in a selected period spanning two years', () => {
+    const wrapper = mountInvoicesTable({
+      filters: {
+        ...defaultFilters,
+        dateFrom: '2025-12-30',
+        dateTo: '2026-01-02',
+      },
+    });
+
+    expect(wrapper.get<HTMLInputElement>('#invoice-period-filter').element.value)
+      .toBe('Dec 30, 2025 - Jan 2, 2026');
+  });
+
+  it.each([
+    ['Project', 'invoice-project-filter'],
+    ['Status', 'invoice-status-filter'],
+  ])('associates the %s label with its focusable combobox', (name, id) => {
+    const wrapper = mountInvoicesTable({ isMobileViewport: true });
+    const label = wrapper.get(`label[for="${id}"]`);
+    const combobox = wrapper.get(`[role="combobox"]#${id}`);
+
+    expect(label.text()).toBe(name);
+    expect(combobox.attributes('aria-labelledby')).toBe(label.attributes('id'));
+  });
+
   it('emits date range filter updates from the period picker only for complete ranges', async () => {
     const wrapper = mountInvoicesTable();
     const periodFilter = wrapper.getComponent(DatePicker);
