@@ -158,9 +158,14 @@ const paymentLines = computed(() => {
     body-class="flex flex-col gap-4"
     data-testid="invoice-summary"
   >
-    <h2 class="text-base font-semibold break-words sm:text-lg">
-      {{ invoice.services || invoice.title }}
-    </h2>
+    <div class="flex flex-col gap-1.5">
+      <h2 class="text-text-muted text-xs font-medium sm:text-[13px]">
+        Services
+      </h2>
+      <p class="text-base font-semibold break-words whitespace-pre-line sm:text-lg">
+        {{ invoice.services?.trim() || '—' }}
+      </p>
+    </div>
     <dl
       class="grid gap-3 sm:grid-cols-2"
       data-testid="invoice-dates"

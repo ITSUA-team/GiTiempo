@@ -531,6 +531,44 @@ describe('InvoiceDetailView', () => {
     ).toContain('Updated 10 May 2026');
   });
 
+  it.each([false, true])('shows the title below the reference and labels services separately (mobile=%s)', async (mobile) => {
+    vi.stubGlobal('matchMedia', vi.fn(() => ({
+      matches: mobile,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })));
+    testMocks.getInvoice.mockResolvedValue(createInvoice({
+      reference: 'INV-2',
+      title: 'Custom Project Fee',
+      services: 'Web Development Services',
+    }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    const heading = wrapper.get('[data-testid="invoice-detail-header"] h1');
+    const summary = wrapper.get('[data-testid="invoice-summary"]');
+    expect(heading.text()).toBe('INV-2');
+    expect(heading.element.nextElementSibling?.textContent?.trim()).toBe('Custom Project Fee');
+    expect(summary.get('h2').text()).toBe('Services');
+    expect(summary.get('h2 + p').text()).toBe('Web Development Services');
+  });
+
+  it('shows the title once in the header and a placeholder for missing legacy services', async () => {
+    testMocks.getInvoice.mockResolvedValue(createInvoice({
+      title: 'Legacy invoice',
+      services: null,
+    }));
+    const wrapper = mountInvoiceDetailView();
+    await flushPromises();
+
+    const heading = wrapper.get('[data-testid="invoice-detail-header"] h1');
+    const summary = wrapper.get('[data-testid="invoice-summary"]');
+    expect(heading.text()).toBe('Legacy invoice');
+    expect(heading.element.nextElementSibling).toBeNull();
+    expect(summary.get('h2').text()).toBe('Services');
+    expect(summary.get('h2 + p').text()).toBe('—');
+  });
+
   it('uses the saved-invoice ceiling for a fractional cent without displaying a negative discount at 0%', async () => {
     testMocks.getInvoice.mockResolvedValue(
       createInvoice({
