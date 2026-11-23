@@ -475,7 +475,7 @@ const selectedPeriodLabel = computed(() => {
     </Column>
     <Column
       header="Project"
-      style="width: 106px"
+      style="width: clamp(120px, calc(120px + 100cqw - 660px), 212px)"
       :pt="columnPt"
     >
       <template #body="{data}">
