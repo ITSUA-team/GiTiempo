@@ -108,6 +108,60 @@ describe('Time Entries', () => {
     wrapper.unmount();
   });
 
+  it.each([false, true])('updates one entry in place after saving (mobile: %s)', async viewport => {
+    mobile.value = viewport;
+    const { wrapper } = render();
+    await flushPromises();
+    const rowSelector = viewport ? 'article' : 'tbody tr';
+    const rowsBefore = wrapper.findAll(rowSelector).map(row => row.element);
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('#managed-entry-description').setValue('Corrected note');
+    mocks.update.mockResolvedValue({ ...editable, description: 'Saved note' });
+
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.get(rowSelector).text()).toContain('Saved note');
+    expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
+    expect(mocks.list).toHaveBeenCalledOnce();
+    expect(mocks.members).toHaveBeenCalledTimes(2);
+    wrapper.findAll(rowSelector).forEach((row, index) => {
+      expect(row.element).toBe(rowsBefore[index]);
+    });
+    wrapper.unmount();
+  });
+
+  it('keeps the table mounted while reconciling an edit that changes the sort order', async () => {
+    const updated = { ...editable, startedAt: '2026-04-16T10:00:25.000Z' };
+    const freshPage = response([{ ...running }, { ...invoiced }, updated]);
+    let resolve!: (value: typeof freshPage) => void;
+    const { wrapper } = render();
+    await flushPromises();
+    const table = wrapper.get('table').element;
+    const rowsBefore = wrapper.findAll('tbody tr').map(row => row.element);
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    mocks.update.mockResolvedValue(updated);
+    mocks.list.mockReturnValueOnce(new Promise<typeof freshPage>(done => { resolve = done; }));
+
+    wrapper.getComponent(ManagedEntryDialog).vm.$emit('update', { startedAt: updated.startedAt });
+    await flushPromises();
+
+    expect(mocks.list).toHaveBeenCalledTimes(2);
+    expect(wrapper.get('table').element).toBe(table);
+    expect(wrapper.text()).not.toContain('Loading time entries');
+
+    resolve(freshPage);
+    await flushPromises();
+
+    const rowsAfter = wrapper.findAll('tbody tr');
+    expect(rowsAfter[0]?.element).toBe(rowsBefore[1]);
+    expect(rowsAfter[1]?.element).toBe(rowsBefore[2]);
+    expect(rowsAfter[2]?.element).toBe(rowsBefore[0]);
+    expect(rowsAfter[2]?.text()).toContain('16 Apr 2026');
+    wrapper.unmount();
+  });
+
   it('keeps the draft and refetches an invoice conflict after editing historical time', async () => {
     const { wrapper } = render();
     mocks.tasks.mockRejectedValue(new ApiError('Former member', { status: 422 }));

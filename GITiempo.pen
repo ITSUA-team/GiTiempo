@@ -109118,7 +109118,7 @@
                           "id": "te471_333",
                           "name": "Projects",
                           "context": "Show projects manageable in the current workspace. PMs see only explicit assignments.",
-                          "width": 208,
+                          "width": 312,
                           "fill": "$color-surface",
                           "cornerRadius": "$radius-lg",
                           "stroke": "$color-divider",

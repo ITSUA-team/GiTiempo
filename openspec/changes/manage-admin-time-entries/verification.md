@@ -24,3 +24,7 @@ The desktop page matched the 60 px navigation rail, project panel width (208 px)
 Chrome verified the desktop Invoices table treatment at 1280 × 800, including the border, corner radius, 42 px header and 66 px entry rows. The project heading and names measured 16 px. Edit, delete and lock icons measured 20 × 20 px. At 768 px, horizontal scrolling stayed inside the table. At 375 × 812, the cards fit the viewport without horizontal overflow.
 
 The plus button displayed only the icon and kept the accessible name **New time entry**. Enter opened the form on desktop, and tapping opened it on mobile. Edit opened the selected entry, and cancel dismissed the delete confirmation.
+
+## In-place edits
+
+Chrome verified a description edit against the local API at 1280 × 800 and 375 × 812. The saved description appeared in the same table row or mobile card. The existing rows and cards stayed mounted, and saving made no request for the project entry list. The desktop project sidebar measured 312 px after the width change.

@@ -1,6 +1,7 @@
-import type { TimeEntryListResponse } from '@gitiempo/shared';
+import type { TimeEntryListResponse, TimeEntryResponse } from '@gitiempo/shared';
 import { getErrorMessage } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
+import { replaceEqualDeep } from '@tanstack/vue-query';
 import { computed, onScopeDispose, ref, shallowRef, watch, type Ref } from 'vue';
 
 import type { AdminTimeEntriesClient, ManagementMember, ManagementProject } from '@/services/admin-time-entries-client';
@@ -50,6 +51,8 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
       dateTo: dateTo.value,
     },
   }));
+  let loadedQuery: typeof entryQuery.value | undefined;
+  let pendingQuery: typeof entryQuery.value | undefined;
 
   async function loadProjects() {
     const request = ++projectRequest;
@@ -126,12 +129,14 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     }
   }
 
-  async function loadEntries() {
+  async function loadEntries(keepRows = false) {
     const request = ++listRequest;
     const query = entryQuery.value;
     const { selected } = query;
     const current = () => request === listRequest && query === entryQuery.value;
-    loadingEntries.value = Boolean(selected);
+    const retained = keepRows && loadedQuery === query ? list.value : undefined;
+    pendingQuery = selected ? query : undefined;
+    loadingEntries.value = Boolean(selected && !retained);
     if (!selected) return;
     try {
       const result = await client.list(selected, query.page, query.filters);
@@ -140,14 +145,47 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
         page.value = Math.max(1, result.meta.totalPages);
         return;
       }
-      list.value = result;
+      loadedQuery = query;
+      if (retained) {
+        const previousById = new Map(retained.items.map(entry => [entry.id, entry]));
+        list.value = {
+          ...result,
+          items: result.items.map(entry => replaceEqualDeep(previousById.get(entry.id), entry)),
+        };
+      } else {
+        list.value = result;
+      }
     } catch (error) {
       if (!current()) return;
-      list.value = undefined;
+      if (!retained) list.value = undefined;
       handleReadFailure(error, entriesError, 'Unable to load time entries.');
     } finally {
-      if (current()) loadingEntries.value = false;
+      if (current()) {
+        pendingQuery = undefined;
+        loadingEntries.value = false;
+      }
     }
+  }
+
+  function refreshEntries() {
+    entriesError.value = '';
+    void loadEntries(true);
+  }
+
+  function applyUpdatedEntry(previous: TimeEntryResponse, updated: TimeEntryResponse) {
+    const query = entryQuery.value;
+    const loaded = list.value;
+    const affectsPage = previous.startedAt !== updated.startedAt
+      || (query.filters.search && previous.task.title !== updated.task.title);
+    if (!loaded || loadedQuery !== query || pendingQuery === query || affectsPage) {
+      refreshEntries();
+      return;
+    }
+    if (!loaded.items.some(entry => entry.id === updated.id)) return;
+    list.value = {
+      ...loaded,
+      items: loaded.items.map(entry => entry.id === updated.id ? updated : entry),
+    };
   }
 
   function refresh() {
@@ -197,6 +235,6 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     projects, project, projectId, members, memberId, search, dates, page, list,
     loadingProjects, loadingEntries, projectError, entriesError, memberError,
     eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
-    retryProjects, reloadScope, refresh,
+    retryProjects, reloadScope, refresh, refreshEntries, applyUpdatedEntry,
   };
 }

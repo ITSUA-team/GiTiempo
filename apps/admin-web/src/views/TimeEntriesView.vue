@@ -41,7 +41,7 @@ const {
   projects, project, projectId, members, memberId, search, dates, page, list,
   loadingProjects, loadingEntries, projectError, entriesError, memberError,
   eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
-  retryProjects, reloadScope, refresh,
+  retryProjects, reloadScope, refresh, refreshEntries, applyUpdatedEntry,
 } = useManagedTimeEntries(scope, client);
 const mobile = useIsMobileViewport();
 const { requireConfirmation, dismissConfirmation } = useConfirmation();
@@ -110,17 +110,17 @@ onBeforeUnmount(() => {
   dismissConfirmation();
 });
 
-async function mutate(action: () => Promise<unknown>, inEditor: boolean) {
+async function mutate<T>(action: () => Promise<T>, inEditor: boolean, onSuccess: (result: T) => void = refresh) {
   if (busy.value) return;
   const activeGeneration = generation;
   busy.value = true;
   mutationError.value = '';
   editorError.value = '';
   try {
-    await action();
+    const result = await action();
     if (activeGeneration !== generation) return;
     closeEditor();
-    refresh();
+    onSuccess(result);
   } catch (error) {
     if (activeGeneration !== generation) return;
     if (isApiErrorStatus(error, [401, 403, 404])) {
@@ -133,7 +133,8 @@ async function mutate(action: () => Promise<unknown>, inEditor: boolean) {
       const conflict = managedTimeEntryConflictSchema.safeParse(error.body);
       if (conflict.success) target.value = conflict.data.message;
       if (inEditor) editorLocked.value = true;
-      refresh();
+      if (inEditor && editor.value?.entry) refreshEntries();
+      else refresh();
     } else if (isApiErrorStatus(error, [422])) {
       void loadEligibleMembers();
     }
@@ -150,7 +151,11 @@ function createEntry(input: ManagedEntryCreate) {
 function updateEntry(input: ManagedEntryUpdate) {
   const entry = editor.value?.entry;
   if (entry && entry.projectId === projectId.value) {
-    void mutate(() => client.update(entry.projectId, entry.id, input), true);
+    void mutate(
+      () => client.update(entry.projectId, entry.id, input),
+      true,
+      updated => applyUpdatedEntry(entry, updated),
+    );
   }
 }
 
@@ -170,7 +175,7 @@ function confirmDelete(entry: TimeEntryResponse) {
 </script>
 
 <template>
-  <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[208px_minmax(0,1fr)] sm:gap-5">
+  <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[312px_minmax(0,1fr)] sm:gap-5">
     <SurfaceCard
       body-class="flex flex-col gap-2"
       padding-class="p-0 sm:p-3"
@@ -339,7 +344,7 @@ function confirmDelete(entry: TimeEntryResponse) {
         @retry="refresh"
       />
       <div
-        v-else-if="loadingEntries"
+        v-if="loadingEntries"
         role="status"
         class="grid gap-2"
       >
@@ -351,7 +356,7 @@ function confirmDelete(entry: TimeEntryResponse) {
         />
       </div>
       <div
-        v-else-if="!list?.items.length"
+        v-else-if="!list?.items.length && !entriesError"
         class="text-text-muted flex flex-col items-center gap-2 px-4 py-10 text-center"
       >
         <ClockIcon
@@ -365,7 +370,7 @@ function confirmDelete(entry: TimeEntryResponse) {
           {{ hasFilters ? 'Try a different task, member or date range.' : 'This project has no recorded time.' }}
         </p>
       </div>
-      <template v-else>
+      <template v-else-if="list?.items.length">
         <div
           v-if="mobile"
           class="grid min-w-0 gap-3"
