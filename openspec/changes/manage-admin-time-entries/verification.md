@@ -46,3 +46,21 @@ Chrome verified a description edit against the local API at 1280 × 800 and 375 
 - PASS — With the editor open, a test entry was removed from the isolated database and the next projects request was interrupted in Chrome. Save returned 404, the draft remained visible, and Save stayed disabled. Restoring the projects request and choosing Try again retained the draft and re-enabled Save.
 - PASS — At 375 × 812, the assigned PM used the keyboard to choose an eligible member and task, dismissed the editor with Escape, and saw the empty result after a task-title search. The mobile layout used cards and fit the viewport.
 - The focused tests also hold DELETE open on desktop and mobile to check that competing actions are disabled, and resubmit after 422 to check that the missing task error is linked to the input.
+
+## Member picker and manual acceptance, 2026-11-24
+
+The configured local database contains three eligible admin accounts for `My-test-org-for-clock/test-repo` with identical display names and emails and distinct GiTiempo IDs and Firebase UIDs. The database lacks the `users_email_lookup_unique` index defined by migration `0010_register_lookup_uniqueness`. Account ownership and migration history need separate reconciliation before the index can be applied to those data.
+
+Browser acceptance ran against the branch at `b0ee77b4` with the picker changes applied, in Chrome at 1280 × 800 and 375 × 812. Writes used a disposable database. The configured local data were queried read-only.
+
+| Scenario | Observed result |
+| --- | --- |
+| Duplicate member labels | In the member filter and create picker, three fixture users with the same name and email showed different ID prefixes. Network requests used the selected IDs. At 375 px the picker stayed within the viewport and all three prefixes were visible. A create from that picker persisted exactly one entry owned by the selected user, with the task's default billability. |
+| Admin project selection, search and pagination | Admin could open the unassigned public project. A 22-record project displayed 20 records on page one and two on the last page. The selected member returned seven records. Switching projects cleared the filter and reset pagination. Search showed the empty-result state and clearing it restored entries. |
+| Admin create, edit and delete | Empty required fields and an end earlier than the start showed field errors. Admin created a completed entry for another member. Edit kept project and member read-only. A description edit preserved the edited and neighboring row nodes and made no list request. Canceling deletion retained the record. Confirming deletion removed it after reload. |
+| Historical records and locks | The archived project hid creation. Its former contributor remained selectable in the filter, and Admin corrected a record on the original closed task. Running and draft-invoiced records showed their lock reasons and omitted mutation actions. |
+| Assigned PM at desktop and mobile widths | The project list omitted the unassigned public project. Mobile cards fit the viewport. PM created, edited and deleted a completed entry for another member. Member filtering, empty search, and date Confirm and Cancel passed. Confirm sent one request with both bounds. Without invoice viewing permission, PM retained Time Entries access. Revoking an assignment while the editor was open discarded the unsubmitted change, cleared project data and selected the remaining project. |
+| Load and mutation failures | After an interrupted project request, Try again restored project selection and the table. Attaching a draft invoice while the editor was open caused 409. The editor retained the draft and disabled Save, the row became Invoiced, and the stored description stayed unchanged. |
+| Guest and ordinary member | Guest redirected to login. The ordinary member reached standalone `/403` without admin navigation. Its primary action correctly went to the user workspace, but the visible label **Back to dashboard** differs from the `admin-pages` change spec. |
+
+The desktop table and mobile cards followed frames `te471_1069` and `te471_1569`. The picker uses the existing PrimeVue treatment with a viewport width limit and readable ID prefixes for collisions.

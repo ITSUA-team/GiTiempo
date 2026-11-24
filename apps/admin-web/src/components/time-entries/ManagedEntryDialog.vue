@@ -59,6 +59,13 @@ const start = ref<Date | null>(entry ? new Date(entry.startedAt) : null);
 const end = ref<Date | null>(entry?.endedAt ? new Date(entry.endedAt) : null);
 const startPicker = useDatePickerConfirmCancel<Date>();
 const endPicker = useDatePickerConfirmCancel<Date>();
+const memberPickerPt = {
+  ...giTiempoAutoCompleteDropdownPt,
+  overlay: {
+    ...giTiempoAutoCompleteDropdownPt.overlay,
+    class: [giTiempoAutoCompleteDropdownPt.overlay?.class, 'max-w-[calc(100vw-2rem)]'].join(' '),
+  },
+};
 const description = ref(entry?.description ?? '');
 const isBillable = ref(entry?.isBillable ?? false);
 const tasks = shallowRef<ManagementTask[]>([]);
@@ -234,7 +241,7 @@ async function submit(event: SubmitEvent) {
             v-model="memberModel"
             input-id="managed-entry-member"
             class="w-full"
-            :pt="requiredFieldPt(giTiempoAutoCompleteDropdownPt, memberError ? 'managed-entry-member-error' : undefined)"
+            :pt="requiredFieldPt(memberPickerPt, memberError ? 'managed-entry-member-error' : undefined)"
             :suggestions="memberSuggestions"
             complete-on-focus
             data-key="id"
