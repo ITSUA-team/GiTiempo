@@ -225,6 +225,26 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/projects/:id/time-entries` | JWT  | Any  | List entries within the resolved project scope, with optional task-title search. Own-time external access returns owned entries and totals only; explicit project access retains established team reads. |
 
+### Administrative time entry management
+
+All routes below require an active Admin or PM membership in the session workspace. Admins can manage every workspace project. PMs need an explicit assignment to the requested project, including public projects. Invoice-view permission is independent of this access.
+
+| Method | Path | Input | Result |
+| --- | --- | --- | --- |
+| GET | `/management/projects` | `page`, `limit` | Manageable projects, including archived projects. Options include `id`, `name` and `isActive`. |
+| GET | `/management/projects/:projectId/time-entry-members` | `purpose` (`filter` or `create`), `page`, `limit` | Owner options with `id`, `displayName` and `email`. Filter includes historical owners. Create includes active members with eligible tasks. |
+| GET | `/management/projects/:projectId/time-entry-tasks` | `userId`, `page`, `limit` | Tasks the selected owner can currently track, with `id`, `title` and `defaultBillableForTimeEntries`. |
+| GET | `/management/projects/:projectId/time-entries` | `page`, `limit`, optional `userId`, `search`, `dateFrom` and `dateTo` | Individual records, including running and invoiced time. |
+| POST | `/management/projects/:projectId/time-entries` | `userId` plus the manual-entry fields | 201 with a completed entry owned by the selected user. |
+| PATCH | `/management/projects/:projectId/time-entries/:entryId` | At least one of `taskId`, `startedAt`, `endedAt`, `description` and `isBillable` | 200 with the updated entry. An empty update returns 400. Owner and project are fixed. |
+| DELETE | `/management/projects/:projectId/time-entries/:entryId` | None | 204. |
+
+Lists return `items` and `meta` with `page`, `limit`, `total` and `totalPages`. Entry search matches partial task titles case-insensitively. The date filters apply to the start time, with an inclusive lower bound and exclusive upper bound.
+
+The server returns 401 for missing authentication, 403 for an insufficient workspace role and 404 for an out-of-scope project, entry or task. Creating an entry or changing its task requires the owner's current tracking access. The server rejects an ineligible owner or inactive work with 422. A completed, unlinked entry can be corrected in place or deleted even after its owner's access ends or the work is archived.
+
+Administrative PATCH and DELETE return 409 with `time_entry_running` when the timer must be stopped, or `time_entry_invoiced` when the entry belongs to an invoice in any status, including draft. These protections apply to this management API. Personal time-entry and timer routes follow the rules in section 8.
+
 ---
 
 ## 10. Reports

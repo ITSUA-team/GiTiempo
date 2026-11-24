@@ -1,5 +1,6 @@
 import {
   ChartBarSquareIcon,
+  ClockIcon,
   Cog6ToothIcon,
   DocumentTextIcon,
   FolderIcon,
@@ -21,6 +22,7 @@ export const ADMIN_PAGE_NAMES_BY_ROUTE_NAME: Record<string, string> = {
   [routeNames.projects]: 'Projects',
   [routeNames.reports]: 'Reports',
   [routeNames.settings]: 'Settings',
+  [routeNames.timeEntries]: 'Time Entries',
 };
 
 export const ADMIN_SETTINGS_ICON = markRaw(Cog6ToothIcon);
@@ -36,6 +38,11 @@ export const ADMIN_BASE_NAV_ITEMS = [
     icon: markRaw(ChartBarSquareIcon),
     label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.reports],
     name: routeNames.reports,
+  },
+  {
+    icon: markRaw(ClockIcon),
+    label: ADMIN_PAGE_NAMES_BY_ROUTE_NAME[routeNames.timeEntries],
+    name: routeNames.timeEntries,
   },
   {
     icon: markRaw(DocumentTextIcon),

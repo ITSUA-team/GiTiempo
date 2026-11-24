@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { RouterLink } from 'vue-router';
+import { entryListColumnPt } from '@/constants/entry-list-table';
 import { routeNames } from '@/constants/routes';
 import { PlusIcon } from '@heroicons/vue/24/outline';
 import type { InvoiceStatus } from '@gitiempo/shared';
@@ -91,8 +92,8 @@ function selectPage(checked: boolean) {
   selection.value = [...selected];
 }
 const columnPt = {
-  headerCell: { class: 'h-[42px] bg-app-bg px-2 py-0 text-left text-[13px] font-semibold' },
-  bodyCell: { class: 'h-[66px] border-b border-divider px-2 text-[13px]' },
+  ...entryListColumnPt,
+  bodyCell: { class: [entryListColumnPt.bodyCell, 'px-2'] },
 };
 // Local mirror of the period picker value. PrimeVue DatePicker with
 // selectionMode="range" emits [start, null] after the first click; keeping that

@@ -127,6 +127,18 @@ The shared example includes Dashboard UX 17h (10h + 7h; 2h excluded) and Invoice
 - Invoices nav item is visible for Admin and PM roles, except PMs with `canViewInvoices = false`, for whom the nav item is hidden from the sidebar and mobile bottom navigation.
 - Invoice defaults (currency, default hourly rate, rounding step) are loaded from `GET /invoices/defaults`, which is accessible to Admin and PMs with `canViewInvoices = true`. The admin-only `GET /workspace/settings` endpoint is NOT called on the invoices page.
 
+## Time Entries Page
+
+- The protected `/time-entries` route and its accessible **Time Entries** navigation link are available to Admins and PMs. Admins see all projects in the active workspace. PMs see only projects to which they are explicitly assigned, including public ones. The page uses its own project lookup independently of invoice access.
+- The desktop layout follows **Admin · Time Entries** in `GITiempo.pen` (frame `te471_1069`). A 312 px sidebar uses 16 px text for the project list beside the selected project's listing. The table follows Invoices styling and shows task and description, member, date and time, duration and billability, status, and actions. The toolbar shows the project name, task-title search, and an icon-only plus button with the accessible name **New time entry**. Member and date filters sit above the table. Below 640 px a project selector and the same search, filters and create action sit above stacked cards (frame `te471_1569`).
+- Changing project clears the previous project rows and member filter, resets pagination and closes the previous editor. Distinguish loading, request failure, no manageable projects and no matching entries. Historical contributors remain selectable in the member filter.
+- The date range filter applies on Confirm. Cancel restores the selected dates without changing the results. Clearing the date range preserves the other filters.
+- The creation dialog starts in the selected project. The manager chooses an eligible member, one of that member's trackable tasks, a completed interval, description and billability. Editing shows the fixed project and owner and allows changing the task within that project. The original task remains visible for historical corrections. Deletion requires confirmation.
+- The creation dialog and member filter show the email when names match and a GiTiempo account ID fragment when the name and email both match.
+- A successful edit updates the existing row or mobile card from the saved response. If the start time or task title changes the sort or search results, reconcile the page in the background while the current list stays visible.
+- Successful changes invalidate the Reports and dashboard caches for the current workspace.
+- Running and invoiced entries explain why edit and delete are unavailable in both layouts. Show server errors alongside the action and refresh the affected data. When a selected task becomes ineligible, refresh the owner's tasks and preserve the rest of the draft. When an entry or task is unavailable, verify current project access. If project access is lost, clear its data and reload the permitted projects.
+
 ## Members Page
 
 - Successful assignment, invoice-permission, member removal, initial invitation, and invitation cancellation update the existing rows/counters and form state without redundant success toasts. Destructive confirmations and error/retry feedback remain. Resending an invitation retains its acknowledgement without claiming email delivery.
