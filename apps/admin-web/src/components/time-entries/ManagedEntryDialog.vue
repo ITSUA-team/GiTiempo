@@ -59,7 +59,7 @@ const start = ref<Date | null>(entry ? new Date(entry.startedAt) : null);
 const end = ref<Date | null>(entry?.endedAt ? new Date(entry.endedAt) : null);
 const startPicker = useDatePickerConfirmCancel<Date>();
 const endPicker = useDatePickerConfirmCancel<Date>();
-const memberPickerPt = {
+const dialogAutoCompletePt = {
   ...giTiempoAutoCompleteDropdownPt,
   overlay: {
     ...giTiempoAutoCompleteDropdownPt.overlay,
@@ -241,7 +241,7 @@ async function submit(event: SubmitEvent) {
             v-model="memberModel"
             input-id="managed-entry-member"
             class="w-full"
-            :pt="requiredFieldPt(memberPickerPt, memberError ? 'managed-entry-member-error' : undefined)"
+            :pt="requiredFieldPt(dialogAutoCompletePt, memberError ? 'managed-entry-member-error' : undefined)"
             :suggestions="memberSuggestions"
             complete-on-focus
             data-key="id"
@@ -273,7 +273,7 @@ async function submit(event: SubmitEvent) {
         </label>
         <AutoComplete
           input-id="managed-entry-task"
-          :pt="requiredFieldPt(giTiempoAutoCompleteDropdownPt, taskError ? 'managed-entry-task-error' : undefined)"
+          :pt="requiredFieldPt(dialogAutoCompletePt, taskError ? 'managed-entry-task-error' : undefined)"
           :model-value="taskModel"
           :suggestions="taskSuggestions"
           complete-on-focus

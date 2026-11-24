@@ -313,15 +313,23 @@ describe('Managed time entries (e2e)', () => {
     const pool = app.get<Pool>(PG_POOL);
     const lock = await pool.connect();
     const pending: Promise<request.Response>[] = [];
-    const waitForRequests = (count: number) =>
+    const waitForRequests = (lockPid: number, count: number) =>
       vi.waitFor(
         async () => {
-          const { rows } = await pool.query<{ count: number }>(`
-        SELECT count(*)::int AS count
-        FROM pg_stat_activity
-        WHERE datname = current_database() AND pid <> pg_backend_pid()
-          AND wait_event_type = 'Lock' AND query LIKE '%"time_entries"%'
-      `);
+          const { rows } = await pool.query<{ count: number }>(
+            `WITH RECURSIVE waiting AS MATERIALIZED (
+               SELECT pid, pg_blocking_pids(pid) AS blockers
+               FROM pg_stat_activity
+               WHERE datname = current_database() AND wait_event_type = 'Lock'
+             ), blocked(pid) AS (
+               SELECT $1::int
+               UNION
+               SELECT waiting.pid FROM waiting
+               JOIN blocked ON blocked.pid = ANY(waiting.blockers)
+             )
+             SELECT count(*)::int AS count FROM blocked WHERE pid <> $1`,
+            [lockPid],
+          );
           expect(rows[0]?.count).toBe(count);
         },
         { interval: 10, timeout: 5000 },
@@ -329,13 +337,16 @@ describe('Managed time entries (e2e)', () => {
 
     try {
       await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query<{ pid: number }>('SELECT pg_backend_pid() AS pid');
       await lock.query('SELECT id FROM time_entries WHERE id = $1 FOR UPDATE', [
         entryId,
       ]);
       pending.push(first.then((response) => response));
-      await waitForRequests(1);
+      await waitForRequests(pid, 1);
       pending.push(second.then((response) => response));
-      await waitForRequests(2);
+      await waitForRequests(pid, 2);
       await lock.query('COMMIT');
       return await Promise.all(pending);
     } finally {

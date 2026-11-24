@@ -393,11 +393,13 @@ describe('Time Entries', () => {
       `${sameName.displayName} (${sameName.email})`,
       `${active.displayName} (${active.email})`,
     ]));
+    expect(member!.get('.p-autocomplete-overlay').classes()).toContain('max-w-[calc(100vw-2rem)]');
     await member!.get('[role="option"]:last-child').trigger('click');
     await flushPromises();
     expect(mocks.tasks).toHaveBeenCalledWith(alpha.id, active.id, expect.any(Function));
     await taskField!.get('button.p-autocomplete-dropdown').trigger('click');
     await vi.waitFor(() => expect(taskField!.get('[role="option"]').text()).toBe(task.title));
+    expect(taskField!.get('.p-autocomplete-overlay').classes()).toContain('max-w-[calc(100vw-2rem)]');
     await taskField!.get('[role="option"]').trigger('click');
     const [start, end] = dialog.findAllComponents(DatePicker);
     start?.vm.$emit('update:modelValue', new Date(startedAt));
@@ -485,6 +487,33 @@ describe('Time Entries', () => {
     await flushPromises();
     expect(mocks.remove).toHaveBeenCalledWith(alpha.id, editable.id);
     expect(wrapper.text()).toContain('No time entries yet');
+    wrapper.unmount();
+  });
+
+  it.each([false, true])('keeps the entry and refreshes its lock after a delete conflict (mobile: %s)', async viewport => {
+    mobile.value = viewport;
+    const message = 'This entry is included in an invoice.';
+    mocks.list.mockResolvedValueOnce(response([editable]))
+      .mockResolvedValue(response([{ ...editable, invoiceId: 'invoice' }]));
+    mocks.remove.mockRejectedValueOnce(new ApiError('Conflict', {
+      status: 409,
+      body: { statusCode: 409, error: 'Conflict', code: 'time_entry_invoiced', message },
+    }));
+    const { wrapper } = render();
+    await flushPromises();
+
+    const deleteButton = 'button[aria-label="Delete time entry for Historical task"]';
+    await wrapper.get(deleteButton).trigger('click');
+    mocks.confirm.mock.calls[0][3]();
+    await flushPromises();
+
+    expect(mocks.remove).toHaveBeenCalledExactlyOnceWith(alpha.id, editable.id);
+    expect(mocks.list).toHaveBeenCalledTimes(2);
+    expect(wrapper.text()).toContain(message);
+    expect(wrapper.text()).toContain('Historical task');
+    expect(wrapper.text()).toContain('Included in invoice');
+    expect(wrapper.find(deleteButton).exists()).toBe(false);
+    expect(wrapper.find('button[aria-label="Edit time entry for Historical task"]').exists()).toBe(false);
     wrapper.unmount();
   });
 

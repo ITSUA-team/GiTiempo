@@ -64,3 +64,9 @@ Browser acceptance ran against the branch at `b0ee77b4` with the picker changes 
 | Guest and ordinary member | Guest redirected to login. The ordinary member reached standalone `/403` without admin navigation. Its primary action correctly went to the user workspace, but the visible label **Back to dashboard** differs from the `admin-pages` change spec. |
 
 The desktop table and mobile cards followed frames `te471_1069` and `te471_1569`. The picker uses the existing PrimeVue treatment with a viewport width limit and readable ID prefixes for collisions.
+
+## PR #588 review follow-up
+
+- PASS — On `4a70ec1d` with the review fixes applied, Chrome opened the real create dialog against a local API and disposable database at 320, 375 and 1280 px. Both Member and Task stayed within the viewport, and both long options were selectable. The mobile lists measured 288 and 343 px respectively and truncated the long labels. The page had no horizontal overflow.
+- PASS — The Admin view tests verify the width limit on both rendered overlays and the message, refreshed invoice lock and retained record after `DELETE 409` in both layouts.
+- PASS — All 509 API e2e tests passed on isolated PostgreSQL 17. The race tests now wait for the database sessions blocked by the fixture transaction.
