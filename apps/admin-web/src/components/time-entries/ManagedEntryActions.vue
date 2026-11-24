@@ -3,8 +3,8 @@ import { LockClosedIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline
 import type { TimeEntryResponse } from '@gitiempo/shared';
 import Button from 'primevue/button';
 
-defineProps<{ entry: TimeEntryResponse; disabled: boolean }>();
-const emit = defineEmits<{ edit: []; remove: [] }>();
+defineProps<{ entry: TimeEntryResponse; disabled: boolean; deleting: boolean }>();
+const emit = defineEmits<{ edit: [event: MouseEvent]; remove: [] }>();
 </script>
 
 <template>
@@ -22,7 +22,7 @@ const emit = defineEmits<{ edit: []; remove: [] }>();
       :pt="{ root: 'size-8 p-0' }"
       :disabled="disabled"
       :aria-label="`Edit time entry for ${entry.task.title}`"
-      @click="emit('edit')"
+      @click="emit('edit', $event)"
     >
       <template #icon>
         <PencilIcon
@@ -39,10 +39,14 @@ const emit = defineEmits<{ edit: []; remove: [] }>();
       size="small"
       :pt="{ root: 'size-8 p-0' }"
       :disabled="disabled"
-      :aria-label="`Delete time entry for ${entry.task.title}`"
+      :loading="deleting"
+      :aria-label="`${deleting ? 'Deleting' : 'Delete'} time entry for ${entry.task.title}`"
       @click="emit('remove')"
     >
-      <template #icon>
+      <template
+        v-if="!deleting"
+        #icon
+      >
         <TrashIcon
           class="size-5"
           aria-hidden="true"

@@ -39,3 +39,10 @@ Chrome verified a description edit against the local API at 1280 × 800 and 375 
 - The exported managed PATCH schema requires at least one property and documents the 400 response for invalid input.
 - All 509 API e2e tests passed on isolated PostgreSQL 17. The regression tests force both lock orders for invoice attachment versus management PATCH and DELETE, exercise reciprocal task moves, and verify another participation record is used when the first is deleted while a move waits.
 - All 20 focused Admin UI and client tests passed, including invalidation of Reports and Dashboard in the workspace where the change was saved.
+
+## DOM review follow-up
+
+- PASS — On the local admin page in Chrome with the DOM review changes applied to `f47fd699`, the keyboard opened the editor, saved a description against the isolated API, and returned focus to the original Edit button. At 1280 × 800 the project sidebar measured 312 px, the create button 38 px, the table header 42 px, and the entry rows 66 px. The table column order matched the desktop Pen frame.
+- PASS — With the editor open, a test entry was removed from the isolated database and the next projects request was interrupted in Chrome. Save returned 404, the draft remained visible, and Save stayed disabled. Restoring the projects request and choosing Try again retained the draft and re-enabled Save.
+- PASS — At 375 × 812, the assigned PM used the keyboard to choose an eligible member and task, dismissed the editor with Escape, and saw the empty result after a task-title search. The mobile layout used cards and fit the viewport.
+- The focused tests also hold DELETE open on desktop and mobile to check that competing actions are disabled, and resubmit after 422 to check that the missing task error is linked to the input.

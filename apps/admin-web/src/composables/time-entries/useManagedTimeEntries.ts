@@ -21,6 +21,8 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   const loadingProjects = ref(false);
   const loadingEntries = ref(false);
   const projectError = ref('');
+  const projectAccessError = ref('');
+  const checkingProjectAccess = ref(false);
   const entriesError = ref('');
   let projectRequest = 0;
   let memberRequest = 0;
@@ -59,20 +61,33 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     const selected = projectId.value;
     const current = () => request === projectRequest;
     loadingProjects.value = Boolean(scope.value) && !recheckAccess;
+    if (recheckAccess) checkingProjectAccess.value = true;
     projectError.value = '';
-    if (!scope.value) return;
+    if (!scope.value) return false;
     try {
       const items = await client.projects(current);
-      if (!current()) return;
+      if (!current() || (recheckAccess && selected !== projectId.value)) return false;
       projects.value = items;
+      if (selected === projectId.value) projectAccessError.value = '';
       if (!items.some(item => item.id === projectId.value)) projectId.value = items[0]?.id;
+      return selected === projectId.value;
     } catch (error) {
-      if (!current()) return;
-      if (recheckAccess && selected !== projectId.value) return;
-      if (recheckAccess) clearProjects();
+      if (!current()) return false;
+      if (recheckAccess) {
+        if (selected !== projectId.value) return false;
+        if (!isApiErrorStatus(error, [401, 403])) {
+          projectAccessError.value = getErrorMessage(error, 'Unable to verify project access.');
+          return false;
+        }
+        clearProjects();
+      }
       projectError.value = getErrorMessage(error, 'Unable to load projects.');
+      return false;
     } finally {
-      if (current()) loadingProjects.value = false;
+      if (current()) {
+        loadingProjects.value = false;
+        if (recheckAccess) checkingProjectAccess.value = false;
+      }
     }
   }
 
@@ -92,6 +107,7 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   }
 
   function recheckProjectAccess() {
+    if (!projectId.value || checkingProjectAccess.value) return Promise.resolve(false);
     return loadProjects(true);
   }
 
@@ -187,13 +203,14 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
       || (query.filters.search && previous.task.title !== updated.task.title);
     if (!loaded || loadedQuery !== query || pendingQuery === query || affectsPage) {
       refreshEntries();
-      return;
+      return false;
     }
-    if (!loaded.items.some(entry => entry.id === updated.id)) return;
+    if (!loaded.items.some(entry => entry.id === updated.id)) return false;
     list.value = {
       ...loaded,
       items: loaded.items.map(entry => entry.id === updated.id ? updated : entry),
     };
+    return true;
   }
 
   function refresh() {
@@ -205,6 +222,8 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   }
 
   watch(projectId, () => {
+    checkingProjectAccess.value = false;
+    projectAccessError.value = '';
     list.value = undefined;
     members.value = [];
     eligibleMembers.value = [];
@@ -241,7 +260,7 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
 
   return {
     projects, project, projectId, members, memberId, search, dates, page, list,
-    loadingProjects, loadingEntries, projectError, entriesError, memberError,
+    loadingProjects, loadingEntries, projectError, projectAccessError, checkingProjectAccess, entriesError, memberError,
     eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
     retryProjects, reloadScope, recheckProjectAccess, refresh, refreshEntries, applyUpdatedEntry,
   };

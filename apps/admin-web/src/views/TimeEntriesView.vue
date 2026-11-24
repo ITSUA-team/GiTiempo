@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
-import { ClockIcon, FolderIcon, MagnifyingGlassIcon, PlusIcon } from '@heroicons/vue/24/outline';
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
+import { ClockIcon, FolderIcon, PlusIcon } from '@heroicons/vue/24/outline';
 import { managedTimeEntryConflictSchema, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
-import { DatePickerButtonBar, EntryActionButton, getErrorMessage, MobileRecordCard, SurfaceCard, useDatePickerConfirmCancel, useIsMobileViewport } from '@gitiempo/web-shared';
+import { giTiempoDatePickerPt, giTiempoSelectPt } from '@gitiempo/web-config/theme';
+import { DatePickerButtonBar, EmptyStateBlock, EntryActionButton, FilterAutoComplete, filterAutocompleteOptions, getErrorMessage, MobileRecordCard, SurfaceCard, useDatePickerConfirmCancel, useIsMobileViewport } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
 import { formatLocalTime, formatPaddedHoursMinutesDuration, getLocalDateKey } from '@gitiempo/web-shared/time';
 import { useIntervalFn } from '@vueuse/core';
@@ -11,6 +12,8 @@ import Button from 'primevue/button';
 import Column from 'primevue/column';
 import DataTable from 'primevue/datatable';
 import DatePicker from 'primevue/datepicker';
+import IconField from 'primevue/iconfield';
+import InputIcon from 'primevue/inputicon';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Paginator from 'primevue/paginator';
@@ -21,9 +24,11 @@ import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import ManagedEntryActions from '@/components/time-entries/ManagedEntryActions.vue';
 import ManagedEntryDialog from '@/components/time-entries/ManagedEntryDialog.vue';
 import ManagedEntryStatus from '@/components/time-entries/ManagedEntryStatus.vue';
+import { managedMemberOptions } from '@/components/time-entries/managed-member-options';
 import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { invalidateQueryKeys } from '@/composables/query';
 import { useManagedTimeEntries } from '@/composables/time-entries/useManagedTimeEntries';
+import { entryListColumnPt } from '@/constants/entry-list-table';
 import { adminMutationInvalidationKeys } from '@/lib/query-keys';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 import {
@@ -44,15 +49,19 @@ const scope = computed(() => {
 const client = createAdminTimeEntriesClient();
 const {
   projects, project, projectId, members, memberId, search, dates, page, list,
-  loadingProjects, loadingEntries, projectError, entriesError, memberError,
+  loadingProjects, loadingEntries, projectError, projectAccessError, checkingProjectAccess, entriesError, memberError,
   eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
   retryProjects, reloadScope, recheckProjectAccess, refresh, refreshEntries, applyUpdatedEntry,
 } = useManagedTimeEntries(scope, client);
 const mobile = useIsMobileViewport();
 const { requireConfirmation, dismissConfirmation } = useConfirmation();
-const editor = shallowRef<{ entry?: TimeEntryResponse }>();
+const editor = shallowRef<{ entry?: TimeEntryResponse; opener?: HTMLElement }>();
+const editorVisible = ref(false);
 const editorLocked = ref(false);
 const pendingMutation = shallowRef<{ inEditor: boolean; entryId?: string }>();
+const pendingDeletionId = computed(() => pendingMutation.value?.inEditor ? undefined : pendingMutation.value?.entryId);
+const accessUnverified = computed(() => checkingProjectAccess.value || Boolean(projectAccessError.value));
+const actionsDisabled = computed(() => Boolean(pendingDeletionId.value) || accessUnverified.value);
 const mutationError = ref('');
 const editorError = ref('');
 const taskRefresh = ref(0);
@@ -60,10 +69,19 @@ const dateDraft = ref<(Date | null)[] | null>(null);
 const datePicker = useDatePickerConfirmCancel<(Date | null)[]>();
 watch([dates, scope], () => { dateDraft.value = dates.value; }, { flush: 'sync' });
 const hasFilters = computed(() => Boolean(search.value.trim() || memberId.value || dates.value?.[0]));
-const memberOptions = computed(() => members.value.map(member => ({
-  id: member.id,
-  label: member.displayName || member.email,
-})));
+const memberOptions = computed(() => managedMemberOptions(members.value));
+const memberSearch = shallowRef({ query: '' });
+const selectedMember = computed(() => memberOptions.value.find(member => member.id === memberId.value) ?? null);
+const memberSuggestions = computed(() => filterAutocompleteOptions(memberOptions.value, memberSearch.value.query, member => member.label));
+const rangeFilterPt = {
+  ...giTiempoDatePickerPt,
+  pcInputText: { root: { ...giTiempoDatePickerPt.pcInputText.root, 'aria-label': 'Filter by date range' } },
+};
+
+function selectMember(value: (typeof memberOptions.value)[number] | string | null) {
+  if (typeof value === 'string' && value.trim()) return;
+  memberId.value = typeof value === 'object' ? value?.id : undefined;
+}
 const now = ref(Date.now());
 const timer = useIntervalFn(() => { now.value = Date.now(); }, 1000, { immediate: false });
 watch(() => list.value?.items.some(entry => !entry.endedAt), running => {
@@ -76,8 +94,8 @@ watch(() => list.value?.items.some(entry => !entry.endedAt), running => {
 const shortDate = new Intl.DateTimeFormat('en-GB', { month: 'short', day: 'numeric', year: 'numeric' });
 const rowCount = computed(() => list.value?.meta.total ?? 0);
 const columnPt = {
-  headerCell: { class: 'h-[42px] bg-app-bg px-2 py-0 text-left text-[13px] font-semibold' },
-  bodyCell: { class: 'h-[66px] border-b border-divider p-2 text-[13px]' },
+  ...entryListColumnPt,
+  bodyCell: { class: [entryListColumnPt.bodyCell, 'p-2'] },
 };
 const endAlignedColumnPt = { ...columnPt, columnHeaderContent: 'justify-end' };
 
@@ -114,15 +132,35 @@ function confirmDateRange() {
 }
 
 function closeEditor() {
+  editorVisible.value = false;
   editor.value = undefined;
   editorError.value = '';
   editorLocked.value = false;
+}
+
+async function finishClosingEditor() {
+  const opener = editor.value?.opener;
+  const activeGeneration = generation;
+  closeEditor();
+  await nextTick();
+  if (activeGeneration !== generation || editor.value) return;
+  if (opener?.isConnected && !opener.matches(':disabled')) opener.focus();
+  else document.getElementById('managed-time-entries-search')?.focus();
+}
+
+async function verifyProjectAccess({ reloadTasks = false } = {}) {
+  const activeGeneration = generation;
+  const verified = await recheckProjectAccess();
+  if (!verified || activeGeneration !== generation) return;
+  refreshEntries();
+  if (reloadTasks && editor.value) taskRefresh.value += 1;
 }
 
 let generation = 0;
 watch([scope, projectId], () => {
   generation += 1;
   pendingMutation.value = undefined;
+  memberSearch.value = { query: '' };
   mutationError.value = '';
   closeEditor();
   dismissConfirmation();
@@ -137,7 +175,7 @@ async function mutate<T>(
   mutation: NonNullable<typeof pendingMutation.value>,
   onSuccess: (result: T) => void = refresh,
 ) {
-  if (pendingMutation.value) return;
+  if (pendingMutation.value || accessUnverified.value) return;
   const activeGeneration = generation;
   const requestScope = serverScope.value;
   const { inEditor } = mutation;
@@ -148,7 +186,7 @@ async function mutate<T>(
     const result = await action();
     void invalidateQueryKeys(queryClient, adminMutationInvalidationKeys.afterReportsDataMutation(requestScope));
     if (activeGeneration !== generation) return;
-    closeEditor();
+    if (inEditor) editorVisible.value = false;
     onSuccess(result);
   } catch (error) {
     if (activeGeneration !== generation) return;
@@ -156,15 +194,11 @@ async function mutate<T>(
       void reloadScope();
       return;
     }
-    if (isApiErrorStatus(error, [404])) {
-      await recheckProjectAccess();
-      if (activeGeneration !== generation) return;
-      refreshEntries();
-      if (inEditor) taskRefresh.value += 1;
-    }
     const target = inEditor ? editorError : mutationError;
     target.value = getErrorMessage(error, 'Unable to save time entry changes.');
-    if (isApiErrorStatus(error, [409])) {
+    if (isApiErrorStatus(error, [404])) {
+      await verifyProjectAccess({ reloadTasks: inEditor });
+    } else if (isApiErrorStatus(error, [409])) {
       const conflict = managedTimeEntryConflictSchema.safeParse(error.body);
       if (conflict.success) target.value = conflict.data.message;
       if (inEditor) editorLocked.value = true;
@@ -190,17 +224,23 @@ function updateEntry(input: ManagedEntryUpdate) {
     void mutate(
       () => client.update(entry.projectId, entry.id, input),
       { inEditor: true, entryId: entry.id },
-      updated => applyUpdatedEntry(entry, updated),
+      updated => {
+        const rowRetained = applyUpdatedEntry(entry, updated);
+        if (!rowRetained && editor.value) editor.value = { entry };
+      },
     );
   }
 }
 
-function openEditor(entry?: TimeEntryResponse) {
-  if (!pendingMutation.value) editor.value = { entry };
+function openEditor(event: MouseEvent, entry?: TimeEntryResponse) {
+  if (editor.value || pendingMutation.value || accessUnverified.value) return;
+  const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
+  editor.value = { entry, opener };
+  editorVisible.value = true;
 }
 
 function confirmDelete(entry: TimeEntryResponse) {
-  if (pendingMutation.value) return;
+  if (pendingMutation.value || accessUnverified.value) return;
   const activeGeneration = generation;
   requireConfirmation(
     `Delete the time entry for “${entry.task.title}”? This action cannot be undone.`,
@@ -248,6 +288,7 @@ function confirmDelete(entry: TimeEntryResponse) {
         :options="projects"
         option-label="name"
         option-value="id"
+        :pt="giTiempoSelectPt"
         fluid
       />
       <div
@@ -285,6 +326,7 @@ function confirmDelete(entry: TimeEntryResponse) {
       padding-class="p-0 sm:p-4"
       body-class="flex min-w-0 flex-col gap-4"
       class="managed-time-entries-list min-w-0"
+      :aria-busy="checkingProjectAccess || undefined"
     >
       <div class="flex min-w-0 flex-col gap-3">
         <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
@@ -300,45 +342,45 @@ function confirmDelete(entry: TimeEntryResponse) {
             </p>
           </div>
           <div class="flex items-center gap-2 sm:gap-3">
-            <div class="relative min-w-0 grow lg:w-[220px] lg:grow-0">
-              <MagnifyingGlassIcon
-                class="text-text-muted pointer-events-none absolute top-3 left-3 size-4"
-                aria-hidden="true"
-              />
+            <IconField class="min-w-0 grow lg:w-[220px] lg:grow-0">
+              <InputIcon class="pi pi-search text-text-muted" />
               <InputText
+                id="managed-time-entries-search"
                 v-model="search"
-                aria-label="Search tasks"
+                aria-label="Search entries"
                 placeholder="Search entries"
                 maxlength="200"
-                class="h-[38px] w-full pl-9 text-[13px]"
+                class="h-[38px] w-full text-[13px]"
               />
-            </div>
+            </IconField>
             <EntryActionButton
               v-if="project.isActive && eligibleMembers.length"
               :icon="PlusIcon"
               label="New time entry"
+              :disabled="actionsDisabled"
               class="shrink-0"
-              @click="openEditor()"
+              @click="openEditor"
             />
           </div>
         </div>
 
         <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
-          <Select
-            v-model="memberId"
+          <FilterAutoComplete
+            :model-value="selectedMember"
             aria-label="Filter by member"
-            :options="memberOptions"
+            :suggestions="memberSuggestions"
+            force-selection
             option-label="label"
-            option-value="id"
             placeholder="All members"
             show-clear
-            size="small"
-            class="min-h-[38px] w-full min-w-0 sm:w-56"
+            class="w-full min-w-0 sm:w-56"
+            @complete="memberSearch = $event"
+            @update:model-value="selectMember"
           />
           <DatePicker
             :ref="datePicker.datePickerRef"
             :model-value="dateDraft"
-            :pt="{ pcInputText: { root: { 'aria-label': 'Filter by date range', class: 'min-w-0 w-full' } } }"
+            :pt="rangeFilterPt"
             selection-mode="range"
             date-format="M d, yy"
             placeholder="Date range"
@@ -372,6 +414,12 @@ function confirmDelete(entry: TimeEntryResponse) {
         </div>
       </div>
 
+      <RequestErrorCard
+        v-if="projectAccessError && !editor"
+        title="Unable to verify project access"
+        :message="projectAccessError"
+        @retry="verifyProjectAccess()"
+      />
       <Message
         v-if="mutationError"
         severity="error"
@@ -416,12 +464,11 @@ function confirmDelete(entry: TimeEntryResponse) {
           class="size-6"
           aria-hidden="true"
         />
-        <p class="text-text-dark font-medium">
-          {{ hasFilters ? 'No matching time entries' : 'No time entries yet' }}
-        </p>
-        <p class="text-sm">
-          {{ hasFilters ? 'Try a different task, member or date range.' : 'This project has no recorded time.' }}
-        </p>
+        <EmptyStateBlock
+          :title="hasFilters ? 'No matching time entries' : 'No time entries yet'"
+          :description="hasFilters ? 'Try a different task, member or date range.' : 'This project has no recorded time.'"
+          padding-class="p-0"
+        />
       </div>
       <template v-else-if="list?.items.length">
         <div
@@ -473,8 +520,9 @@ function confirmDelete(entry: TimeEntryResponse) {
               />
               <ManagedEntryActions
                 :entry="entry"
-                :disabled="pendingMutation?.entryId === entry.id"
-                @edit="openEditor(entry)"
+                :disabled="actionsDisabled || pendingMutation?.entryId === entry.id"
+                :deleting="pendingDeletionId === entry.id"
+                @edit="openEditor($event, entry)"
                 @remove="confirmDelete(entry)"
               />
             </template>
@@ -555,8 +603,9 @@ function confirmDelete(entry: TimeEntryResponse) {
               <div class="flex items-center justify-end gap-1">
                 <ManagedEntryActions
                   :entry="entry"
-                  :disabled="pendingMutation?.entryId === entry.id"
-                  @edit="openEditor(entry)"
+                  :disabled="actionsDisabled || pendingMutation?.entryId === entry.id"
+                  :deleting="pendingDeletionId === entry.id"
+                  @edit="openEditor($event, entry)"
                   @remove="confirmDelete(entry)"
                 />
               </div>
@@ -581,18 +630,23 @@ function confirmDelete(entry: TimeEntryResponse) {
 
     <ManagedEntryDialog
       v-if="project && editor"
+      v-model:visible="editorVisible"
       :client="client"
       :project="project"
       :members="eligibleMembers"
       :entry="editor.entry"
       :busy="pendingMutation?.inEditor ?? false"
+      :access-unverified="accessUnverified"
+      :project-access-error="projectAccessError"
       :locked="editorLocked"
       :error="editorError"
       :task-refresh="taskRefresh"
-      @close="closeEditor"
+      @close="finishClosingEditor"
       @create="createEntry"
       @update="updateEntry"
       @scope-lost="reloadScope"
+      @access-check="verifyProjectAccess()"
+      @retry-access="verifyProjectAccess({ reloadTasks: true })"
     />
   </div>
 </template>

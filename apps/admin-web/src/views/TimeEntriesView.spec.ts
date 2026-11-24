@@ -4,10 +4,10 @@ import { ApiError } from '@gitiempo/web-shared/http';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia } from 'pinia';
+import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import DatePicker from 'primevue/datepicker';
-import Select from 'primevue/select';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, ref } from 'vue';
 
@@ -60,15 +60,23 @@ function token(workspaceId: string) {
 }
 
 const dialogStub = defineComponent({
+  props: { visible: Boolean },
+  emits: ['after-hide'],
+  watch: {
+    visible(value: boolean) {
+      if (!value) this.$emit('after-hide');
+    },
+  },
   template: '<section><slot /><slot name="footer" /></section>',
 });
 
-function render() {
+function render({ attachToDocument = false } = {}) {
   const pinia = createPinia();
   const auth = useAuthStore(pinia);
   auth.accessToken = token('workspace');
   const queryClient = new QueryClient();
   const wrapper = mount(TimeEntriesView, {
+    attachTo: attachToDocument ? document.body : undefined,
     global: {
       directives: { tooltip: {} },
       plugins: [pinia, PrimeVue, ConfirmationService, [VueQueryPlugin, { queryClient }]],
@@ -170,7 +178,7 @@ describe('Time Entries', () => {
     const updated = { ...editable, startedAt: '2026-04-16T10:00:25.000Z' };
     const freshPage = response([{ ...running }, { ...invoiced }, updated]);
     let resolve!: (value: typeof freshPage) => void;
-    const { wrapper } = render();
+    const { wrapper } = render({ attachToDocument: true });
     await flushPromises();
     const table = wrapper.get('table').element;
     const rowsBefore = wrapper.findAll('tbody tr').map(row => row.element);
@@ -184,6 +192,7 @@ describe('Time Entries', () => {
     expect(mocks.list).toHaveBeenCalledTimes(2);
     expect(wrapper.get('table').element).toBe(table);
     expect(wrapper.text()).not.toContain('Loading time entries');
+    expect(document.activeElement === wrapper.get('[aria-label="Search entries"]').element).toBe(true);
 
     resolve(freshPage);
     await flushPromises();
@@ -208,7 +217,7 @@ describe('Time Entries', () => {
     await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
     await flushPromises();
     expect(wrapper.get('#managed-entry-member').attributes('readonly')).toBeDefined();
-    expect(wrapper.getComponent(ManagedEntryDialog).text()).toContain('Historical task');
+    expect(wrapper.get<HTMLInputElement>('#managed-entry-task').element.value).toBe('Historical task');
     await wrapper.get('#managed-entry-description').setValue('Corrected note');
     mocks.list.mockResolvedValue(response([{ ...editable, invoiceId: 'invoice' }]));
     await wrapper.get('form').trigger('submit');
@@ -243,6 +252,79 @@ describe('Time Entries', () => {
     wrapper.unmount();
   });
 
+  it('blocks saving and keeps the draft until a failed access check can be retried', async () => {
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    const description = wrapper.get<HTMLTextAreaElement>('#managed-entry-description');
+    await description.setValue('Keep my draft');
+    mocks.update.mockRejectedValueOnce(new ApiError('Time entry not found', { status: 404 }));
+    mocks.projects.mockRejectedValueOnce(new ApiError('Project service unavailable', { status: 500 }));
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Unable to verify project access');
+    expect(description.element.value).toBe('Keep my draft');
+    const submit = wrapper.get('button[type="submit"]');
+    expect(submit.attributes('disabled')).toBeDefined();
+    await wrapper.get('form').trigger('submit');
+    expect(mocks.update).toHaveBeenCalledOnce();
+
+    const retry = wrapper.getComponent(ManagedEntryDialog).findAll('button').find(button => button.text() === 'Try again');
+    await retry?.trigger('click');
+    await flushPromises();
+
+    expect(submit.attributes('disabled')).toBeUndefined();
+    expect(description.element.value).toBe('Keep my draft');
+    expect(wrapper.text()).not.toContain('Unable to verify project access');
+    expect(mocks.projects).toHaveBeenCalledTimes(3);
+    wrapper.unmount();
+  });
+
+  it('returns focus to the invoking edit button after saving in place', async () => {
+    const { wrapper } = render({ attachToDocument: true });
+    await flushPromises();
+    const edit = wrapper.get<HTMLButtonElement>('button[aria-label="Edit time entry for Historical task"]');
+    edit.element.focus();
+    await edit.trigger('click');
+    const description = wrapper.get<HTMLTextAreaElement>('#managed-entry-description');
+    description.element.focus();
+    await description.setValue('Saved with focus restored');
+    mocks.update.mockResolvedValueOnce({ ...editable, description: 'Saved with focus restored' });
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(mocks.update).toHaveBeenCalledOnce();
+    expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
+    expect(document.activeElement === edit.element).toBe(true);
+    wrapper.unmount();
+  });
+
+  it.each([false, true])('disables competing actions during deletion (mobile: %s)', async viewport => {
+    mobile.value = viewport;
+    mocks.list.mockResolvedValue(response([editable, otherEditable]));
+    const { wrapper } = render();
+    await flushPromises();
+    let finishDelete!: () => void;
+    mocks.remove.mockReturnValue(new Promise<void>(resolve => { finishDelete = resolve; }));
+    await wrapper.get('button[aria-label="Delete time entry for Historical task"]').trigger('click');
+    mocks.confirm.mock.calls[0][3]();
+    await flushPromises();
+
+    const add = wrapper.get('button[aria-label="New time entry"]');
+    const edit = wrapper.get('button[aria-label="Edit time entry for Other editable task"]');
+    expect(add.attributes('disabled')).toBeDefined();
+    expect(edit.attributes('disabled')).toBeDefined();
+    expect(wrapper.get('button[aria-label="Deleting time entry for Historical task"]').attributes('disabled')).toBeDefined();
+
+    mocks.list.mockResolvedValue(response([otherEditable]));
+    finishDelete();
+    await flushPromises();
+    expect(add.attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('button[aria-label="Edit time entry for Other editable task"]').attributes('disabled')).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it('clears the editor and protected rows when a missing project is no longer manageable', async () => {
     const { wrapper } = render();
     await flushPromises();
@@ -266,24 +348,27 @@ describe('Time Entries', () => {
     const available = { id: 'available', title: 'Still eligible', defaultBillableForTimeEntries: false };
     mocks.tasks.mockResolvedValueOnce([closed, available]).mockResolvedValue([available]);
     mocks.update.mockRejectedValueOnce(new ApiError('Task is ineligible', { status: 422 }));
-    const { wrapper } = render();
+    const { wrapper } = render({ attachToDocument: true });
     await flushPromises();
     await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
     await flushPromises();
     const dialog = wrapper.getComponent(ManagedEntryDialog);
-    const task = dialog.getComponent(Select);
-    task.vm.$emit('update:modelValue', closed.id);
+    const task = dialog.getComponent(AutoComplete);
+    task.vm.$emit('update:modelValue', closed);
     await dialog.get('#managed-entry-description').setValue('Keep the description');
     await dialog.get('form').trigger('submit');
     await flushPromises();
 
     expect(dialog.text()).toContain('Task is ineligible');
     expect(dialog.get<HTMLTextAreaElement>('#managed-entry-description').element.value).toBe('Keep the description');
-    expect(task.props('modelValue')).toBeUndefined();
-    expect((task.props('options') ?? []).map(option => option.id)).toEqual([editable.taskId, available.id]);
+    expect(task.props('modelValue')).toBeNull();
+    expect((task.props('suggestions') ?? []).map(option => option.id)).toEqual([editable.taskId, available.id]);
     expect(mocks.tasks).toHaveBeenCalledTimes(2);
     await dialog.get('form').trigger('submit');
     expect(mocks.update).toHaveBeenCalledTimes(1);
+    expect(dialog.get('#managed-entry-task-error').text()).toBe('Select a task.');
+    expect(dialog.get('#managed-entry-task').attributes('aria-describedby')).toBe('managed-entry-task-error');
+    expect(document.activeElement === dialog.get('#managed-entry-task').element).toBe(true);
     wrapper.unmount();
   });
 
@@ -291,6 +376,8 @@ describe('Time Entries', () => {
     const task = { id: 'new-task', title: 'Eligible task', defaultBillableForTimeEntries: true };
     const startedAt = editable.startedAt;
     const endedAt = editable.endedAt!;
+    const sameName = { ...active, id: 'same-name', email: 'other-active@example.com' };
+    mocks.members.mockImplementation(async (_project, purpose) => purpose === 'create' ? [sameName, active] : [past, active]);
     mocks.tasks.mockResolvedValue([task]);
     mocks.create.mockResolvedValue(editable);
     const { wrapper } = render();
@@ -300,11 +387,18 @@ describe('Time Entries', () => {
     expect(createButton.text()).toBe('');
     await createButton.trigger('click');
     const dialog = wrapper.getComponent(ManagedEntryDialog);
-    const [member, taskField] = dialog.findAllComponents(Select);
-    member?.vm.$emit('update:modelValue', active.id);
+    const [member, taskField] = dialog.findAllComponents(AutoComplete);
+    await member!.get('button.p-autocomplete-dropdown').trigger('click');
+    await vi.waitFor(() => expect(member!.findAll('[role="option"]').map(option => option.text())).toEqual([
+      `${sameName.displayName} (${sameName.email})`,
+      `${active.displayName} (${active.email})`,
+    ]));
+    await member!.get('[role="option"]:last-child').trigger('click');
     await flushPromises();
     expect(mocks.tasks).toHaveBeenCalledWith(alpha.id, active.id, expect.any(Function));
-    taskField?.vm.$emit('update:modelValue', task.id);
+    await taskField!.get('button.p-autocomplete-dropdown').trigger('click');
+    await vi.waitFor(() => expect(taskField!.get('[role="option"]').text()).toBe(task.title));
+    await taskField!.get('[role="option"]').trigger('click');
     const [start, end] = dialog.findAllComponents(DatePicker);
     start?.vm.$emit('update:modelValue', new Date(startedAt));
     end?.vm.$emit('update:modelValue', new Date(endedAt));
@@ -329,10 +423,10 @@ describe('Time Entries', () => {
     await flushPromises();
     expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 2, expect.anything());
 
-    const filter = wrapper.getComponent(Select);
-    expect(filter.props('options')).toEqual(expect.arrayContaining([expect.objectContaining({ id: past.id })]));
-    filter.vm.$emit('update:modelValue', past.id);
-    await wrapper.get('input[aria-label="Search tasks"]').setValue('  historic ');
+    const filter = wrapper.getComponent(AutoComplete);
+    expect(filter.props('suggestions')).toEqual(expect.arrayContaining([expect.objectContaining({ id: past.id })]));
+    filter.vm.$emit('update:modelValue', { ...past, label: past.displayName });
+    await wrapper.get('input[aria-label="Search entries"]').setValue('  historic ');
     await flushPromises();
 
     expect(mocks.list).toHaveBeenLastCalledWith(alpha.id, 1, expect.objectContaining({ userId: past.id, search: 'historic' }));
