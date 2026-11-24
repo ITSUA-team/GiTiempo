@@ -88,6 +88,9 @@ const activeName = computed(() => {
 
   return name;
 });
+const usesCompactListLayout = computed(
+  () => activeName.value === routeNames.invoices || activeName.value === routeNames.timeEntries,
+);
 
 async function handleSignOut(): Promise<void> {
   await authStore.logout();
@@ -219,7 +222,7 @@ watch(
 
     <div
       class="flex flex-1"
-      :class="{ 'sm:[&>aside]:w-[60px]': activeName === routeNames.invoices }"
+      :class="{ 'sm:[&>aside]:w-[60px]': usesCompactListLayout }"
     >
       <WorkspaceNavigation
         :active-name="activeName"
@@ -229,7 +232,7 @@ watch(
       <main
         :id="MAIN_CONTENT_ELEMENT_ID"
         class="min-w-0 flex-1 pb-20 sm:pb-6"
-        :class="activeName === routeNames.invoices || activeName === routeNames.settings ? 'px-4 pt-4 sm:px-6 sm:pt-6' : 'px-6 pt-6'"
+        :class="usesCompactListLayout || activeName === routeNames.settings ? 'px-4 pt-4 sm:px-6 sm:pt-6' : 'px-6 pt-6'"
         tabindex="-1"
       >
         <RouterView />

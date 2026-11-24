@@ -255,6 +255,7 @@ describe("AdminAppShell", () => {
     );
     expect(wrapper.find('[data-testid="top-bar-timer"]').exists()).toBe(false);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Time Entries"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(2);
@@ -388,7 +389,7 @@ describe("AdminAppShell", () => {
     expect(wrapper.findAll('a[href="/settings"]')).toHaveLength(0);
   });
 
-  it("hides invoices navigation for PMs without canViewInvoices permission", async () => {
+  it("shows Time Entries and hides Invoices for PMs without invoice permission", async () => {
     const pinia = createPinia();
     setActivePinia(pinia);
     const authStore = useAuthStore(pinia);
@@ -403,7 +404,7 @@ describe("AdminAppShell", () => {
       history: createMemoryHistory(),
       pinia,
     });
-    await router.push("/");
+    await router.push("/time-entries");
     await router.isReady();
 
     const wrapper = mount(AdminAppShell, {
@@ -425,9 +426,11 @@ describe("AdminAppShell", () => {
 
     expect(wrapper.findAll('a[aria-label="Dashboard"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Reports"]')).toHaveLength(2);
+    expect(wrapper.findAll('a[aria-label="Time Entries"][aria-current="page"]')).toHaveLength(2);
     expect(wrapper.findAll('a[aria-label="Invoices"]')).toHaveLength(0);
     expect(wrapper.findAll('a[aria-label="Members"]')).toHaveLength(0);
     expect(wrapper.findAll('a[aria-label="Projects"]')).toHaveLength(0);
+    expect(wrapper.get("main").classes()).toContain("px-4");
   });
 
   it("keeps Projects active for admins on the add-project route", async () => {
