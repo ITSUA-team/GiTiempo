@@ -545,8 +545,15 @@ describe('ProjectsService', () => {
   it('backfills selected project downstream billable defaults', async () => {
     const taskUpdate = updateRowCount(2);
     const timeEntryUpdate = updateRowCount(1);
+    const lock = vi
+      .fn()
+      .mockResolvedValue([{ defaultBillableForTasks: false }]);
+    const from = vi
+      .fn()
+      .mockReturnValue({ where: vi.fn().mockReturnValue({ for: lock }) });
     const tx = {
       execute: vi.fn(),
+      select: vi.fn().mockReturnValue({ from }),
       update: vi
         .fn()
         .mockReturnValueOnce(taskUpdate.query)
@@ -559,7 +566,7 @@ describe('ProjectsService', () => {
     const service = new ProjectsService(db as never, members as never);
     Object.defineProperty(service, 'requireProjectForUpdate', {
       value: vi.fn().mockResolvedValue({
-        project: { ...projectRow, defaultBillableForTasks: false },
+        project: projectRow,
         role: 'admin',
       }),
     });
@@ -571,6 +578,9 @@ describe('ProjectsService', () => {
     );
 
     expect(result).toEqual({ tasksUpdated: 2, timeEntriesUpdated: 1 });
+    expect(from).toHaveBeenCalledWith(projects);
+    expect(lock).toHaveBeenCalledWith('no key update');
+    expect(lock).toHaveBeenCalledBefore(tx.update);
     expect(tx.update).toHaveBeenNthCalledWith(1, tasks);
     expect(taskUpdate.set).toHaveBeenCalledWith(
       expect.objectContaining({ defaultBillableForTimeEntries: false }),
