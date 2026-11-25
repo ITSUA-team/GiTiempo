@@ -55,7 +55,7 @@ The managed list SHALL return the shared time-entry items and pagination metadat
 - **AND** a subsequent successful delete at the destination path returns 204 with no body
 
 ### Requirement: Managed entry conflict responses
-Management mutations blocked by record state SHALL return HTTP 409 using the standard error envelope with a stable code and explanatory message.
+Management mutations blocked by record state or by concurrent updates SHALL return HTTP 409 using the standard error envelope with a stable code and explanatory message.
 
 #### Scenario: Client distinguishes both lock reasons
 - **GIVEN** an authorized manager issues a patch or delete
@@ -63,3 +63,8 @@ Management mutations blocked by record state SHALL return HTTP 409 using the sta
 - **THEN** the response includes `code: time_entry_running` and instructs the caller to stop the timer first
 - **WHEN** the completed entry has an invoice link
 - **THEN** the response includes `code: time_entry_invoiced` and explains that the entry is included in an invoice
+
+#### Scenario: Partial reassignment exceeds its retry budget
+- **GIVEN** a management patch changes the task or member and retains the other field
+- **WHEN** concurrent changes to the retained field invalidate every save attempt
+- **THEN** the patch stops retrying and returns `code: time_entry_concurrent_update` with an instruction to try saving again

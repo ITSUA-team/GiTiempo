@@ -46,6 +46,12 @@ The page SHALL support manual creation, editing the project, member, task, inter
 - **WHEN** the manager starts with an explicitly assigned member instead
 - **THEN** they can choose any active, non-closed task in that project
 
+#### Scenario: Choose between tasks with the same title
+- **GIVEN** multiple tasks in the picker have the same title, ignoring case
+- **WHEN** the manager searches for that title
+- **THEN** the choices show distinct task ID prefixes
+- **AND** typing the shared title alone does not select either task
+
 #### Scenario: Change the draft project before saving
 - **GIVEN** the manager has entered start, end and description and chosen a member and task in project A
 - **WHEN** they choose another active manageable project B inside the create dialog
@@ -99,3 +105,8 @@ The page SHALL show running and invoiced entries with an accessible reason for b
 - **GIVEN** the manager opened an edit form or delete confirmation while an entry was editable
 - **WHEN** the server rejects the action because the entry has since been invoiced
 - **THEN** the page explains the invoice conflict and shows the refreshed entry as read-only
+
+#### Scenario: Try saving again after a concurrent update
+- **GIVEN** a manager submits an edit and the API returns `time_entry_concurrent_update`
+- **WHEN** the editor shows the conflict message and refreshes the list
+- **THEN** the draft stays available and the manager can try saving it again

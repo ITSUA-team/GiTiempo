@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { ClockIcon, FolderIcon, PlusIcon } from '@heroicons/vue/24/outline';
-import { managedTimeEntryConflictSchema, managedTimeEntryNotFoundCode, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
+import { managedTimeEntryConcurrentUpdateCode, managedTimeEntryConflictSchema, managedTimeEntryNotFoundCode, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
 import { giTiempoDatePickerPt, giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import { DatePickerButtonBar, EmptyStateBlock, EntryActionButton, FilterAutoComplete, filterAutocompleteOptions, getErrorMessage, MobileRecordCard, SurfaceCard, useDatePickerConfirmCancel, useIsMobileViewport } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
@@ -51,7 +51,7 @@ const client = createAdminTimeEntriesClient();
 const {
   projects, project, projectId, members, memberId, search, dates, page, list,
   loadingProjects, loadingEntries, projectError, projectAccessError, checkingProjectAccess, entriesError, memberError,
-  eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
+  hasEligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
   retryProjects, reloadScope, recheckProjectAccess, refresh, refreshEntries, applyUpdatedEntry,
 } = useManagedTimeEntries(scope, client);
 const mobile = useIsMobileViewport();
@@ -213,7 +213,7 @@ async function mutate<T>(
     } else if (isApiErrorStatus(error, [409])) {
       const conflict = managedTimeEntryConflictSchema.safeParse(error.body);
       if (conflict.success) target.value = conflict.data.message;
-      if (inEditor) editorLocked.value = true;
+      if (inEditor && error.code !== managedTimeEntryConcurrentUpdateCode) editorLocked.value = true;
       if (inEditor && editor.value?.entry) refreshEntries();
       else refresh();
     } else if (isApiErrorStatus(error, [422])) {
@@ -371,7 +371,7 @@ function confirmDelete(entry: TimeEntryResponse) {
               />
             </IconField>
             <EntryActionButton
-              v-if="project.isActive && eligibleMembers.length"
+              v-if="project.isActive && hasEligibleMembers"
               :icon="PlusIcon"
               label="New time entry"
               :disabled="actionsDisabled"

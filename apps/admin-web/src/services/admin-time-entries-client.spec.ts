@@ -67,6 +67,20 @@ describe('admin time entries client', () => {
     ]);
   });
 
+  it.each([0, 3])('checks gate eligibility in one request when %i members are eligible', async total => {
+    const items = total > 0 ? [{ id: userId, displayName: 'Member', email: 'member@example.com' }] : [];
+    const fetchFn = vi.fn<typeof fetch>().mockImplementation(async () => Response.json({
+      items,
+      meta: { page: 1, limit: 1, total, totalPages: total },
+    }));
+
+    await expect(authenticatedClient(fetchFn).hasEligibleMembers(projectId)).resolves.toBe(total > 0);
+    expect(fetchFn).toHaveBeenCalledExactlyOnceWith(
+      `https://api.example.test/management/projects/${projectId}/time-entry-members?page=1&limit=1&purpose=create`,
+      expect.anything(),
+    );
+  });
+
   it('stops requesting option pages when the selection becomes stale', async () => {
     let current = true;
     const requestJson = vi.fn().mockImplementationOnce(async () => {

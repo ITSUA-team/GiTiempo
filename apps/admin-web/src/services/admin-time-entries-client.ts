@@ -55,6 +55,13 @@ async function collectOptions<T>(
 export function createAdminTimeEntriesClient(
   client: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'> = getAuthenticatedAppApiClient(),
 ) {
+  function memberPage(projectId: string, purpose: 'filter' | 'create', page: number, limit: number, taskId?: string) {
+    return client.requestJson({
+      path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit, purpose, taskId }),
+      responseSchema: managementTimeEntryMembersResponseSchema,
+    });
+  }
+
   return {
     projects(current: () => boolean) {
       return collectOptions(page => client.requestJson({
@@ -63,10 +70,11 @@ export function createAdminTimeEntriesClient(
       }), current);
     },
     members(projectId: string, purpose: 'filter' | 'create', current: () => boolean, taskId?: string) {
-      return collectOptions(page => client.requestJson({
-        path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit: 100, purpose, taskId }),
-        responseSchema: managementTimeEntryMembersResponseSchema,
-      }), current);
+      return collectOptions(page => memberPage(projectId, purpose, page, 100, taskId), current);
+    },
+    async hasEligibleMembers(projectId: string) {
+      const { items } = await memberPage(projectId, 'create', 1, 1);
+      return items.length > 0;
     },
     async tasks(projectId: string, userId: string | undefined, current: () => boolean) {
       let isOwnerAssigned: boolean | undefined;

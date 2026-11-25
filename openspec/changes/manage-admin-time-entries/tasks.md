@@ -3,7 +3,7 @@
 ## 1. Shared contracts
 
 - [x] 1.1 Define and export the management project, member and task option schemas, paginated results and list query. Cover both member lookup purposes, UUIDs, page bounds and invalid date ranges in contract tests.
-- [x] 1.2 Define the strict create, patch and record-conflict contracts using existing time-entry fields and validation. Test required owner on create, immutable fields on patch, empty and invalid intervals, nullable description and both 409 codes.
+- [x] 1.2 Define the strict create, patch and record-conflict contracts using existing time-entry fields and validation. Test required owner on create, immutable fields on patch, empty and invalid intervals, nullable description and supported 409 codes.
 
 ## 2. API and endpoint documentation
 

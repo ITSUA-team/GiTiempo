@@ -3954,7 +3954,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ManagedTimeEntryConflictDto"
+                  "$ref": "#/components/schemas/ManagedTimeEntryDeleteConflictDto"
                 }
               }
             }
@@ -9533,6 +9533,37 @@
         "additionalProperties": false
       },
       "ManagedTimeEntryConflictDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "enum": [
+              409
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "time_entry_running",
+              "time_entry_invoiced",
+              "time_entry_concurrent_update"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "error",
+          "message",
+          "code"
+        ]
+      },
+      "ManagedTimeEntryDeleteConflictDto": {
         "type": "object",
         "properties": {
           "statusCode": {

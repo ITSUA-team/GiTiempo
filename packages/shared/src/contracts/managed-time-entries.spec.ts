@@ -162,14 +162,18 @@ describe('management time-entry contracts', () => {
     ).toBe(false);
   });
 
-  it.each(['time_entry_running', 'time_entry_invoiced'])(
+  it.each([
+    'time_entry_running',
+    'time_entry_invoiced',
+    'time_entry_concurrent_update',
+  ])(
     'parses the %s conflict',
     (code) => {
       expect(
         managedTimeEntryConflictSchema.parse({
           statusCode: 409,
           code,
-          message: 'The record is locked',
+          message: 'The update conflicts with the current record',
           error: 'Conflict',
         }).code,
       ).toBe(code);

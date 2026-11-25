@@ -14,6 +14,7 @@ import Textarea from 'primevue/textarea';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
 import { managedMemberOptions } from '@/components/time-entries/managed-member-options';
+import { managedTaskOptions, type ManagedTaskChoice } from '@/components/time-entries/managed-task-options';
 import type {
   AdminTimeEntriesClient,
   ManagedEntryCreate,
@@ -52,10 +53,9 @@ const projectOptions = computed(() => props.projects.filter(project => project.i
 const draftProject = computed(() => projectOptions.value.find(project => project.id === draftProjectId.value));
 const activeDraftProjectId = computed(() => draftProject.value?.isActive ? draftProject.value.id : undefined);
 type MemberOption = ManagementMember & { label: string };
-type TaskOption = Pick<ManagementTask, 'id' | 'title'>;
 const originalMember = entry ? { ...entry.user, label: entry.user.displayName || entry.user.email } : null;
 const memberModel = shallowRef<MemberOption | string | null>(originalMember);
-const taskModel = shallowRef<TaskOption | string | null>(entry?.task ?? null);
+const taskModel = shallowRef<ManagedTaskChoice | string | null>(entry?.task ?? null);
 const userId = computed(() => typeof memberModel.value === 'object' ? memberModel.value?.id : undefined);
 const taskId = computed(() => typeof taskModel.value === 'object' ? taskModel.value?.id : undefined);
 const originalProject = computed(() => Boolean(entry && draftProject.value?.id === entry.projectId));
@@ -94,10 +94,15 @@ const validationAttempted = ref(false);
 let taskRequest = 0;
 let memberRequest = 0;
 
-const displayedTasks = computed(() => {
+const taskOptions = computed(() => {
   if (entry && originalProject.value && (!userId.value || userId.value === entry.userId)
-    && !tasks.value.some(task => task.id === entry.taskId)) return [entry.task, ...tasks.value];
-  return tasks.value;
+    && !tasks.value.some(task => task.id === entry.taskId)) return managedTaskOptions([entry.task, ...tasks.value]);
+  return managedTaskOptions(tasks.value);
+});
+const displayedTask = computed(() => {
+  const task = taskModel.value;
+  if (!task || typeof task === 'string') return task;
+  return taskOptions.value.find(option => option.id === task.id) ?? { ...task, label: task.title };
 });
 const memberOptions = computed(() => {
   if (entry && originalProject.value && (!taskId.value || taskId.value === entry.taskId)
@@ -107,7 +112,7 @@ const memberOptions = computed(() => {
   return managedMemberOptions(members.value);
 });
 const memberSuggestions = computed(() => filterAutocompleteOptions(memberOptions.value, memberSearch.value.query, member => member.label));
-const taskSuggestions = computed(() => filterAutocompleteOptions(displayedTasks.value, taskSearch.value.query, task => task.title));
+const taskSuggestions = computed(() => filterAutocompleteOptions(taskOptions.value, taskSearch.value.query, task => task.label));
 const fieldsDisabled = computed(() => props.busy || props.locked || props.accessUnverified);
 const validTask = computed(() => originalPair.value || tasks.value.some(task => task.id === taskId.value));
 const validMember = computed(() => originalPair.value || members.value.some(member => member.id === userId.value));
@@ -236,7 +241,7 @@ function selectMember(value: MemberOption | string | null) {
   memberModel.value = value;
 }
 
-function selectTask(value: TaskOption | string | null) {
+function selectTask(value: ManagedTaskChoice | string | null) {
   taskModel.value = value;
   if (!entry && typeof value === 'object') {
     isBillable.value = tasks.value.find(task => task.id === value?.id)?.defaultBillableForTimeEntries ?? false;
@@ -369,7 +374,7 @@ async function submit(event: SubmitEvent) {
         <AutoComplete
           input-id="managed-entry-task"
           :pt="requiredFieldPt(dialogAutoCompletePt, taskError ? 'managed-entry-task-error' : undefined)"
-          :model-value="taskModel"
+          :model-value="displayedTask"
           :suggestions="taskSuggestions"
           complete-on-focus
           data-key="id"
@@ -377,7 +382,7 @@ async function submit(event: SubmitEvent) {
           dropdown-mode="blank"
           force-selection
           :min-length="0"
-          option-label="title"
+          option-label="label"
           placeholder="Select a task"
           empty-search-message="No matching eligible tasks"
           :loading="tasksLoading"

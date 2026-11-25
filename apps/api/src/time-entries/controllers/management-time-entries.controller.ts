@@ -31,6 +31,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import {
   CreateManagedTimeEntryDto,
   ManagedTimeEntryConflictDto,
+  ManagedTimeEntryDeleteConflictDto,
   ManagementProjectsQueryDto,
   ManagementProjectsResponseDto,
   ManagementTimeEntriesQueryDto,
@@ -165,7 +166,7 @@ export class ManagementTimeEntriesController {
     description:
       'Project or entry not found. A missing entry in the managed project returns code time_entry_not_found.',
   })
-  @ApiConflictResponse({ type: ManagedTimeEntryConflictDto })
+  @ApiConflictResponse({ type: ManagedTimeEntryDeleteConflictDto })
   deleteEntry(
     @CurrentUser() user: AuthUser,
     @Param('projectId', ParseUUIDPipe) projectId: string,

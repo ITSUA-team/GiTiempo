@@ -249,6 +249,8 @@ The server returns 401 for missing authentication, 403 for an insufficient works
 
 Administrative PATCH and DELETE return 409 with `time_entry_running` when the timer must be stopped, or `time_entry_invoiced` when the entry belongs to an invoice in any status, including draft. These protections apply to this management API. Personal time-entry and timer routes follow the rules in section 8.
 
+Administrative PATCH also returns 409 with `time_entry_concurrent_update` if concurrent edits prevent it from resolving an omitted member or task after three attempts. The client can retry the update.
+
 ---
 
 ## 10. Reports

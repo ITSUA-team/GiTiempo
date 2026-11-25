@@ -1202,6 +1202,29 @@ describe('Managed time entries (e2e)', () => {
     },
   );
 
+  it('serializes member reassignment with task and entry billable backfill', async () => {
+    const id = await insertEntry();
+    const [moved, backfilled] = await queueOnEntry(
+      id,
+      patch(publicProject, id, { userId: pmId }),
+      request(app.getHttpServer())
+        .post(`/projects/${publicProject}/billable-default/backfill`)
+        .set('Authorization', bearer(adminToken))
+        .send({ updateTasks: true, updateTimeEntries: true }),
+    );
+    expect(moved.status).toBe(200);
+    expect(backfilled.status).toBe(200);
+    const [task] = await db
+      .select({ billable: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(eq(tasks.id, publicTask));
+    expect(await read(id)).toMatchObject({
+      userId: pmId,
+      taskId: publicTask,
+      isBillable: task.billable,
+    });
+  });
+
   it('rejects a personal delete that raced with reassignment to another member', async () => {
     const id = await insertEntry();
     const [move, deletion] = await queueOnEntry(

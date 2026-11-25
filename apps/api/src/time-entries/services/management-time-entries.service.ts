@@ -7,7 +7,10 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { managedTimeEntryNotFoundCode } from '@gitiempo/shared';
+import {
+  managedTimeEntryConcurrentUpdateCode,
+  managedTimeEntryNotFoundCode,
+} from '@gitiempo/shared';
 import {
   and,
   asc,
@@ -77,6 +80,7 @@ const taskSelection = {
 };
 
 const memberLabel = sql`lower(coalesce(nullif(${users.displayName}, ''), ${users.email}))`;
+const maxUpdateAttempts = 3;
 
 @Injectable()
 export class ManagementTimeEntriesService {
@@ -342,7 +346,7 @@ export class ManagementTimeEntriesService {
     const setsAssignment =
       requestedTaskId !== undefined || requestedOwnerId !== undefined;
 
-    for (;;) {
+    for (let attempt = 0; attempt < maxUpdateAttempts; attempt += 1) {
       const result = await this.db.transaction(async (tx) => {
         const role = await this.requireManager(tx, actor);
         if (changesProject && requestedTaskId === undefined) {
@@ -453,6 +457,11 @@ export class ManagementTimeEntriesService {
         return result;
       }
     }
+    throw new DomainError(
+      managedTimeEntryConcurrentUpdateCode,
+      'This time entry changed while you were saving. Try saving again.',
+      HttpStatus.CONFLICT,
+    );
   }
 
   async deleteEntry(

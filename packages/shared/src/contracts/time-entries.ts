@@ -224,12 +224,17 @@ export const updateManagedTimeEntrySchema = updateTimeEntryBaseSchema
   .meta({ minProperties: 1 });
 
 export const managedTimeEntryNotFoundCode = 'time_entry_not_found';
+export const managedTimeEntryConcurrentUpdateCode = 'time_entry_concurrent_update';
 
 export const managedTimeEntryConflictSchema = z.object({
   statusCode: z.literal(409),
   error: z.string(),
   message: z.string(),
-  code: z.enum(['time_entry_running', 'time_entry_invoiced']),
+  code: z.enum([
+    'time_entry_running',
+    'time_entry_invoiced',
+    managedTimeEntryConcurrentUpdateCode,
+  ]),
 });
 
 export const startTimerSchema = z

@@ -1,4 +1,4 @@
-import { managedTimeEntryNotFoundCode, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
+import { managedTimeEntryConcurrentUpdateCode, managedTimeEntryNotFoundCode, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
 import * as SharedUi from '@gitiempo/web-shared';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query';
@@ -18,7 +18,7 @@ import { useAuthStore } from '@/stores/auth';
 import TimeEntriesView from './TimeEntriesView.vue';
 
 const mocks = vi.hoisted(() => ({
-  projects: vi.fn(), members: vi.fn(), tasks: vi.fn(), list: vi.fn(),
+  projects: vi.fn(), members: vi.fn(), hasEligibleMembers: vi.fn(), tasks: vi.fn(), list: vi.fn(),
   create: vi.fn(), update: vi.fn(), remove: vi.fn(),
   confirm: vi.fn(), dismiss: vi.fn(),
 }));
@@ -97,6 +97,7 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   }));
   mocks.projects.mockResolvedValue([alpha, beta]);
+  mocks.hasEligibleMembers.mockResolvedValue(true);
   mocks.members.mockImplementation(async (_project, purpose) => purpose === 'create' ? [active] : [past, active]);
   mocks.tasks.mockResolvedValue({ items: [] });
   mocks.list.mockResolvedValue(response([editable, running, invoiced]));
@@ -244,6 +245,48 @@ describe('Time Entries', () => {
     expect((wrapper.get('#managed-entry-description').element as HTMLTextAreaElement).value).toBe('Corrected note');
     expect(wrapper.find('button[aria-label="Edit time entry for Historical task"]').exists()).toBe(false);
     expect(mocks.list).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it('keeps an edit draft available to save after a concurrent update', async () => {
+    const description = 'Keep my draft';
+    const message = 'This time entry was updated concurrently. Please try saving again.';
+    const code = managedTimeEntryConcurrentUpdateCode;
+    mocks.update.mockRejectedValueOnce(new ApiError(message, {
+      status: 409, code, body: { statusCode: 409, error: 'Conflict', code, message },
+    })).mockResolvedValue({ ...editable, description });
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('#managed-entry-description').setValue(description);
+    await wrapper.get('form').trigger('submit');
+    await flushPromises();
+
+    const dialog = wrapper.getComponent(ManagedEntryDialog);
+    expect(dialog.text()).toContain(message);
+    expect(dialog.get<HTMLTextAreaElement>('#managed-entry-description').element.value).toBe(description);
+    expect(dialog.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
+
+    await dialog.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(mocks.update.mock.calls).toEqual([
+      [alpha.id, editable.id, { description }],
+      [alpha.id, editable.id, { description }],
+    ]);
+    expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('hides the create action when no member can create an entry', async () => {
+    mocks.hasEligibleMembers.mockResolvedValue(false);
+    const { wrapper } = render();
+    await flushPromises();
+
+    expect(mocks.hasEligibleMembers).toHaveBeenCalledExactlyOnceWith(alpha.id);
+    expect(wrapper.find('button[aria-label="New time entry"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain(editable.task.title);
     wrapper.unmount();
   });
 
@@ -416,7 +459,7 @@ describe('Time Entries', () => {
     expect(member!.props('suggestions')).toEqual([expect.objectContaining(past), expect.objectContaining(active)]);
     member!.vm.$emit('update:modelValue', active);
     await flushPromises();
-    expect(taskField!.props('modelValue')).toEqual(editable.task);
+    expect(taskField!.props('modelValue')).toEqual(expect.objectContaining(editable.task));
     mocks.members.mockResolvedValue([active]);
     mocks.list.mockResolvedValue(response([]));
     await dialog.get('form').trigger('submit');
@@ -450,19 +493,19 @@ describe('Time Entries', () => {
     const dialog = wrapper.getComponent(ManagedEntryDialog);
     const [member, task] = dialog.findAllComponents(AutoComplete);
     expect(member!.props('suggestions')).toEqual([expect.objectContaining(past)]);
-    expect(task!.props('suggestions')).toEqual([editable.task]);
+    expect(task!.props('suggestions')).toEqual([expect.objectContaining(editable.task)]);
     if (first === 'member') {
       await task!.get('.p-autocomplete-clear-icon').trigger('click');
       await flushPromises();
       expect(member!.props('suggestions')).toEqual(expect.arrayContaining([expect.objectContaining(active)]));
       member!.vm.$emit('update:modelValue', active);
       await flushPromises();
-      expect(task!.props('suggestions')).toEqual([replacementTask]);
+      expect(task!.props('suggestions')).toEqual([expect.objectContaining(replacementTask)]);
       task!.vm.$emit('update:modelValue', replacementTask);
     } else {
       await member!.get('.p-autocomplete-clear-icon').trigger('click');
       await flushPromises();
-      expect(task!.props('suggestions')).toEqual(expect.arrayContaining([replacementTask]));
+      expect(task!.props('suggestions')).toContainEqual(expect.objectContaining(replacementTask));
       task!.vm.$emit('update:modelValue', replacementTask);
       await flushPromises();
       expect(member!.props('suggestions')).toEqual([expect.objectContaining(active)]);
@@ -584,7 +627,7 @@ describe('Time Entries', () => {
 
     const [member, task] = dialog.findAllComponents(AutoComplete);
     expect(member!.props('modelValue')).toEqual(expect.objectContaining(past));
-    expect(task!.props('modelValue')).toEqual(editable.task);
+    expect(task!.props('modelValue')).toEqual(expect.objectContaining(editable.task));
     expect(dialog.get('button[type="submit"]').attributes('disabled')).toBeUndefined();
     await dialog.get('form').trigger('submit');
     await flushPromises();
@@ -636,6 +679,40 @@ describe('Time Entries', () => {
     wrapper.unmount();
   });
 
+  it('requires an explicit choice between tasks with the same title', async () => {
+    const first = { id: 'aaaaaaaa-first', title: 'Shared task', defaultBillableForTimeEntries: false };
+    const second = { ...first, id: 'bbbbbbbb-second' };
+    mocks.members.mockResolvedValue([past, active]);
+    mocks.tasks.mockResolvedValue({ items: [first, second] });
+    mocks.update.mockResolvedValue({ ...editable, task: second, taskId: second.id });
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="Edit time entry for Historical task"]').trigger('click');
+    await flushPromises();
+    const dialog = wrapper.getComponent(ManagedEntryDialog);
+    const [, task] = dialog.findAllComponents(AutoComplete);
+    const input = dialog.get<HTMLInputElement>('#managed-entry-task');
+    await task!.get('.p-autocomplete-clear-icon').trigger('click');
+    await input.setValue(first.title);
+    await vi.waitFor(() => expect(task!.findAll('[role="option"]').map(option => option.text())).toEqual([
+      `aaaaaaaa · ${first.title}`, `bbbbbbbb · ${second.title}`,
+    ]));
+    await input.trigger('change');
+    expect(task!.props('modelValue')).toBeNull();
+    await input.setValue('bbbbbbbb');
+    await vi.waitFor(() => expect(task!.findAll('[role="option"]').map(option => option.text())).toEqual([
+      `bbbbbbbb · ${second.title}`,
+    ]));
+    await task!.get('[role="option"]').trigger('click');
+    await vi.waitFor(() => expect(input.attributes('aria-expanded')).toBe('false'));
+    expect(input.element.value).toBe(`bbbbbbbb · ${second.title}`);
+
+    await dialog.get('form').trigger('submit');
+    await flushPromises();
+    expect(mocks.update).toHaveBeenCalledExactlyOnceWith(alpha.id, editable.id, { taskId: second.id });
+    wrapper.unmount();
+  });
+
   it.each([true, false])('keeps the draft and saves in the dialog project (assigned: %s)', async assigned => {
     const destination = { id: 'destination', name: 'Destination', isActive: true };
     const originTask = { id: 'origin-task', title: 'Origin task', defaultBillableForTimeEntries: true };
@@ -672,7 +749,7 @@ describe('Time Entries', () => {
     end!.vm.$emit('update:modelValue', new Date(editable.endedAt!));
     await dialog.get('#managed-entry-description').setValue('Retained notes');
     await flushPromises();
-    expect(task!.props('modelValue')).toEqual(originTask);
+    expect(task!.props('modelValue')).toEqual(expect.objectContaining(originTask));
 
     project.vm.$emit('update:modelValue', destination.id);
     await flushPromises();
@@ -722,7 +799,7 @@ describe('Time Entries', () => {
     await flushPromises();
 
     expect(member!.props('modelValue')).toEqual(expect.objectContaining(active));
-    expect(task!.props('suggestions')).toEqual([thirdTask]);
+    expect(task!.props('suggestions')).toEqual([expect.objectContaining(thirdTask)]);
     wrapper.unmount();
   });
 
