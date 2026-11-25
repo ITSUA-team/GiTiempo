@@ -6,6 +6,7 @@ import {
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
   updateManagedTimeEntrySchema,
+  type UpdateManagedTimeEntryInput,
 } from '@gitiempo/shared';
 import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
@@ -14,7 +15,7 @@ import { getAuthenticatedAppApiClient } from './api-client';
 export type ManagementProject = ReturnType<typeof managementProjectsResponseSchema.parse>['items'][number];
 export type ManagementMember = ReturnType<typeof managementTimeEntryMembersResponseSchema.parse>['items'][number];
 export type ManagementTask = ReturnType<typeof managementTimeEntryTasksResponseSchema.parse>['items'][number];
-export type ManagedEntryUpdate = ReturnType<typeof updateManagedTimeEntrySchema.parse>;
+export type ManagedEntryUpdate = UpdateManagedTimeEntryInput;
 export type ManagedEntryCreate = ReturnType<typeof createManagedTimeEntrySchema.parse>;
 
 interface ManagementEntryFilters {
@@ -93,9 +94,9 @@ export function createAdminTimeEntriesClient(
         responseSchema: timeEntryResponseSchema,
       });
     },
-    update(projectId: string, entryId: string, input: ManagedEntryUpdate) {
+    update(sourceProjectId: string, entryId: string, input: ManagedEntryUpdate) {
       return client.requestJson({
-        path: `${projectPath(projectId)}/time-entries/${encodeURIComponent(entryId)}`,
+        path: `${projectPath(sourceProjectId)}/time-entries/${encodeURIComponent(entryId)}`,
         method: 'PATCH',
         body: updateManagedTimeEntrySchema.parse(input),
         responseSchema: timeEntryResponseSchema,

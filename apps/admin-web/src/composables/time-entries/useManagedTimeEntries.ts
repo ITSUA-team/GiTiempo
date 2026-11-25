@@ -199,13 +199,31 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   function applyUpdatedEntry(previous: TimeEntryResponse, updated: TimeEntryResponse) {
     const query = entryQuery.value;
     const loaded = list.value;
+    const movedProject = previous.projectId !== updated.projectId;
+    if (movedProject || previous.userId !== updated.userId) {
+      void loadMembers();
+      void loadEligibleMembers();
+    }
     const affectsPage = previous.startedAt !== updated.startedAt
       || (query.filters.search && previous.task.title !== updated.task.title);
-    if (!loaded || loadedQuery !== query || pendingQuery === query || affectsPage) {
+    if (!loaded || loadedQuery !== query || pendingQuery === query) {
       refreshEntries();
       return false;
     }
     if (!loaded.items.some(entry => entry.id === updated.id)) return false;
+    if (movedProject || (query.filters.userId && query.filters.userId !== updated.userId)) {
+      const total = loaded.meta.total - 1;
+      list.value = {
+        items: loaded.items.filter(entry => entry.id !== updated.id),
+        meta: { ...loaded.meta, total, totalPages: Math.ceil(total / loaded.meta.limit) },
+      };
+      refreshEntries();
+      return false;
+    }
+    if (affectsPage) {
+      refreshEntries();
+      return false;
+    }
     list.value = {
       ...loaded,
       items: loaded.items.map(entry => entry.id === updated.id ? updated : entry),

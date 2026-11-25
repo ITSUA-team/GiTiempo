@@ -15,10 +15,17 @@ The backend SHALL authorize every management request against current active work
 
 #### Scenario: Direct requests cannot cross workspace or project boundaries
 - **GIVEN** a manager can access project A
-- **WHEN** they request a project from a different workspace, address an entry from project B under project A, or submit a write in A with a destination task from B
+- **WHEN** they request a project from another workspace, address a project B entry under A, or supply a task outside the declared destination project
 - **THEN** the request returns 404 and neither project's records change
 - **WHEN** they request create-member choices in A with a task filter from B
 - **THEN** the lookup returns an empty page
+
+#### Scenario: A project move requires management access at both ends
+- **GIVEN** a PM is assigned to the source and destination projects in the current workspace
+- **WHEN** they move a completed entry with no invoice link to an eligible member and task in the destination
+- **THEN** the move succeeds
+- **WHEN** the PM lacks an assignment to either project at save time, or the destination is outside the current workspace
+- **THEN** the request returns 404 and the entry stays in its original project
 
 #### Scenario: Ordinary member cannot manage entries
 - **GIVEN** an authenticated workspace member with no Admin or PM role
@@ -45,7 +52,7 @@ The backend SHALL return individual entries, including running and invoiced entr
 - **AND** closed and inactive tasks remain unavailable for creation
 
 ### Requirement: Administrative creation and historical correction
-The backend SHALL create completed manual entries for the selected owner using that person's current tracking access to the destination task. An edit SHALL preserve owner and project. A move to another task in the same project SHALL repeat the owner's eligibility check. Changes to the interval SHALL preserve a positive duration calculated from the resulting endpoints.
+The backend SHALL create completed manual entries for the selected owner using that person's current tracking access to the destination task. A change to project, member or task SHALL verify the resulting combination against current tracking rules and update the existing entry atomically. Changes to the interval SHALL preserve a positive duration calculated from the resulting endpoints.
 
 #### Scenario: Eligible owner differs from the acting manager
 - **GIVEN** an active workspace member can track an open active task in an active public project without assignment
@@ -54,8 +61,15 @@ The backend SHALL create completed manual entries for the selected owner using t
 
 #### Scenario: Ineligible owner or work is rejected
 - **GIVEN** the owner lacks current membership or access, or the selected destination task is closed or inactive or its project archived
-- **WHEN** a manager creates an entry or moves one to that task
+- **WHEN** a manager creates an entry or changes an entry's project, owner or task to that combination
 - **THEN** the backend rejects the ineligible combination with 422 without recording or moving time
+
+#### Scenario: Reassign a completed entry without recreating it
+- **GIVEN** a completed entry with no invoice link and a valid destination within scope
+- **WHEN** a manager saves a different project or member, optionally with a different task
+- **THEN** the original entry keeps its ID and source and reflects the resulting project, member and task
+- **AND** its start, end, description and billable flag keep their stored values unless the patch changes them
+- **AND** the source and destination lists and reports account for the entry once under its resulting project and member
 
 #### Scenario: External own-time access applies to the exact task
 - **GIVEN** an active owner only has own-time access to one active open task in a private external project
@@ -64,7 +78,7 @@ The backend SHALL create completed manual entries for the selected owner using t
 
 #### Scenario: In-place corrections survive changes in tracking eligibility
 - **GIVEN** a manager retains scope and a completed unlinked entry's project was archived, its task closed, or its owner lost access
-- **WHEN** the manager corrects the interval, description or billable flag without moving the entry, or deletes it
+- **WHEN** the manager corrects the interval, description or billable flag while keeping the original project, member and task, or deletes it
 - **THEN** the operation succeeds without requiring renewed tracking access
 
 ### Requirement: Administrative write protection for running and invoiced entries

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { ClockIcon, FolderIcon, PlusIcon } from '@heroicons/vue/24/outline';
-import { managedTimeEntryConflictSchema, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
+import { managedTimeEntryConflictSchema, managedTimeEntryNotFoundCode, WorkspaceRoles, type TimeEntryResponse } from '@gitiempo/shared';
 import { giTiempoDatePickerPt, giTiempoSelectPt } from '@gitiempo/web-config/theme';
 import { DatePickerButtonBar, EmptyStateBlock, EntryActionButton, FilterAutoComplete, filterAutocompleteOptions, getErrorMessage, MobileRecordCard, SurfaceCard, useDatePickerConfirmCancel, useIsMobileViewport } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
@@ -35,6 +35,7 @@ import {
   createAdminTimeEntriesClient,
   type ManagedEntryCreate,
   type ManagedEntryUpdate,
+  type ManagementMember,
 } from '@/services/admin-time-entries-client';
 import { useAuthStore } from '@/stores/auth';
 
@@ -64,12 +65,20 @@ const accessUnverified = computed(() => checkingProjectAccess.value || Boolean(p
 const actionsDisabled = computed(() => Boolean(pendingDeletionId.value) || accessUnverified.value);
 const mutationError = ref('');
 const editorError = ref('');
-const taskRefresh = ref(0);
+const choicesRefresh = ref(0);
 const dateDraft = ref<(Date | null)[] | null>(null);
 const datePicker = useDatePickerConfirmCancel<(Date | null)[]>();
 watch([dates, scope], () => { dateDraft.value = dates.value; }, { flush: 'sync' });
 const hasFilters = computed(() => Boolean(search.value.trim() || memberId.value || dates.value?.[0]));
-const memberOptions = computed(() => managedMemberOptions(members.value));
+const selectedMemberFallback = shallowRef<ManagementMember>();
+const memberOptions = computed(() => {
+  const selected = selectedMemberFallback.value;
+  const options = members.value;
+  if (selected && selected.id === memberId.value && !options.some(member => member.id === selected.id)) {
+    return managedMemberOptions([...options, selected]);
+  }
+  return managedMemberOptions(options);
+});
 const memberSearch = shallowRef({ query: '' });
 const selectedMember = computed(() => memberOptions.value.find(member => member.id === memberId.value) ?? null);
 const memberSuggestions = computed(() => filterAutocompleteOptions(memberOptions.value, memberSearch.value.query, member => member.label));
@@ -80,7 +89,8 @@ const rangeFilterPt = {
 
 function selectMember(value: (typeof memberOptions.value)[number] | string | null) {
   if (typeof value === 'string' && value.trim()) return;
-  memberId.value = typeof value === 'object' ? value?.id : undefined;
+  selectedMemberFallback.value = typeof value === 'object' ? value ?? undefined : undefined;
+  memberId.value = selectedMemberFallback.value?.id;
 }
 const now = ref(Date.now());
 const timer = useIntervalFn(() => { now.value = Date.now(); }, 1000, { immediate: false });
@@ -114,7 +124,7 @@ function duration(entry: TimeEntryResponse) {
 
 function clearFilters() {
   search.value = '';
-  memberId.value = undefined;
+  selectMember(null);
   dates.value = null;
   dateDraft.value = null;
 }
@@ -148,12 +158,12 @@ async function finishClosingEditor() {
   else document.getElementById('managed-time-entries-search')?.focus();
 }
 
-async function verifyProjectAccess({ reloadTasks = false } = {}) {
+async function verifyProjectAccess({ reloadChoices = false, refreshList = true } = {}) {
   const activeGeneration = generation;
   const verified = await recheckProjectAccess();
   if (!verified || activeGeneration !== generation) return;
-  refreshEntries();
-  if (reloadTasks && editor.value) taskRefresh.value += 1;
+  if (refreshList) refreshEntries();
+  if (reloadChoices && editor.value) choicesRefresh.value += 1;
 }
 
 let generation = 0;
@@ -161,6 +171,7 @@ watch([scope, projectId], () => {
   generation += 1;
   pendingMutation.value = undefined;
   memberSearch.value = { query: '' };
+  selectedMemberFallback.value = undefined;
   mutationError.value = '';
   closeEditor();
   dismissConfirmation();
@@ -197,7 +208,8 @@ async function mutate<T>(
     const target = inEditor ? editorError : mutationError;
     target.value = getErrorMessage(error, 'Unable to save time entry changes.');
     if (isApiErrorStatus(error, [404])) {
-      await verifyProjectAccess({ reloadTasks: inEditor });
+      if (inEditor && error.code === managedTimeEntryNotFoundCode) editorLocked.value = true;
+      await verifyProjectAccess({ reloadChoices: inEditor && !editorLocked.value });
     } else if (isApiErrorStatus(error, [409])) {
       const conflict = managedTimeEntryConflictSchema.safeParse(error.body);
       if (conflict.success) target.value = conflict.data.message;
@@ -205,8 +217,8 @@ async function mutate<T>(
       if (inEditor && editor.value?.entry) refreshEntries();
       else refresh();
     } else if (isApiErrorStatus(error, [422])) {
-      void loadEligibleMembers();
-      if (inEditor) taskRefresh.value += 1;
+      await verifyProjectAccess({ reloadChoices: inEditor, refreshList: false });
+      if (activeGeneration === generation) void loadEligibleMembers();
     }
   } finally {
     if (activeGeneration === generation) pendingMutation.value = undefined;
@@ -645,13 +657,13 @@ function confirmDelete(entry: TimeEntryResponse) {
       :project-access-error="projectAccessError"
       :locked="editorLocked"
       :error="editorError"
-      :task-refresh="taskRefresh"
+      :choices-refresh="choicesRefresh"
       @close="finishClosingEditor"
       @create="createEntry"
       @update="updateEntry"
       @scope-lost="reloadScope"
       @access-check="verifyProjectAccess()"
-      @retry-access="verifyProjectAccess({ reloadTasks: true })"
+      @retry-access="verifyProjectAccess({ reloadChoices: true })"
     />
   </div>
 </template>

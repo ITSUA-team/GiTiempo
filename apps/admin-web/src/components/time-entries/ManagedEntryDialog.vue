@@ -8,7 +8,6 @@ import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
-import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
 import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
@@ -34,7 +33,7 @@ const props = defineProps<{
   projectAccessError: string;
   locked: boolean;
   error: string;
-  taskRefresh: number;
+  choicesRefresh: number;
 }>();
 
 const emit = defineEmits<{
@@ -49,17 +48,18 @@ const emit = defineEmits<{
 const visible = defineModel<boolean>('visible', { required: true });
 const entry = props.entry;
 const draftProjectId = shallowRef(props.project.id);
-const activeProjects = computed(() => props.projects.filter(project => project.isActive));
-const draftProject = computed(() => entry
-  ? props.project
-  : activeProjects.value.find(project => project.id === draftProjectId.value));
+const projectOptions = computed(() => props.projects.filter(project => project.isActive || project.id === entry?.projectId));
+const draftProject = computed(() => projectOptions.value.find(project => project.id === draftProjectId.value));
 const activeDraftProjectId = computed(() => draftProject.value?.isActive ? draftProject.value.id : undefined);
 type MemberOption = ManagementMember & { label: string };
 type TaskOption = Pick<ManagementTask, 'id' | 'title'>;
-const memberModel = shallowRef<MemberOption | string | null>(null);
+const originalMember = entry ? { ...entry.user, label: entry.user.displayName || entry.user.email } : null;
+const memberModel = shallowRef<MemberOption | string | null>(originalMember);
 const taskModel = shallowRef<TaskOption | string | null>(entry?.task ?? null);
-const userId = computed(() => entry?.userId ?? (typeof memberModel.value === 'object' ? memberModel.value?.id : undefined));
+const userId = computed(() => typeof memberModel.value === 'object' ? memberModel.value?.id : undefined);
 const taskId = computed(() => typeof taskModel.value === 'object' ? taskModel.value?.id : undefined);
+const originalProject = computed(() => Boolean(entry && draftProject.value?.id === entry.projectId));
+const originalPair = computed(() => originalProject.value && userId.value === entry?.userId && taskId.value === entry?.taskId);
 const memberSearch = shallowRef({ query: '' });
 const taskSearch = shallowRef({ query: '' });
 const start = ref<Date | null>(entry ? new Date(entry.startedAt) : null);
@@ -68,9 +68,17 @@ const startPicker = useDatePickerConfirmCancel<Date>();
 const endPicker = useDatePickerConfirmCancel<Date>();
 const dialogAutoCompletePt = {
   ...giTiempoAutoCompleteDropdownPt,
+  clearIcon: { class: 'bg-surface-primary end-10 box-content' },
   overlay: {
     ...giTiempoAutoCompleteDropdownPt.overlay,
     class: [giTiempoAutoCompleteDropdownPt.overlay?.class, 'max-w-[calc(100vw-2rem)]'].join(' '),
+  },
+  pcInputText: {
+    ...giTiempoAutoCompleteDropdownPt.pcInputText,
+    root: {
+      ...giTiempoAutoCompleteDropdownPt.pcInputText?.root,
+      class: [giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class, '[.p-autocomplete-clearable_&]:pr-7'].join(' '),
+    },
   },
 };
 const description = ref(entry?.description ?? '');
@@ -87,18 +95,24 @@ let taskRequest = 0;
 let memberRequest = 0;
 
 const displayedTasks = computed(() => {
-  if (!entry || tasks.value.some(task => task.id === entry.taskId)) return tasks.value;
-  return [entry.task, ...tasks.value];
+  if (entry && originalProject.value && (!userId.value || userId.value === entry.userId)
+    && !tasks.value.some(task => task.id === entry.taskId)) return [entry.task, ...tasks.value];
+  return tasks.value;
 });
-const memberOptions = computed(() => managedMemberOptions(members.value));
+const memberOptions = computed(() => {
+  if (entry && originalProject.value && (!taskId.value || taskId.value === entry.taskId)
+    && !members.value.some(member => member.id === entry.userId)) {
+    return managedMemberOptions([entry.user, ...members.value]);
+  }
+  return managedMemberOptions(members.value);
+});
 const memberSuggestions = computed(() => filterAutocompleteOptions(memberOptions.value, memberSearch.value.query, member => member.label));
 const taskSuggestions = computed(() => filterAutocompleteOptions(displayedTasks.value, taskSearch.value.query, task => task.title));
 const fieldsDisabled = computed(() => props.busy || props.locked || props.accessUnverified);
-const validTask = computed(() => displayedTasks.value.some(task => task.id === taskId.value));
-const validMember = computed(() => Boolean(entry || members.value.some(member => member.id === userId.value)));
-const choicesPending = computed(() => entry
-  ? tasksLoading.value && taskId.value !== entry.taskId
-  : tasksLoading.value || membersLoading.value || !draftProject.value);
+const validTask = computed(() => originalPair.value || tasks.value.some(task => task.id === taskId.value));
+const validMember = computed(() => originalPair.value || members.value.some(member => member.id === userId.value));
+const choicesPending = computed(() => !draftProject.value || checkingAssignment.value
+  || (!originalPair.value && (tasksLoading.value || membersLoading.value)));
 const memberError = computed(() => validationAttempted.value && !validMember.value ? 'Select an eligible member.' : '');
 const taskError = computed(() => validationAttempted.value && !validTask.value ? 'Select a task.' : '');
 const startError = computed(() => validationAttempted.value && !start.value ? 'Enter a start time.' : '');
@@ -133,10 +147,7 @@ async function loadTasks() {
   tasks.value = [];
   tasksError.value = '';
   tasksLoading.value = Boolean(projectId);
-  if (!projectId) {
-    if (entry) taskModel.value = entry.task;
-    return;
-  }
+  if (!projectId) return;
   try {
     const result = await props.client.tasks(projectId, selectedUser, current);
     if (!current()) return;
@@ -148,13 +159,13 @@ async function loadTasks() {
       }
     }
     tasks.value = result.items;
-    if (taskId.value && taskId.value !== entry?.taskId && !validTask.value) {
+    if (taskId.value && !validTask.value) {
       selectTask(null);
     }
   } catch (error) {
     if (!current()) return;
     if (isApiErrorStatus(error, [401, 403])) emit('scopeLost');
-    else if (!(entry && isApiErrorStatus(error, [422]))) {
+    else if (!(originalPair.value && isApiErrorStatus(error, [422]))) {
       tasksError.value = getErrorMessage(error, 'Unable to load eligible tasks.');
       if (isApiErrorStatus(error, [404])) emit('accessCheck');
     }
@@ -171,8 +182,8 @@ async function loadMembers() {
     && projectId === activeDraftProjectId.value && selectedTask === taskId.value;
   members.value = [];
   membersError.value = '';
-  membersLoading.value = Boolean(!entry && projectId);
-  if (entry || !projectId) return;
+  membersLoading.value = Boolean(projectId);
+  if (!projectId) return;
   try {
     const result = await props.client.members(projectId, 'create', current, selectedTask);
     if (current()) members.value = result;
@@ -188,12 +199,28 @@ async function loadMembers() {
   }
 }
 
-watch([userId, activeDraftProjectId, () => props.taskRefresh], loadTasks, { immediate: true });
-watch([taskId, activeDraftProjectId, () => props.taskRefresh], loadMembers, { immediate: true });
+watch(draftProject, project => {
+  if (entry && project?.id === entry.projectId && !project.isActive) {
+    selectMember(originalMember);
+    selectTask(entry.task);
+  }
+});
+watch([userId, activeDraftProjectId, () => props.choicesRefresh], loadTasks, { immediate: true });
+watch([taskId, activeDraftProjectId, () => props.choicesRefresh], loadMembers, { immediate: true });
+watch(memberOptions, options => {
+  const selected = options.find(member => member.id === userId.value);
+  if (selected && typeof memberModel.value === 'object' && memberModel.value?.label !== selected.label) {
+    memberModel.value = selected;
+  }
+});
 onBeforeUnmount(() => {
   taskRequest += 1;
   memberRequest += 1;
 });
+
+function revealError(element: Element) {
+  element.scrollIntoView?.({ block: 'nearest' });
+}
 
 function selectProject(projectId: string) {
   if (projectId === draftProjectId.value) return;
@@ -202,6 +229,11 @@ function selectProject(projectId: string) {
   selectTask(null);
   memberSearch.value = { query: '' };
   taskSearch.value = { query: '' };
+}
+
+function selectMember(value: MemberOption | string | null) {
+  checkingAssignment.value = false;
+  memberModel.value = value;
 }
 
 function selectTask(value: TaskOption | string | null) {
@@ -231,7 +263,9 @@ async function submit(event: SubmitEvent) {
   }
 
   const input: ManagedEntryUpdate = {};
-  if (taskId.value !== entry.taskId) input.taskId = taskId.value;
+  if (draftProjectId.value !== entry.projectId) input.projectId = draftProjectId.value;
+  if (userId.value !== entry.userId) input.userId = userId.value;
+  if (input.projectId || taskId.value !== entry.taskId) input.taskId = taskId.value;
   if (start.value.getTime() !== Date.parse(entry.startedAt)) input.startedAt = startedAt;
   if (end.value.getTime() !== Date.parse(entry.endedAt ?? '')) input.endedAt = endedAt;
   if (description.value !== (entry.description ?? '')) input.description = notes;
@@ -269,28 +303,21 @@ async function submit(event: SubmitEvent) {
           >
             Project
           </label>
-          <InputText
-            v-if="entry"
-            id="managed-entry-project"
-            :model-value="project.name"
-            readonly
-            fluid
-          />
           <Select
-            v-else
             input-id="managed-entry-project"
             aria-labelledby="managed-entry-project-label"
             :model-value="draftProjectId"
-            :options="activeProjects"
+            :options="projectOptions"
             option-label="name"
             option-value="id"
+            placeholder="Select a project"
             :pt="giTiempoFieldWidthSelectPt"
             :disabled="fieldsDisabled"
             fluid
             @update:model-value="selectProject"
           />
           <small
-            v-if="!entry && !draftProject"
+            v-if="!draftProject"
             class="text-destructive text-xs"
             role="status"
           >Choose an active project you can manage.</small>
@@ -302,20 +329,12 @@ async function submit(event: SubmitEvent) {
           >
             Member
           </label>
-          <InputText
-            v-if="entry"
-            id="managed-entry-member"
-            :model-value="entry.user.displayName || entry.user.email"
-            readonly
-            fluid
-          />
           <AutoComplete
-            v-else
-            v-model="memberModel"
             input-id="managed-entry-member"
             class="w-full"
             :pt="requiredFieldPt(dialogAutoCompletePt, memberError ? 'managed-entry-member-error' : undefined)"
             :suggestions="memberSuggestions"
+            :model-value="memberModel"
             complete-on-focus
             data-key="id"
             dropdown
@@ -326,10 +345,12 @@ async function submit(event: SubmitEvent) {
             placeholder="Select a member"
             empty-search-message="No matching eligible members"
             :loading="membersLoading || (checkingAssignment && tasksLoading)"
-            :disabled="fieldsDisabled || membersLoading || checkingAssignment || !draftProject"
+            :disabled="fieldsDisabled || membersLoading || (checkingAssignment && tasksLoading) || !activeDraftProjectId"
+            :show-clear="Boolean(entry && userId)"
             :invalid="Boolean(memberError)"
             fluid
             @complete="memberSearch = $event"
+            @update:model-value="selectMember"
           />
           <small
             v-if="memberError"
@@ -360,7 +381,8 @@ async function submit(event: SubmitEvent) {
           placeholder="Select a task"
           empty-search-message="No matching eligible tasks"
           :loading="tasksLoading"
-          :disabled="tasksLoading || fieldsDisabled || !draftProject?.isActive"
+          :disabled="tasksLoading || fieldsDisabled || !activeDraftProjectId"
+          :show-clear="Boolean(entry && taskId)"
           :invalid="Boolean(taskError)"
           fluid
           @complete="taskSearch = $event"
@@ -493,6 +515,7 @@ async function submit(event: SubmitEvent) {
       <Message
         v-if="error"
         severity="error"
+        :pt="{ transition: { onAfterEnter: revealError } }"
       >
         {{ error }}
       </Message>

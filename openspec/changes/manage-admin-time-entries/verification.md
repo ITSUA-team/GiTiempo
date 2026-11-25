@@ -85,3 +85,18 @@ Acceptance exercised Chrome on `3c6f51a6` with the follow-up changes applied, on
 The page retained the desktop table and mobile card structure in Pen frames `te471_1069` and `te471_1569`. The form uses the existing dialog layout with a PrimeVue Project picker for creation. Local run evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/`.
 
 Automated verification passed for all 1,172 admin-web tests, including the 30 focused tests, and all 510 API integration tests in Docker. Repository lint and type checks, OpenAPI export, and strict OpenSpec validation passed. The repository test run hit a five-second timeout in an invoice PDF test. A separate run with a 30-second timeout passed all 822 API unit tests.
+
+## Edit time entry reassignment, 2026-11-25
+
+Chrome exercised the actual `/time-entries` route on `5ac9c1d8` plus the reassignment changes, with the local API and an isolated PostgreSQL database. The two private projects shared an explicitly assigned member. Each test record had a fixed ID in the fixture.
+
+| Scenario | Observed result |
+| --- | --- |
+| Desktop, 1280 × 800 | PASS. Changing only Member retained Task and updated the same row in the source project. Moving a separate entry cleared Task, kept the assigned member and preserved start, end, description and billability. After choosing a destination task and saving, the source row disappeared while the source project stayed selected. The destination list showed the moved entry. |
+| Mobile, 375 × 812 | PASS. Both edits worked in the stacked-card layout. The source and destination lists reflected the new member or project. The dialog and page fit the viewport. |
+| Newly attached draft invoice | PASS. After the editor opened and Member changed, the fixture linked the entry to a draft invoice. Save received 409, kept the draft values and disabled submission. On mobile, the dialog scrolled until both lines of the error were visible above its footer. The refreshed source card showed Invoiced and no longer offered Edit. The database retained the original owner and invoice link. |
+| Persisted records | PASS. All five fixture IDs matched the expected projects, tasks and members. The original time intervals, descriptions, billable values and manual sources were retained. |
+
+The list layouts followed desktop frame `te471_1069` and mobile frame `te471_1569`. The editor kept the established dialog layout and used the same PrimeVue pickers as creation. Neither viewport required a design exception. Evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/` (`edit-desktop.png`, `edit-mobile.png`, `edit-list-desktop.png`, `edit-list-mobile.png`, `edit-invoiced-final.png`, and `edit-entries.txt`).
+
+All 519 API integration tests passed in Docker, including all 24 management time-entry tests. The latter verified reassignment in Reports, access and eligibility boundaries, and concurrent edits, moves, invoice attachment and deletion by the former owner. All 40 focused admin-web tests passed. The default repository test run hit five-second timeouts. A serial rerun with a 60-second Vitest timeout passed all repository tests, including 1,182 admin-web tests. Repository typecheck and lint, OpenAPI export, strict OpenSpec validation and `git diff --check` passed.

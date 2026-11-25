@@ -31,7 +31,7 @@ The page SHALL show the projects the viewer can manage and the paginated entries
 - **THEN** the page distinguishes those empty states and offers creation only when a selected project can accept new entries
 
 ### Requirement: Manage completed entries
-The page SHALL support manual creation for an eligible member, editing an eligible entry's task within the project, interval, description and billable flag, and confirmed deletion. Edits SHALL preserve project and owner.
+The page SHALL support manual creation, editing the project, member, task, interval, description and billable flag on completed entries with no invoice link, and confirmed deletion. Edit SHALL open with the entry's current values and use the same eligible destination options as creation.
 
 #### Scenario: Create time on behalf of a member
 - **GIVEN** the manager has selected a project
@@ -54,9 +54,29 @@ The page SHALL support manual creation for an eligible member, editing an eligib
 - **WHEN** they complete a valid selection and save
 - **THEN** the entry is created in B and the sidebar still shows A under its existing filters
 
+#### Scenario: Change only the member within the current project
+- **GIVEN** the manager opens an editable entry whose active task is trackable by another current member of the workspace
+- **WHEN** they select that member and save
+- **THEN** the same entry is assigned to the new member and keeps the project and task
+- **AND** the table reflects the new member or removes the row if it falls outside the current filters
+
+#### Scenario: Replace an incompatible member and task
+- **GIVEN** the entry's current task is unavailable to the intended member
+- **WHEN** the manager clears the task to choose that member first, or clears the member to choose a different task first
+- **THEN** they can select a new eligible pair in either order and save only after both selections are valid
+
+#### Scenario: Move an existing entry to another project
+- **GIVEN** the manager is editing a completed entry with no invoice link in project A and can also manage active project B
+- **WHEN** they choose project B in the dialog
+- **THEN** the task clears and the member stays selected only with a current explicit assignment to B
+- **AND** start, end, description and the current billable value stay in the draft
+- **WHEN** they choose an eligible member and task and save
+- **THEN** the same entry moves to B and disappears from the list for A
+- **AND** the page keeps its selected project and filters while reconciling the list and pagination
+
 #### Scenario: Correct historical time
-- **GIVEN** the manager can access a completed unbilled entry whose owner lost access or whose task or project is inactive
-- **WHEN** the manager corrects its interval or description without changing its task
+- **GIVEN** the manager can access a completed entry with no invoice link whose owner lost access or whose task or project is inactive
+- **WHEN** the manager corrects its interval, description or billable flag while keeping the original project, member and task
 - **THEN** the form accepts the correction without requiring selection of a currently eligible owner or task
 
 #### Scenario: Delete requires confirmation

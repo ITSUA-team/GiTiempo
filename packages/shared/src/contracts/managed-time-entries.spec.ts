@@ -136,14 +136,30 @@ describe('management time-entry contracts', () => {
       updateManagedTimeEntrySchema.safeParse({ startedAt, endedAt: startedAt })
         .success,
     ).toBe(false);
-    for (const field of ['userId', 'projectId', 'workspaceId', 'invoiceId']) {
+    const immutableFields = { workspaceId: userId, invoiceId: userId, source: 'manual' };
+    for (const [field, value] of Object.entries(immutableFields)) {
       expect(
         updateManagedTimeEntrySchema.safeParse({
           description: null,
-          [field]: userId,
+          [field]: value,
         }).success,
       ).toBe(false);
     }
+  });
+
+  it('accepts managed reassignment fields as optional UUIDs', () => {
+    const projectId = '60000000-0000-4000-8000-000000000006';
+    expect(updateManagedTimeEntrySchema.parse({ userId })).toEqual({ userId });
+    expect(updateManagedTimeEntrySchema.parse({ projectId, taskId })).toEqual({
+      projectId,
+      taskId,
+    });
+    expect(
+      updateManagedTimeEntrySchema.safeParse({ projectId: 'invalid' }).success,
+    ).toBe(false);
+    expect(
+      updateManagedTimeEntrySchema.safeParse({ userId: 'invalid' }).success,
+    ).toBe(false);
   });
 
   it.each(['time_entry_running', 'time_entry_invoiced'])(

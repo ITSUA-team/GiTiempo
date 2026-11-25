@@ -3839,6 +3839,7 @@
     },
     "/management/projects/{projectId}/time-entries/{entryId}": {
       "patch": {
+        "description": "The path identifies the current project. Changing the project in the body requires a task in the destination project.",
         "operationId": "ManagementTimeEntriesController_updateEntry",
         "parameters": [
           {
@@ -3889,7 +3890,7 @@
             "description": "Current workspace role cannot manage time entries"
           },
           "404": {
-            "description": "Project, entry or task not found"
+            "description": "Project, entry or task not found. If both projects and the destination task are in scope, a missing current entry returns code time_entry_not_found."
           },
           "409": {
             "description": "",
@@ -3910,7 +3911,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update a completed unlinked entry in the managed project",
+        "summary": "Update or reassign a completed unlinked entry",
         "tags": [
           "management-time-entries"
         ]
@@ -3946,7 +3947,7 @@
             "description": "Current workspace role cannot manage time entries"
           },
           "404": {
-            "description": "Project or entry not found"
+            "description": "Project or entry not found. A missing entry in the managed project returns code time_entry_not_found."
           },
           "409": {
             "description": "",
@@ -9516,6 +9517,16 @@
           },
           "isBillable": {
             "type": "boolean"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
         "minProperties": 1,
