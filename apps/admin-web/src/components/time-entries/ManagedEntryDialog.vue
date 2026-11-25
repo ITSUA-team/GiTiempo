@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch, onBeforeUnmount } from 'vue';
 import { type TimeEntryResponse } from '@gitiempo/shared';
-import { giTiempoAutoCompleteDropdownPt, giTiempoDatePickerPt } from '@gitiempo/web-config/theme';
+import { giTiempoAutoCompleteDropdownPt, giTiempoDatePickerPt, giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import { AppDialog, DatePickerButtonBar, filterAutocompleteOptions, getErrorMessage, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
 import AutoComplete from 'primevue/autocomplete';
@@ -10,6 +10,7 @@ import Checkbox from 'primevue/checkbox';
 import DatePicker from 'primevue/datepicker';
 import InputText from 'primevue/inputtext';
 import Message from 'primevue/message';
+import Select from 'primevue/select';
 import Textarea from 'primevue/textarea';
 
 import RequestErrorCard from '@/components/RequestErrorCard.vue';
@@ -26,7 +27,7 @@ import type {
 const props = defineProps<{
   client: AdminTimeEntriesClient;
   project: ManagementProject;
-  members: ManagementMember[];
+  projects: ManagementProject[];
   entry?: TimeEntryResponse;
   busy: boolean;
   accessUnverified: boolean;
@@ -38,7 +39,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   close: [];
-  create: [input: ManagedEntryCreate];
+  create: [projectId: string, input: ManagedEntryCreate];
   update: [input: ManagedEntryUpdate];
   scopeLost: [];
   accessCheck: [];
@@ -47,6 +48,12 @@ const emit = defineEmits<{
 
 const visible = defineModel<boolean>('visible', { required: true });
 const entry = props.entry;
+const draftProjectId = shallowRef(props.project.id);
+const activeProjects = computed(() => props.projects.filter(project => project.isActive));
+const draftProject = computed(() => entry
+  ? props.project
+  : activeProjects.value.find(project => project.id === draftProjectId.value));
+const activeDraftProjectId = computed(() => draftProject.value?.isActive ? draftProject.value.id : undefined);
 type MemberOption = ManagementMember & { label: string };
 type TaskOption = Pick<ManagementTask, 'id' | 'title'>;
 const memberModel = shallowRef<MemberOption | string | null>(null);
@@ -69,21 +76,30 @@ const dialogAutoCompletePt = {
 const description = ref(entry?.description ?? '');
 const isBillable = ref(entry?.isBillable ?? false);
 const tasks = shallowRef<ManagementTask[]>([]);
+const members = shallowRef<ManagementMember[]>([]);
 const tasksLoading = ref(false);
+const membersLoading = ref(false);
 const tasksError = ref('');
+const membersError = ref('');
+const checkingAssignment = ref(false);
 const validationAttempted = ref(false);
 let taskRequest = 0;
+let memberRequest = 0;
 
 const displayedTasks = computed(() => {
   if (!entry || tasks.value.some(task => task.id === entry.taskId)) return tasks.value;
   return [entry.task, ...tasks.value];
 });
-const memberOptions = computed(() => managedMemberOptions(props.members));
+const memberOptions = computed(() => managedMemberOptions(members.value));
 const memberSuggestions = computed(() => filterAutocompleteOptions(memberOptions.value, memberSearch.value.query, member => member.label));
 const taskSuggestions = computed(() => filterAutocompleteOptions(displayedTasks.value, taskSearch.value.query, task => task.title));
 const fieldsDisabled = computed(() => props.busy || props.locked || props.accessUnverified);
 const validTask = computed(() => displayedTasks.value.some(task => task.id === taskId.value));
-const memberError = computed(() => validationAttempted.value && !userId.value ? 'Select a member.' : '');
+const validMember = computed(() => Boolean(entry || members.value.some(member => member.id === userId.value)));
+const choicesPending = computed(() => entry
+  ? tasksLoading.value && taskId.value !== entry.taskId
+  : tasksLoading.value || membersLoading.value || !draftProject.value);
+const memberError = computed(() => validationAttempted.value && !validMember.value ? 'Select an eligible member.' : '');
 const taskError = computed(() => validationAttempted.value && !validTask.value ? 'Select a task.' : '');
 const startError = computed(() => validationAttempted.value && !start.value ? 'Enter a start time.' : '');
 const endError = computed(() => {
@@ -110,21 +126,30 @@ function requiredFieldPt<T extends typeof giTiempoDatePickerPt | typeof giTiempo
 
 async function loadTasks() {
   const request = ++taskRequest;
+  const projectId = activeDraftProjectId.value;
   const selectedUser = userId.value;
-  const current = () => request === taskRequest && selectedUser === userId.value;
+  const current = () => request === taskRequest
+    && projectId === activeDraftProjectId.value && selectedUser === userId.value;
   tasks.value = [];
   tasksError.value = '';
-  tasksLoading.value = Boolean(selectedUser && props.project.isActive);
-  if (!selectedUser || !props.project.isActive) {
-    taskModel.value = entry?.task ?? null;
+  tasksLoading.value = Boolean(projectId);
+  if (!projectId) {
+    if (entry) taskModel.value = entry.task;
     return;
   }
   try {
-    const result = await props.client.tasks(props.project.id, selectedUser, current);
+    const result = await props.client.tasks(projectId, selectedUser, current);
     if (!current()) return;
-    tasks.value = result;
-    if (taskId.value !== entry?.taskId && !result.some(task => task.id === taskId.value)) {
-      taskModel.value = null;
+    if (checkingAssignment.value) {
+      checkingAssignment.value = false;
+      if (!result.isOwnerAssigned) {
+        memberModel.value = null;
+        return;
+      }
+    }
+    tasks.value = result.items;
+    if (taskId.value && taskId.value !== entry?.taskId && !validTask.value) {
+      selectTask(null);
     }
   } catch (error) {
     if (!current()) return;
@@ -138,20 +163,46 @@ async function loadTasks() {
   }
 }
 
-watch(userId, () => {
-  taskModel.value = null;
-  taskSearch.value = { query: '' };
-  isBillable.value = false;
-  void loadTasks();
-});
-watch(() => props.members, (members) => {
-  if (!entry && userId.value && !members.some(member => member.id === userId.value)) {
-    memberModel.value = null;
+async function loadMembers() {
+  const request = ++memberRequest;
+  const projectId = activeDraftProjectId.value;
+  const selectedTask = taskId.value;
+  const current = () => request === memberRequest
+    && projectId === activeDraftProjectId.value && selectedTask === taskId.value;
+  members.value = [];
+  membersError.value = '';
+  membersLoading.value = Boolean(!entry && projectId);
+  if (entry || !projectId) return;
+  try {
+    const result = await props.client.members(projectId, 'create', current, selectedTask);
+    if (current()) members.value = result;
+  } catch (error) {
+    if (!current()) return;
+    if (isApiErrorStatus(error, [401, 403])) emit('scopeLost');
+    else {
+      membersError.value = getErrorMessage(error, 'Unable to load eligible members.');
+      if (isApiErrorStatus(error, [404])) emit('accessCheck');
+    }
+  } finally {
+    if (current()) membersLoading.value = false;
   }
+}
+
+watch([userId, activeDraftProjectId, () => props.taskRefresh], loadTasks, { immediate: true });
+watch([taskId, activeDraftProjectId, () => props.taskRefresh], loadMembers, { immediate: true });
+onBeforeUnmount(() => {
+  taskRequest += 1;
+  memberRequest += 1;
 });
-watch([() => props.taskRefresh, () => props.project.isActive], () => { void loadTasks(); });
-onBeforeUnmount(() => { taskRequest += 1; });
-void loadTasks();
+
+function selectProject(projectId: string) {
+  if (projectId === draftProjectId.value) return;
+  checkingAssignment.value = Boolean(userId.value);
+  draftProjectId.value = projectId;
+  selectTask(null);
+  memberSearch.value = { query: '' };
+  taskSearch.value = { query: '' };
+}
 
 function selectTask(value: TaskOption | string | null) {
   taskModel.value = value;
@@ -161,9 +212,9 @@ function selectTask(value: TaskOption | string | null) {
 }
 
 async function submit(event: SubmitEvent) {
-  if (fieldsDisabled.value || (tasksLoading.value && taskId.value !== entry?.taskId)) return;
+  if (fieldsDisabled.value || choicesPending.value) return;
   validationAttempted.value = true;
-  if (!userId.value || !taskId.value || !validTask.value || !start.value || !end.value || endError.value) {
+  if (!userId.value || !validMember.value || !taskId.value || !validTask.value || !start.value || !end.value || endError.value) {
     const form = event.currentTarget;
     await nextTick();
     if (form instanceof HTMLFormElement) {
@@ -175,7 +226,7 @@ async function submit(event: SubmitEvent) {
   const endedAt = end.value.toISOString();
   const notes = description.value || null;
   if (!entry) {
-    emit('create', { userId: userId.value, taskId: taskId.value, startedAt, endedAt, description: notes, isBillable: isBillable.value });
+    emit('create', draftProjectId.value, { userId: userId.value, taskId: taskId.value, startedAt, endedAt, description: notes, isBillable: isBillable.value });
     return;
   }
 
@@ -210,18 +261,40 @@ async function submit(event: SubmitEvent) {
       @submit.prevent="submit"
     >
       <div class="grid gap-4 sm:grid-cols-2">
-        <label
-          for="managed-entry-project"
-          class="flex min-w-0 flex-col gap-1.5 text-sm font-medium"
-        >
-          Project
+        <div class="flex min-w-0 flex-col gap-1.5">
+          <label
+            id="managed-entry-project-label"
+            for="managed-entry-project"
+            class="text-sm font-medium"
+          >
+            Project
+          </label>
           <InputText
+            v-if="entry"
             id="managed-entry-project"
             :model-value="project.name"
             readonly
             fluid
           />
-        </label>
+          <Select
+            v-else
+            input-id="managed-entry-project"
+            aria-labelledby="managed-entry-project-label"
+            :model-value="draftProjectId"
+            :options="activeProjects"
+            option-label="name"
+            option-value="id"
+            :pt="giTiempoFieldWidthSelectPt"
+            :disabled="fieldsDisabled"
+            fluid
+            @update:model-value="selectProject"
+          />
+          <small
+            v-if="!entry && !draftProject"
+            class="text-destructive text-xs"
+            role="status"
+          >Choose an active project you can manage.</small>
+        </div>
         <div class="flex min-w-0 flex-col gap-1.5">
           <label
             for="managed-entry-member"
@@ -252,7 +325,8 @@ async function submit(event: SubmitEvent) {
             option-label="label"
             placeholder="Select a member"
             empty-search-message="No matching eligible members"
-            :disabled="fieldsDisabled"
+            :loading="membersLoading || (checkingAssignment && tasksLoading)"
+            :disabled="fieldsDisabled || membersLoading || checkingAssignment || !draftProject"
             :invalid="Boolean(memberError)"
             fluid
             @complete="memberSearch = $event"
@@ -286,7 +360,7 @@ async function submit(event: SubmitEvent) {
           placeholder="Select a task"
           empty-search-message="No matching eligible tasks"
           :loading="tasksLoading"
-          :disabled="!userId || tasksLoading || fieldsDisabled || !project.isActive"
+          :disabled="tasksLoading || fieldsDisabled || !draftProject?.isActive"
           :invalid="Boolean(taskError)"
           fluid
           @complete="taskSearch = $event"
@@ -298,6 +372,12 @@ async function submit(event: SubmitEvent) {
           class="text-destructive text-xs"
         >{{ taskError }}</small>
       </div>
+      <RequestErrorCard
+        v-if="membersError && !accessUnverified"
+        title="Failed to load members"
+        :message="membersError"
+        @retry="loadMembers"
+      />
       <RequestErrorCard
         v-if="tasksError && !accessUnverified"
         title="Failed to load tasks"
@@ -429,7 +509,7 @@ async function submit(event: SubmitEvent) {
         type="submit"
         form="managed-entry-form"
         class="w-full sm:w-auto"
-        :disabled="fieldsDisabled || (tasksLoading && taskId !== entry?.taskId)"
+        :disabled="fieldsDisabled || choicesPending"
         :loading="busy"
       />
     </template>

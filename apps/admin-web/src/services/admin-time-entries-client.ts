@@ -61,17 +61,23 @@ export function createAdminTimeEntriesClient(
         responseSchema: managementProjectsResponseSchema,
       }), current);
     },
-    members(projectId: string, purpose: 'filter' | 'create', current: () => boolean) {
+    members(projectId: string, purpose: 'filter' | 'create', current: () => boolean, taskId?: string) {
       return collectOptions(page => client.requestJson({
-        path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit: 100, purpose }),
+        path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit: 100, purpose, taskId }),
         responseSchema: managementTimeEntryMembersResponseSchema,
       }), current);
     },
-    tasks(projectId: string, userId: string, current: () => boolean) {
-      return collectOptions(page => client.requestJson({
-        path: queryPath(`${projectPath(projectId)}/time-entry-tasks`, { page, limit: 100, userId }),
-        responseSchema: managementTimeEntryTasksResponseSchema,
-      }), current);
+    async tasks(projectId: string, userId: string | undefined, current: () => boolean) {
+      let isOwnerAssigned: boolean | undefined;
+      const items = await collectOptions(async page => {
+        const result = await client.requestJson({
+          path: queryPath(`${projectPath(projectId)}/time-entry-tasks`, { page, limit: 100, userId }),
+          responseSchema: managementTimeEntryTasksResponseSchema,
+        });
+        isOwnerAssigned = result.isOwnerAssigned;
+        return result;
+      }, current);
+      return { items, isOwnerAssigned };
     },
     list(projectId: string, page: number, filters: ManagementEntryFilters) {
       return client.requestJson({

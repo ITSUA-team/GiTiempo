@@ -27,3 +27,9 @@
 
 - [x] 4.1 Run root lint, typecheck, tests and build plus `pnpm api:e2e:docker` for the isolated API suite. Record results together with strict validation of this change. See [verification](verification.md).
 - [x] 4.2 Exercise the actual admin page at desktop and mobile widths as Admin and assigned PM. Cover creation for another user, edits, deletion, both lock reasons, changed permissions and inaccessible public projects. Compare both layouts against the Pen frames and record the revision, outcomes and any remaining visual differences. See [verification](verification.md).
+
+## 5. New time entry dialog follow-up (#471)
+
+- [x] 5.1 Extend the shared picker contracts, management lookups and OpenAPI. Test both selection orders, distinct paginated results, assignment with zero tasks, public access without assignment, and private external own-time access. Verify an assigned member can use every active, non-closed project task. Update `docs/API-ENDPOINTS.md`.
+- [x] 5.2 Update the create dialog and its submission target. Test compatible selections, project switches, preserved draft fields, out-of-order responses and saving to a project other than the sidebar selection. Verify fixed project and owner on edit. Update `docs/ui/pages-admin.md`.
+- [x] 5.3 Manually test the actual desktop and mobile forms. Save once in each selection order. Switch projects with an assigned member and with an unassigned member who has public access. Verify task reset, member retention or reset, preserved start/end/description, and the saved entry's destination. Record outcomes in `verification.md`.

@@ -15,8 +15,10 @@ The backend SHALL authorize every management request against current active work
 
 #### Scenario: Direct requests cannot cross workspace or project boundaries
 - **GIVEN** a manager can access project A
-- **WHEN** they request a project from a different workspace or address an entry or task from project B under project A
+- **WHEN** they request a project from a different workspace, address an entry from project B under project A, or submit a write in A with a destination task from B
 - **THEN** the request returns 404 and neither project's records change
+- **WHEN** they request create-member choices in A with a task filter from B
+- **THEN** the lookup returns an empty page
 
 #### Scenario: Ordinary member cannot manage entries
 - **GIVEN** an authenticated workspace member with no Admin or PM role
@@ -34,7 +36,13 @@ The backend SHALL return individual entries, including running and invoiced entr
 #### Scenario: Historical filter choices and current creation choices
 - **GIVEN** a manageable project has a former member with recorded time and a current member eligible for an active open task
 - **WHEN** a manager opens the member filter, then requests creation choices
-- **THEN** the filter includes the historical owner, while creation offers only active members with at least one eligible task and lists only the selected member's eligible tasks
+- **THEN** the filter includes the historical owner, while creation offers only current members and tasks that form at least one eligible pair
+
+#### Scenario: Project assignment grants access to all trackable project tasks
+- **GIVEN** a current workspace member is explicitly assigned to an active private project with several active, non-closed tasks, including one they have never tracked and one assigned to someone else
+- **WHEN** an authorized manager lists task options for that member or creates a valid completed entry for them on any of those tasks
+- **THEN** every such task is selectable and creation succeeds irrespective of task assignee or tracking history
+- **AND** closed and inactive tasks remain unavailable for creation
 
 ### Requirement: Administrative creation and historical correction
 The backend SHALL create completed manual entries for the selected owner using that person's current tracking access to the destination task. An edit SHALL preserve owner and project. A move to another task in the same project SHALL repeat the owner's eligibility check. Changes to the interval SHALL preserve a positive duration calculated from the resulting endpoints.

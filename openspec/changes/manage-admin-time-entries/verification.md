@@ -70,3 +70,18 @@ The desktop table and mobile cards followed frames `te471_1069` and `te471_1569`
 - PASS — On `4a70ec1d` with the review fixes applied, Chrome opened the real create dialog against a local API and disposable database at 320, 375 and 1280 px. Both Member and Task stayed within the viewport, and both long options were selectable. The mobile lists measured 288 and 343 px respectively and truncated the long labels. The page had no horizontal overflow.
 - PASS — The Admin view tests verify the width limit on both rendered overlays and the message, refreshed invoice lock and retained record after `DELETE 409` in both layouts.
 - PASS — All 509 API e2e tests passed on isolated PostgreSQL 17. The race tests now wait for the database sessions blocked by the fixture transaction.
+
+## New time entry dialog follow-up, 2026-11-25
+
+Acceptance exercised Chrome on `3c6f51a6` with the follow-up changes applied, on the real admin Time Entries route with a local API and isolated PostgreSQL database. The fixtures included two active private projects with the same assigned member and one active public project where that member could track time without an assignment.
+
+| Scenario | Observed result |
+| --- | --- |
+| Desktop, 1280 × 800 | PASS. Task could be picked first and remained selected when an eligible member was chosen. Switching between the two private projects cleared Task, retained the assigned member, and preserved Start, End and Description. After saving, the sidebar still selected the source project, and the new entry was visible in the destination. |
+| Mobile, 375 × 812 | PASS. Member could be picked first. Switching to the public project cleared Task and Member, and preserved Start, End and Description. The member was selectable again through public tracking access. After saving, the page still selected the source project and the new entry appeared in the destination. The viewport had no horizontal overflow. |
+| Persisted records | PASS. The isolated database contained exactly the two submitted records, each under the expected destination project and task with the selected member and a positive interval. |
+| Keyboard and edit | PASS. The creation Project picker exposed its label and accepted arrow keys and Enter. Edit showed read-only Project and Member fields. |
+
+The page retained the desktop table and mobile card structure in Pen frames `te471_1069` and `te471_1569`. The form uses the existing dialog layout with a PrimeVue Project picker for creation. Local run evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/`.
+
+Automated verification passed for all 1,172 admin-web tests, including the 30 focused tests, and all 510 API integration tests in Docker. Repository lint and type checks, OpenAPI export, and strict OpenSpec validation passed. The repository test run hit a five-second timeout in an invoice PDF test. A separate run with a 30-second timeout passed all 822 API unit tests.

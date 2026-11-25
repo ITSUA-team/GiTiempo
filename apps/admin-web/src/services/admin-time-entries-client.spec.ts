@@ -19,7 +19,7 @@ describe('admin time entries client', () => {
     const request = {
       projects: () => client.projects(current),
       members: () => client.members(projectId, 'filter', current),
-      tasks: () => client.tasks(projectId, userId, current),
+      tasks: async () => (await client.tasks(projectId, userId, current)).items,
     };
 
     await expect(request[picker]()).resolves.toEqual([{ id: 'first' }, { id: 'second' }]);
@@ -29,6 +29,27 @@ describe('admin time entries client', () => {
     })).toEqual([
       { path, query: { page: '1', limit: '100', ...filters } },
       { path, query: { page: '2', limit: '100', ...filters } },
+    ]);
+  });
+
+  it('queries task-first choices and preserves assignment on an empty owner-scoped result', async () => {
+    const taskId = '00000000-0000-4000-8000-000000000103';
+    const requestJson = vi.fn()
+      .mockResolvedValueOnce({ items: [], meta: { totalPages: 0 } })
+      .mockResolvedValueOnce({ items: [], meta: { totalPages: 0 } })
+      .mockResolvedValueOnce({ items: [], meta: { totalPages: 0 }, isOwnerAssigned: true });
+    const client = createAdminTimeEntriesClient({ requestJson, requestNoContent: vi.fn() });
+    const current = () => true;
+
+    await client.tasks(projectId, undefined, current);
+    await client.members(projectId, 'create', current, taskId);
+    await expect(client.tasks(projectId, userId, current)).resolves.toEqual({
+      items: [], isOwnerAssigned: true,
+    });
+    expect(requestJson.mock.calls.map(([options]) => options.path)).toEqual([
+      `/management/projects/${projectId}/time-entry-tasks?page=1&limit=100`,
+      `/management/projects/${projectId}/time-entry-members?page=1&limit=100&purpose=create&taskId=${taskId}`,
+      `/management/projects/${projectId}/time-entry-tasks?page=1&limit=100&userId=${userId}`,
     ]);
   });
 

@@ -8,6 +8,7 @@ import AutoComplete from 'primevue/autocomplete';
 import PrimeVue from 'primevue/config';
 import ConfirmationService from 'primevue/confirmationservice';
 import DatePicker from 'primevue/datepicker';
+import Select from 'primevue/select';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defineComponent, ref } from 'vue';
 
@@ -95,7 +96,7 @@ beforeEach(() => {
   }));
   mocks.projects.mockResolvedValue([alpha, beta]);
   mocks.members.mockImplementation(async (_project, purpose) => purpose === 'create' ? [active] : [past, active]);
-  mocks.tasks.mockResolvedValue([]);
+  mocks.tasks.mockResolvedValue({ items: [] });
   mocks.list.mockResolvedValue(response([editable, running, invoiced]));
 });
 
@@ -346,7 +347,7 @@ describe('Time Entries', () => {
   it('refreshes eligible tasks after a 422, preserving the original historical task and draft', async () => {
     const closed = { id: 'closed', title: 'Now closed', defaultBillableForTimeEntries: false };
     const available = { id: 'available', title: 'Still eligible', defaultBillableForTimeEntries: false };
-    mocks.tasks.mockResolvedValueOnce([closed, available]).mockResolvedValue([available]);
+    mocks.tasks.mockResolvedValueOnce({ items: [closed, available] }).mockResolvedValue({ items: [available] });
     mocks.update.mockRejectedValueOnce(new ApiError('Task is ineligible', { status: 422 }));
     const { wrapper } = render({ attachToDocument: true });
     await flushPromises();
@@ -378,7 +379,7 @@ describe('Time Entries', () => {
     const endedAt = editable.endedAt!;
     const sameName = { ...active, id: 'same-name', email: 'other-active@example.com' };
     mocks.members.mockImplementation(async (_project, purpose) => purpose === 'create' ? [sameName, active] : [past, active]);
-    mocks.tasks.mockResolvedValue([task]);
+    mocks.tasks.mockResolvedValue({ items: [task] });
     mocks.create.mockResolvedValue(editable);
     const { wrapper } = render();
     await flushPromises();
@@ -413,6 +414,96 @@ describe('Time Entries', () => {
     });
     expect(wrapper.findComponent(ManagedEntryDialog).exists()).toBe(false);
     expect(mocks.list).toHaveBeenCalledTimes(2);
+    wrapper.unmount();
+  });
+
+  it.each([true, false])('keeps the draft and saves in the dialog project (assigned: %s)', async assigned => {
+    const destination = { id: 'destination', name: 'Destination', isActive: true };
+    const originTask = { id: 'origin-task', title: 'Origin task', defaultBillableForTimeEntries: true };
+    const destinationTask = { id: 'destination-task', title: 'Destination task', defaultBillableForTimeEntries: false };
+    const replacement = { id: 'replacement', displayName: 'Replacement member', email: 'replacement@example.com' };
+    mocks.projects.mockResolvedValue([alpha, beta, destination]);
+    mocks.tasks.mockImplementation(async (id, owner) => id === alpha.id
+      ? { items: [originTask] }
+      : { items: [destinationTask], isOwnerAssigned: owner ? assigned : undefined });
+    mocks.members.mockImplementation(async (id, _purpose, _current, taskId) => {
+      if (id === alpha.id && taskId === originTask.id) return [active];
+      return [active, replacement];
+    });
+    mocks.create.mockResolvedValue(editable);
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="New time entry"]').trigger('click');
+    await flushPromises();
+
+    const dialog = wrapper.getComponent(ManagedEntryDialog);
+    const project = dialog.getComponent(Select);
+    const [member, task] = dialog.findAllComponents(AutoComplete);
+    expect(project.props('modelValue')).toBe(alpha.id);
+    expect(dialog.get('#managed-entry-project').attributes('aria-labelledby')).toBe('managed-entry-project-label');
+    expect(dialog.get('#managed-entry-project-label').text()).toBe('Project');
+    expect(project.props('options')).toEqual([alpha, destination]);
+    expect(task!.props('disabled')).toBe(false);
+    task!.vm.$emit('update:modelValue', originTask);
+    await flushPromises();
+    expect(mocks.members).toHaveBeenCalledWith(alpha.id, 'create', expect.any(Function), originTask.id);
+    member!.vm.$emit('update:modelValue', active);
+    const [start, end] = dialog.findAllComponents(DatePicker);
+    start!.vm.$emit('update:modelValue', new Date(editable.startedAt));
+    end!.vm.$emit('update:modelValue', new Date(editable.endedAt!));
+    await dialog.get('#managed-entry-description').setValue('Retained notes');
+    await flushPromises();
+    expect(task!.props('modelValue')).toEqual(originTask);
+
+    project.vm.$emit('update:modelValue', destination.id);
+    await flushPromises();
+    expect(task!.props('modelValue')).toBeNull();
+    expect(member!.props('modelValue')).toEqual(assigned ? active : null);
+    expect(dialog.get<HTMLInputElement>('#managed-entry-start').element.value).not.toBe('');
+    expect(dialog.get<HTMLInputElement>('#managed-entry-end').element.value).not.toBe('');
+    expect(dialog.get<HTMLTextAreaElement>('#managed-entry-description').element.value).toBe('Retained notes');
+    task!.vm.$emit('update:modelValue', destinationTask);
+    if (!assigned) member!.vm.$emit('update:modelValue', replacement);
+    await flushPromises();
+    await dialog.get('form').trigger('submit');
+    await flushPromises();
+
+    expect(mocks.create).toHaveBeenCalledWith(destination.id, {
+      userId: assigned ? active.id : replacement.id, taskId: destinationTask.id,
+      startedAt: editable.startedAt, endedAt: editable.endedAt, isBillable: false, description: 'Retained notes',
+    });
+    expect(mocks.list).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+  });
+
+  it('ignores obsolete task and assignment results after rapid project switches', async () => {
+    const second = { ...beta, isActive: true };
+    const third = { id: 'third', name: 'Third', isActive: true };
+    const thirdTask = { id: 'third-task', title: 'Third task', defaultBillableForTimeEntries: false };
+    const staleTask = { ...thirdTask, id: 'stale', title: 'Stale task' };
+    let resolveObsolete!: (result: { items: typeof staleTask[]; isOwnerAssigned: boolean }) => void;
+    mocks.projects.mockResolvedValue([alpha, second, third]);
+    mocks.tasks.mockImplementation(async id => {
+      if (id === second.id) return new Promise(resolve => { resolveObsolete = resolve; });
+      return { items: id === third.id ? [thirdTask] : [], isOwnerAssigned: true };
+    });
+    const { wrapper } = render();
+    await flushPromises();
+    await wrapper.get('button[aria-label="New time entry"]').trigger('click');
+    await flushPromises();
+    const dialog = wrapper.getComponent(ManagedEntryDialog);
+    const [member, task] = dialog.findAllComponents(AutoComplete);
+    const project = dialog.getComponent(Select);
+    member!.vm.$emit('update:modelValue', active);
+    project.vm.$emit('update:modelValue', second.id);
+    await flushPromises();
+    project.vm.$emit('update:modelValue', third.id);
+    await flushPromises();
+    resolveObsolete({ items: [staleTask], isOwnerAssigned: false });
+    await flushPromises();
+
+    expect(member!.props('modelValue')).toEqual(active);
+    expect(task!.props('suggestions')).toEqual([thirdTask]);
     wrapper.unmount();
   });
 

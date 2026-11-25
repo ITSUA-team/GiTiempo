@@ -172,10 +172,18 @@ export const managementProjectsQuerySchema = timeEntryListQueryBaseSchema.pick({
 });
 
 export const managementTimeEntryMembersQuerySchema =
-  managementProjectsQuerySchema.extend({ purpose: z.enum(['filter', 'create']) });
+  managementProjectsQuerySchema
+    .extend({
+      purpose: z.enum(['filter', 'create']),
+      taskId: z.uuid().optional(),
+    })
+    .refine(({ purpose, taskId }) => purpose === 'create' || !taskId, {
+      message: 'taskId is only supported for create choices',
+      path: ['taskId'],
+    });
 
 export const managementTimeEntryTasksQuerySchema =
-  managementProjectsQuerySchema.extend({ userId: z.uuid() });
+  managementProjectsQuerySchema.extend({ userId: z.uuid().optional() });
 
 export const managementTimeEntriesQuerySchema = timeEntryListQueryBaseSchema
   .omit({ projectId: true, taskId: true })
@@ -202,6 +210,7 @@ export const managementTimeEntryTasksResponseSchema = z.object({
     }),
   ),
   meta: timeEntryListMetaSchema,
+  isOwnerAssigned: z.boolean().optional(),
 });
 
 export const createManagedTimeEntrySchema = createManualTimeEntrySchema.safeExtend({

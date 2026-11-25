@@ -38,6 +38,22 @@ The page SHALL support manual creation for an eligible member, editing an eligib
 - **WHEN** they choose New time entry, select an eligible member and task, enter a valid completed interval and save
 - **THEN** the entry belongs to that member in the selected project and the list refreshes under its current filters
 
+#### Scenario: Select task or member first
+- **WHEN** the manager opens New time entry
+- **THEN** the project defaults to the sidebar selection and both pickers are available once their options load
+- **WHEN** the manager selects a task first
+- **THEN** they can choose an eligible member and save with the original task still selected
+- **WHEN** the manager starts with an explicitly assigned member instead
+- **THEN** they can choose any active, non-closed task in that project
+
+#### Scenario: Change the draft project before saving
+- **GIVEN** the manager has entered start, end and description and chosen a member and task in project A
+- **WHEN** they choose another active manageable project B inside the create dialog
+- **THEN** the task clears, start, end and description retain their values, and the member stays selected only with a current explicit assignment to B
+- **AND** a late response for A cannot restore its options or clear a valid selection in B
+- **WHEN** they complete a valid selection and save
+- **THEN** the entry is created in B and the sidebar still shows A under its existing filters
+
 #### Scenario: Correct historical time
 - **GIVEN** the manager can access a completed unbilled entry whose owner lost access or whose task or project is inactive
 - **WHEN** the manager corrects its interval or description without changing its task

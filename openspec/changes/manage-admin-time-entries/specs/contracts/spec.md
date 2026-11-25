@@ -15,6 +15,17 @@ Management lookups SHALL return only choices within the caller's current workspa
 - **THEN** the former member is absent from the create choices and the task options contain only currently trackable tasks for that owner in that project
 - **AND** each task option includes its ID, title and default billable value
 
+#### Scenario: Task selection before owner selection
+- **WHEN** the client requests project task options without `userId`
+- **THEN** each active, non-closed task trackable by at least one current workspace member appears once across the paginated result
+- **WHEN** the client supplies one of those task IDs to the create-member lookup
+- **THEN** its items and total include only distinct current members eligible for that task
+
+#### Scenario: Check assignment independently of task availability
+- **WHEN** the client requests task options with `userId`
+- **THEN** the response identifies whether that current workspace member has an explicit assignment to the requested project, including when the task list is empty
+- **AND** implicit tracking access alone does not count as an assignment
+
 ### Requirement: Managed entry list and write contracts
 The managed list SHALL return the shared time-entry items and pagination metadata. Managed creation SHALL accept the completed manual-entry fields and a required owner identifier. A patch SHALL accept only mutable entry fields. The path SHALL identify the project and the session SHALL identify the workspace.
 

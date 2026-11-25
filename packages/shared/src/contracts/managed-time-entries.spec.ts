@@ -8,6 +8,7 @@ import {
   managementTimeEntriesQuerySchema,
   managementTimeEntryMembersQuerySchema,
   managementTimeEntryTasksQuerySchema,
+  managementTimeEntryTasksResponseSchema,
   updateManagedTimeEntrySchema,
 } from './time-entries.js';
 
@@ -37,6 +38,26 @@ describe('management time-entry contracts', () => {
       managementTimeEntryMembersQuerySchema.safeParse({ purpose: 'other' })
         .success,
     ).toBe(false);
+    expect(
+      managementTimeEntryMembersQuerySchema.parse({ purpose: 'create', taskId })
+        .taskId,
+    ).toBe(taskId);
+    expect(
+      managementTimeEntryMembersQuerySchema.safeParse({
+        purpose: 'filter',
+        taskId,
+      }).success,
+    ).toBe(false);
+    expect(
+      managementTimeEntryMembersQuerySchema.safeParse({
+        purpose: 'create',
+        taskId: 'other',
+      }).success,
+    ).toBe(false);
+    expect(managementTimeEntryTasksQuerySchema.parse({})).toEqual({
+      page: 1,
+      limit: 20,
+    });
     expect(managementTimeEntryTasksQuerySchema.parse({ userId }).userId).toBe(
       userId,
     );
@@ -44,6 +65,22 @@ describe('management time-entry contracts', () => {
       managementTimeEntryTasksQuerySchema.safeParse({ userId: 'other' })
         .success,
     ).toBe(false);
+  });
+
+  it('preserves assignment on an empty owner task page', () => {
+    const emptyPage = {
+      items: [],
+      meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    };
+    expect(managementTimeEntryTasksResponseSchema.parse(emptyPage)).toEqual(
+      emptyPage,
+    );
+    for (const isOwnerAssigned of [true, false]) {
+      const response = { ...emptyPage, isOwnerAssigned };
+      expect(managementTimeEntryTasksResponseSchema.parse(response)).toEqual(
+        response,
+      );
+    }
   });
 
   it('accepts composed filters and validates the interval and query scope', () => {

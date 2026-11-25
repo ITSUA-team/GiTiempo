@@ -46,6 +46,7 @@ describe('Managed time entries (e2e)', () => {
   const externalProject = randomUUID();
   const foreignProject = randomUUID();
   const unassignedProject = randomUUID();
+  const emptyProject = randomUUID();
   const projectIds = [
     privateProject,
     publicProject,
@@ -53,6 +54,7 @@ describe('Managed time entries (e2e)', () => {
     externalProject,
     foreignProject,
     unassignedProject,
+    emptyProject,
   ];
   const publicTask = randomUUID();
   const alternateTask = randomUUID();
@@ -162,6 +164,7 @@ describe('Managed time entries (e2e)', () => {
         visibility: 'public',
       },
       { id: privateProject, workspaceId, name: `Management private ${suffix}` },
+      { id: emptyProject, workspaceId, name: `Management empty ${suffix}` },
       {
         id: archivedProject,
         workspaceId,
@@ -468,6 +471,25 @@ describe('Managed time entries (e2e)', () => {
     expect(eligibleTasks.body.items).toEqual([
       expect.objectContaining({ id: externalTask }),
     ]);
+    expect(eligibleTasks.body.isOwnerAssigned).toBe(false);
+    const externalMembers = `${projectPath(externalProject)}/time-entry-members?purpose=create`;
+    const exactTaskMembers = await get(
+      `${externalMembers}&taskId=${externalTask}`,
+      pmToken,
+    ).expect(200);
+    const siblingTaskMembers = await get(
+      `${externalMembers}&taskId=${siblingTask}`,
+      pmToken,
+    ).expect(200);
+    expect(exactTaskMembers.body.items).toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    expect(siblingTaskMembers.body.items).not.toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    expect(exactTaskMembers.body.meta.total).toBe(
+      siblingTaskMembers.body.meta.total + 1,
+    );
     await create(externalProject, pmToken, memberId, externalTask).expect(201);
     const sibling = await create(
       externalProject,
@@ -488,12 +510,87 @@ describe('Managed time entries (e2e)', () => {
       pmToken,
     ).expect(200);
     expect(taskPage.body.items).toHaveLength(1);
+    expect(taskPage.body.isOwnerAssigned).toBe(false);
     expect(taskPage.body.meta).toEqual({
       page: 2,
       limit: 1,
       total: 2,
       totalPages: 2,
     });
+
+    const allTasksPath = `${projectPath(publicProject)}/time-entry-tasks?limit=1`;
+    const taskPages = await Promise.all(
+      [1, 2].map((page) =>
+        get(`${allTasksPath}&page=${page}`, pmToken).expect(200),
+      ),
+    );
+    const taskIds = taskPages.flatMap(({ body }) =>
+      body.items.map(({ id }: { id: string }) => id),
+    );
+    expect(taskIds.sort()).toEqual([publicTask, alternateTask].sort());
+    for (const { body } of taskPages) {
+      expect(body.meta.total).toBe(2);
+      expect(body).not.toHaveProperty('isOwnerAssigned');
+    }
+    const scopedMembers = await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=create&taskId=${publicTask}&limit=1`,
+      pmToken,
+    ).expect(200);
+    expect(scopedMembers.body.items).toEqual(
+      eligibleMembers.body.items.slice(0, 1),
+    );
+    expect(scopedMembers.body.meta.total).toBe(eligibleMembers.body.meta.total);
+    await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=filter&taskId=${publicTask}`,
+      pmToken,
+    ).expect(400);
+  });
+
+  it('returns explicit assignment independently of task availability', async () => {
+    await db.insert(projectAssignments).values({
+      workspaceId,
+      projectId: emptyProject,
+      userId: memberId,
+      assignedBy: adminId,
+    });
+    const query = `${projectPath(emptyProject)}/time-entry-tasks?userId=${memberId}`;
+    const empty = await get(query).expect(200);
+    expect(empty.body).toMatchObject({
+      items: [],
+      isOwnerAssigned: true,
+      meta: { total: 0 },
+    });
+
+    const openTasks = [randomUUID(), randomUUID()];
+    await db.insert(tasks).values([
+      ...openTasks.map((id, index) => ({
+        id,
+        workspaceId,
+        projectId: emptyProject,
+        title: `New task ${index}`,
+      })),
+      {
+        workspaceId,
+        projectId: emptyProject,
+        title: 'Old task',
+        status: 'closed',
+      },
+      {
+        workspaceId,
+        projectId: emptyProject,
+        title: 'Inactive task',
+        isActive: false,
+      },
+    ]);
+    const populated = await get(query).expect(200);
+    expect(populated.body).toMatchObject({
+      items: openTasks.map((id) => ({ id })),
+      isOwnerAssigned: true,
+      meta: { total: 2 },
+    });
+    for (const id of openTasks) {
+      await create(emptyProject, adminToken, memberId, id).expect(201);
+    }
   });
 
   it('combines literal search, owner and date bounds before stable pagination', async () => {

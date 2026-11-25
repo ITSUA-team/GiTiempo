@@ -159,7 +159,14 @@ export class ManagementTimeEntriesService {
                       tx
                         .select({ id: tasks.id })
                         .from(tasks)
-                        .where(this.eligibleTaskCondition(tx, project)),
+                        .where(
+                          and(
+                            this.eligibleTaskCondition(tx, project),
+                            query.taskId
+                              ? eq(tasks.id, query.taskId)
+                              : undefined,
+                          ),
+                        ),
                     ),
                   ),
                 ),
@@ -186,6 +193,7 @@ export class ManagementTimeEntriesService {
   ) {
     return this.db.transaction(async (tx) => {
       const project = await this.requireProject(tx, actor, projectId);
+      const userId = query.userId;
       const scope = exists(
         tx
           .select({ id: workspaceMembers.id })
@@ -193,13 +201,13 @@ export class ManagementTimeEntriesService {
           .where(
             and(
               eq(workspaceMembers.workspaceId, project.workspaceId),
-              eq(workspaceMembers.userId, query.userId),
+              userId ? eq(workspaceMembers.userId, userId) : undefined,
               this.eligibleTaskCondition(tx, project),
             ),
           ),
       );
 
-      return this.page(
+      const page = await this.page(
         query,
         tx
           .select(taskSelection)
@@ -210,6 +218,22 @@ export class ManagementTimeEntriesService {
           .offset(this.offset(query)),
         tx.select({ total: count() }).from(tasks).where(scope),
       );
+      if (!userId) return page;
+
+      const [assignment] = await tx
+        .select({ id: projectAssignments.id })
+        .from(projectAssignments)
+        .innerJoin(
+          workspaceMembers,
+          and(
+            eq(workspaceMembers.workspaceId, projectAssignments.workspaceId),
+            eq(workspaceMembers.userId, projectAssignments.userId),
+          ),
+        )
+        .where(
+          trackingAssignmentCondition(project.workspaceId, project.id, userId),
+        );
+      return { ...page, isOwnerAssigned: Boolean(assignment) };
     });
   }
 

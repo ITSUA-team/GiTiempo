@@ -232,8 +232,8 @@ All routes below require an active Admin or PM membership in the session workspa
 | Method | Path | Input | Result |
 | --- | --- | --- | --- |
 | GET | `/management/projects` | `page`, `limit` | Manageable projects, including archived projects. Options include `id`, `name` and `isActive`. |
-| GET | `/management/projects/:projectId/time-entry-members` | `purpose` (`filter` or `create`), `page`, `limit` | Owner options with `id`, `displayName` and `email`. Filter includes historical owners. Create includes active members with eligible tasks. |
-| GET | `/management/projects/:projectId/time-entry-tasks` | `userId`, `page`, `limit` | Tasks the selected owner can currently track, with `id`, `title` and `defaultBillableForTimeEntries`. |
+| GET | `/management/projects/:projectId/time-entry-members` | `purpose` (`filter` or `create`), optional `taskId` for create, `page`, `limit` | Distinct owners with `id`, `displayName` and `email`. Filter includes historical owners. Create includes current members eligible for the specified task or for at least one project task when omitted. |
+| GET | `/management/projects/:projectId/time-entry-tasks` | Optional `userId`, `page`, `limit` | Distinct tasks with `id`, `title` and `defaultBillableForTimeEntries`. Without an owner, the list includes tasks trackable by at least one current workspace member. With an owner, it includes that owner's trackable tasks and returns `isOwnerAssigned` even on empty pages. |
 | GET | `/management/projects/:projectId/time-entries` | `page`, `limit`, optional `userId`, `search`, `dateFrom` and `dateTo` | Individual records, including running and invoiced time. |
 | POST | `/management/projects/:projectId/time-entries` | `userId` plus the manual-entry fields | 201 with a completed entry owned by the selected user. |
 | PATCH | `/management/projects/:projectId/time-entries/:entryId` | At least one of `taskId`, `startedAt`, `endedAt`, `description` and `isBillable` | 200 with the updated entry. An empty update returns 400. Owner and project are fixed. |
@@ -241,7 +241,9 @@ All routes below require an active Admin or PM membership in the session workspa
 
 Lists return `items` and `meta` with `page`, `limit`, `total` and `totalPages`. Entry search matches partial task titles case-insensitively. The date filters apply to the start time, with an inclusive lower bound and exclusive upper bound.
 
-The server returns 401 for missing authentication, 403 for an insufficient workspace role and 404 for an out-of-scope project, entry or task. Creating an entry or changing its task requires the owner's current tracking access. The server rejects an ineligible owner or inactive work with 422. A completed, unlinked entry can be corrected in place or deleted even after its owner's access ends or the work is archived.
+A current workspace member explicitly assigned to an active project can track every active, non-closed task in it. Public-project access and exact-task access through previous time entries can make an unassigned member eligible, while `isOwnerAssigned` reflects explicit assignment.
+
+The server returns 401 for missing authentication, 403 for an insufficient workspace role and 404 for an out-of-scope project, entry or write destination task. A create-member lookup whose `taskId` is absent from the requested project returns an empty page. Creating an entry or changing its task requires the owner's current tracking access. The server rejects an ineligible owner or inactive work with 422. A completed, unlinked entry can be corrected in place or deleted even after its owner's access ends or the work is archived.
 
 Administrative PATCH and DELETE return 409 with `time_entry_running` when the timer must be stopped, or `time_entry_invoiced` when the entry belongs to an invoice in any status, including draft. These protections apply to this management API. Personal time-entry and timer routes follow the rules in section 8.
 

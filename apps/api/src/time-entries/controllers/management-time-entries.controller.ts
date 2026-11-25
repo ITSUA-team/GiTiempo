@@ -70,7 +70,7 @@ export class ManagementTimeEntriesController {
   @Get(':projectId/time-entry-members')
   @ApiOperation({
     summary:
-      'List historical owners for filtering or eligible owners for creating entries',
+      'List historical owners or eligible owners, optionally scoped to a task',
   })
   @ApiOkResponse({ type: ManagementTimeEntryMembersResponseDto })
   @ApiNotFoundResponse({ description: 'Project not found' })
@@ -85,7 +85,7 @@ export class ManagementTimeEntriesController {
 
   @Get(':projectId/time-entry-tasks')
   @ApiOperation({
-    summary: 'List tasks an owner can currently track in the managed project',
+    summary: 'List trackable project tasks, optionally scoped to an owner',
   })
   @ApiOkResponse({ type: ManagementTimeEntryTasksResponseDto })
   @ApiNotFoundResponse({ description: 'Project not found' })

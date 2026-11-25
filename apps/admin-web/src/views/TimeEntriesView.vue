@@ -213,9 +213,14 @@ async function mutate<T>(
   }
 }
 
-function createEntry(input: ManagedEntryCreate) {
-  const selected = projectId.value;
-  if (selected) void mutate(() => client.create(selected, input), { inEditor: true });
+function createEntry(destinationId: string, input: ManagedEntryCreate) {
+  void mutate(
+    () => client.create(destinationId, input),
+    { inEditor: true },
+    () => {
+      if (destinationId === projectId.value) refresh();
+    },
+  );
 }
 
 function updateEntry(input: ManagedEntryUpdate) {
@@ -633,7 +638,7 @@ function confirmDelete(entry: TimeEntryResponse) {
       v-model:visible="editorVisible"
       :client="client"
       :project="project"
-      :members="eligibleMembers"
+      :projects="projects"
       :entry="editor.entry"
       :busy="pendingMutation?.inEditor ?? false"
       :access-unverified="accessUnverified"
