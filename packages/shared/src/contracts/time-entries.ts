@@ -134,37 +134,37 @@ export const createManualTimeEntryDraftSchema = manualTimeEntryInputBaseSchema
     path: ['endedAt'],
   });
 
-export const updateTimeEntrySchema = z
-  .object({
-    taskId: z.uuid().optional(),
-    startedAt: dateTimeSchema.optional(),
-    endedAt: dateTimeSchema.optional(),
-    description: z.string().max(2000).nullable().optional(),
-    isBillable: z.boolean().optional(),
-  })
-  .strict()
-  .refine(
-    (data) =>
-      data.taskId !== undefined ||
-      data.startedAt !== undefined ||
-      data.endedAt !== undefined ||
-      data.description !== undefined ||
-      data.isBillable !== undefined,
-    {
-      message: 'At least one field must be provided',
-      path: [],
-    },
-  )
-  .refine(
-    (data) =>
-      data.startedAt === undefined ||
-      data.endedAt === undefined ||
-      new Date(data.endedAt).getTime() > new Date(data.startedAt).getTime(),
-    {
-      message: 'endedAt must be later than startedAt',
-      path: ['endedAt'],
-    },
+const updateTimeEntryBaseSchema = manualTimeEntryInputBaseSchema.partial();
+
+function hasTimeEntryUpdate(data: object): boolean {
+  return Object.values(data).some((value) => value !== undefined);
+}
+
+function hasValidUpdatedInterval(data: {
+  startedAt?: string;
+  endedAt?: string;
+}): boolean {
+  const { startedAt, endedAt } = data;
+  return (
+    startedAt === undefined ||
+    endedAt === undefined ||
+    hasPositiveManualTimeEntryDuration({ startedAt, endedAt })
   );
+}
+
+const emptyTimeEntryUpdate = {
+  message: 'At least one field must be provided',
+  path: [],
+};
+
+const invalidTimeEntryInterval = {
+  message: 'endedAt must be later than startedAt',
+  path: ['endedAt'],
+};
+
+export const updateTimeEntrySchema = updateTimeEntryBaseSchema
+  .refine(hasTimeEntryUpdate, emptyTimeEntryUpdate)
+  .refine(hasValidUpdatedInterval, invalidTimeEntryInterval);
 
 export const managementProjectsQuerySchema = timeEntryListQueryBaseSchema.pick({
   page: true,
@@ -172,10 +172,18 @@ export const managementProjectsQuerySchema = timeEntryListQueryBaseSchema.pick({
 });
 
 export const managementTimeEntryMembersQuerySchema =
-  managementProjectsQuerySchema.extend({ purpose: z.enum(['filter', 'create']) });
+  managementProjectsQuerySchema
+    .extend({
+      purpose: z.enum(['filter', 'create']),
+      taskId: z.uuid().optional(),
+    })
+    .refine(({ purpose, taskId }) => purpose === 'create' || !taskId, {
+      message: 'taskId is only supported for create choices',
+      path: ['taskId'],
+    });
 
 export const managementTimeEntryTasksQuerySchema =
-  managementProjectsQuerySchema.extend({ userId: z.uuid() });
+  managementProjectsQuerySchema.extend({ userId: z.uuid().optional() });
 
 export const managementTimeEntriesQuerySchema = timeEntryListQueryBaseSchema
   .omit({ projectId: true, taskId: true })
@@ -202,21 +210,31 @@ export const managementTimeEntryTasksResponseSchema = z.object({
     }),
   ),
   meta: timeEntryListMetaSchema,
+  isOwnerAssigned: z.boolean().optional(),
 });
 
 export const createManagedTimeEntrySchema = createManualTimeEntrySchema.safeExtend({
   userId: z.uuid(),
 });
 
-export const updateManagedTimeEntrySchema = updateTimeEntrySchema.meta({
-  minProperties: 1,
-});
+export const updateManagedTimeEntrySchema = updateTimeEntryBaseSchema
+  .extend({ projectId: z.uuid().optional(), userId: z.uuid().optional() })
+  .refine(hasTimeEntryUpdate, emptyTimeEntryUpdate)
+  .refine(hasValidUpdatedInterval, invalidTimeEntryInterval)
+  .meta({ minProperties: 1 });
+
+export const managedTimeEntryNotFoundCode = 'time_entry_not_found';
+export const managedTimeEntryConcurrentUpdateCode = 'time_entry_concurrent_update';
 
 export const managedTimeEntryConflictSchema = z.object({
   statusCode: z.literal(409),
   error: z.string(),
   message: z.string(),
-  code: z.enum(['time_entry_running', 'time_entry_invoiced']),
+  code: z.enum([
+    'time_entry_running',
+    'time_entry_invoiced',
+    managedTimeEntryConcurrentUpdateCode,
+  ]),
 });
 
 export const startTimerSchema = z
@@ -341,6 +359,9 @@ export type CreateManualTimeEntryDraftInput = z.infer<
   typeof createManualTimeEntryDraftSchema
 >;
 export type UpdateTimeEntryInput = z.infer<typeof updateTimeEntrySchema>;
+export type UpdateManagedTimeEntryInput = z.infer<
+  typeof updateManagedTimeEntrySchema
+>;
 export type StartTimerInput = z.infer<typeof startTimerSchema>;
 export type StopTimerInput = z.infer<typeof stopTimerSchema>;
 export type ConditionalStopTimerInput = z.infer<

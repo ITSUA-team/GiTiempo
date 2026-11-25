@@ -6,6 +6,7 @@ import {
   timeEntryListResponseSchema,
   timeEntryResponseSchema,
   updateManagedTimeEntrySchema,
+  type UpdateManagedTimeEntryInput,
 } from '@gitiempo/shared';
 import type { AuthenticatedApiClient } from '@gitiempo/web-shared/http';
 
@@ -14,7 +15,7 @@ import { getAuthenticatedAppApiClient } from './api-client';
 export type ManagementProject = ReturnType<typeof managementProjectsResponseSchema.parse>['items'][number];
 export type ManagementMember = ReturnType<typeof managementTimeEntryMembersResponseSchema.parse>['items'][number];
 export type ManagementTask = ReturnType<typeof managementTimeEntryTasksResponseSchema.parse>['items'][number];
-export type ManagedEntryUpdate = ReturnType<typeof updateManagedTimeEntrySchema.parse>;
+export type ManagedEntryUpdate = UpdateManagedTimeEntryInput;
 export type ManagedEntryCreate = ReturnType<typeof createManagedTimeEntrySchema.parse>;
 
 interface ManagementEntryFilters {
@@ -54,6 +55,13 @@ async function collectOptions<T>(
 export function createAdminTimeEntriesClient(
   client: Pick<AuthenticatedApiClient, 'requestJson' | 'requestNoContent'> = getAuthenticatedAppApiClient(),
 ) {
+  function memberPage(projectId: string, purpose: 'filter' | 'create', page: number, limit: number, taskId?: string) {
+    return client.requestJson({
+      path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit, purpose, taskId }),
+      responseSchema: managementTimeEntryMembersResponseSchema,
+    });
+  }
+
   return {
     projects(current: () => boolean) {
       return collectOptions(page => client.requestJson({
@@ -61,17 +69,24 @@ export function createAdminTimeEntriesClient(
         responseSchema: managementProjectsResponseSchema,
       }), current);
     },
-    members(projectId: string, purpose: 'filter' | 'create', current: () => boolean) {
-      return collectOptions(page => client.requestJson({
-        path: queryPath(`${projectPath(projectId)}/time-entry-members`, { page, limit: 100, purpose }),
-        responseSchema: managementTimeEntryMembersResponseSchema,
-      }), current);
+    members(projectId: string, purpose: 'filter' | 'create', current: () => boolean, taskId?: string) {
+      return collectOptions(page => memberPage(projectId, purpose, page, 100, taskId), current);
     },
-    tasks(projectId: string, userId: string, current: () => boolean) {
-      return collectOptions(page => client.requestJson({
-        path: queryPath(`${projectPath(projectId)}/time-entry-tasks`, { page, limit: 100, userId }),
-        responseSchema: managementTimeEntryTasksResponseSchema,
-      }), current);
+    async hasEligibleMembers(projectId: string) {
+      const { items } = await memberPage(projectId, 'create', 1, 1);
+      return items.length > 0;
+    },
+    async tasks(projectId: string, userId: string | undefined, current: () => boolean) {
+      let isOwnerAssigned: boolean | undefined;
+      const items = await collectOptions(async page => {
+        const result = await client.requestJson({
+          path: queryPath(`${projectPath(projectId)}/time-entry-tasks`, { page, limit: 100, userId }),
+          responseSchema: managementTimeEntryTasksResponseSchema,
+        });
+        isOwnerAssigned = result.isOwnerAssigned;
+        return result;
+      }, current);
+      return { items, isOwnerAssigned };
     },
     list(projectId: string, page: number, filters: ManagementEntryFilters) {
       return client.requestJson({
@@ -87,9 +102,9 @@ export function createAdminTimeEntriesClient(
         responseSchema: timeEntryResponseSchema,
       });
     },
-    update(projectId: string, entryId: string, input: ManagedEntryUpdate) {
+    update(sourceProjectId: string, entryId: string, input: ManagedEntryUpdate) {
       return client.requestJson({
-        path: `${projectPath(projectId)}/time-entries/${encodeURIComponent(entryId)}`,
+        path: `${projectPath(sourceProjectId)}/time-entries/${encodeURIComponent(entryId)}`,
         method: 'PATCH',
         body: updateManagedTimeEntrySchema.parse(input),
         responseSchema: timeEntryResponseSchema,

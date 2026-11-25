@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Management project and picker contracts
-Management lookups SHALL return only choices within the caller's current workspace and management scope. Clients SHALL be able to distinguish historical entry owners for filtering from eligible owners and destination tasks for creation.
+Management lookups SHALL return only choices within the caller's current workspace and management scope. Clients SHALL be able to distinguish historical entry owners for filtering from eligible owners and destination tasks for creation and reassignment.
 
 #### Scenario: Project selection and member filtering
 - **GIVEN** a caller can manage a project with records by a former member
@@ -15,8 +15,19 @@ Management lookups SHALL return only choices within the caller's current workspa
 - **THEN** the former member is absent from the create choices and the task options contain only currently trackable tasks for that owner in that project
 - **AND** each task option includes its ID, title and default billable value
 
+#### Scenario: Task selection before owner selection
+- **WHEN** the client requests project task options without `userId`
+- **THEN** each active, non-closed task trackable by at least one current workspace member appears once across the paginated result
+- **WHEN** the client supplies one of those task IDs to the create-member lookup
+- **THEN** its items and total include only distinct current members eligible for that task
+
+#### Scenario: Check assignment independently of task availability
+- **WHEN** the client requests task options with `userId`
+- **THEN** the response identifies whether that current workspace member has an explicit assignment to the requested project, including when the task list is empty
+- **AND** implicit tracking access alone does not count as an assignment
+
 ### Requirement: Managed entry list and write contracts
-The managed list SHALL return the shared time-entry items and pagination metadata. Managed creation SHALL accept the completed manual-entry fields and a required owner identifier. A patch SHALL accept only mutable entry fields. The path SHALL identify the project and the session SHALL identify the workspace.
+The managed list SHALL return the shared time-entry items and pagination metadata. Managed creation SHALL accept the completed manual-entry fields and a required owner identifier. A management patch SHALL accept a nonempty subset of `projectId`, `userId`, `taskId`, `startedAt`, `endedAt`, `description` and `isBillable`. The path SHALL identify the entry's current project and the session SHALL identify the workspace.
 
 #### Scenario: Filters compose within one project
 - **GIVEN** entries from multiple owners and dates
@@ -29,14 +40,22 @@ The managed list SHALL return the shared time-entry items and pagination metadat
 - **THEN** the API returns 201 with the created time-entry representation for that owner, its calculated duration and manual source
 - **AND** omitting the billable flag uses the task default
 
-#### Scenario: Mutation contract keeps ownership fixed
-- **GIVEN** an editable entry
-- **WHEN** a client patches a nonempty subset of task, start, end, description and billable fields
-- **THEN** a successful patch returns 200 with the updated entry and a successful subsequent delete returns 204 with no body
-- **AND** a patch containing owner, project, workspace, invoice, or other undeclared fields fails validation without changing the entry
+#### Scenario: Patch an editable entry in place
+- **WHEN** a client patches only `userId` on an editable entry and the new member is eligible for the current task
+- **THEN** the API returns 200 with the same entry ID, the new member and the existing project and task
+- **AND** a patch containing workspace, invoice, source, or other undeclared fields fails validation without changing the entry
+
+#### Scenario: Provide an explicit destination for a project move
+- **GIVEN** the client addresses an editable entry by its current project and entry ID
+- **WHEN** the patch changes `projectId`
+- **THEN** the request must include a `taskId` from that destination project
+- **AND** a project change without a task identifier returns 400
+- **AND** omitting `userId` retains the current owner if eligible for the destination task
+- **AND** success returns 200 with the same entry ID and the resulting project, member and task
+- **AND** a subsequent successful delete at the destination path returns 204 with no body
 
 ### Requirement: Managed entry conflict responses
-Management mutations blocked by record state SHALL return HTTP 409 using the standard error envelope with a stable code and explanatory message.
+Management mutations blocked by record state or by concurrent updates SHALL return HTTP 409 using the standard error envelope with a stable code and explanatory message.
 
 #### Scenario: Client distinguishes both lock reasons
 - **GIVEN** an authorized manager issues a patch or delete
@@ -44,3 +63,8 @@ Management mutations blocked by record state SHALL return HTTP 409 using the sta
 - **THEN** the response includes `code: time_entry_running` and instructs the caller to stop the timer first
 - **WHEN** the completed entry has an invoice link
 - **THEN** the response includes `code: time_entry_invoiced` and explains that the entry is included in an invoice
+
+#### Scenario: Partial reassignment exceeds its retry budget
+- **GIVEN** a management patch changes the task or member and retains the other field
+- **WHEN** concurrent changes to the retained field invalidate every save attempt
+- **THEN** the patch stops retrying and returns `code: time_entry_concurrent_update` with an instruction to try saving again

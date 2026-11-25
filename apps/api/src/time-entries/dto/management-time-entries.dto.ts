@@ -1,5 +1,6 @@
 import {
   createManagedTimeEntrySchema,
+  managedTimeEntryConcurrentUpdateCode,
   managedTimeEntryConflictSchema,
   managementProjectsQuerySchema,
   managementProjectsResponseSchema,
@@ -41,4 +42,11 @@ export class UpdateManagedTimeEntryDto extends createZodDto(
 ) {}
 export class ManagedTimeEntryConflictDto extends createZodDto(
   managedTimeEntryConflictSchema,
+) {}
+export class ManagedTimeEntryDeleteConflictDto extends createZodDto(
+  managedTimeEntryConflictSchema.extend({
+    code: managedTimeEntryConflictSchema.shape.code.exclude([
+      managedTimeEntryConcurrentUpdateCode,
+    ]),
+  }),
 ) {}

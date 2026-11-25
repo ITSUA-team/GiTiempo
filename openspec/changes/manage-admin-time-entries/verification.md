@@ -70,3 +70,64 @@ The desktop table and mobile cards followed frames `te471_1069` and `te471_1569`
 - PASS — On `4a70ec1d` with the review fixes applied, Chrome opened the real create dialog against a local API and disposable database at 320, 375 and 1280 px. Both Member and Task stayed within the viewport, and both long options were selectable. The mobile lists measured 288 and 343 px respectively and truncated the long labels. The page had no horizontal overflow.
 - PASS — The Admin view tests verify the width limit on both rendered overlays and the message, refreshed invoice lock and retained record after `DELETE 409` in both layouts.
 - PASS — All 509 API e2e tests passed on isolated PostgreSQL 17. The race tests now wait for the database sessions blocked by the fixture transaction.
+
+## New time entry dialog follow-up, 2026-11-25
+
+Acceptance exercised Chrome on `3c6f51a6` with the follow-up changes applied, on the real admin Time Entries route with a local API and isolated PostgreSQL database. The fixtures included two active private projects with the same assigned member and one active public project where that member could track time without an assignment.
+
+| Scenario | Observed result |
+| --- | --- |
+| Desktop, 1280 × 800 | PASS. Task could be picked first and remained selected when an eligible member was chosen. Switching between the two private projects cleared Task, retained the assigned member, and preserved Start, End and Description. After saving, the sidebar still selected the source project, and the new entry was visible in the destination. |
+| Mobile, 375 × 812 | PASS. Member could be picked first. Switching to the public project cleared Task and Member, and preserved Start, End and Description. The member was selectable again through public tracking access. After saving, the page still selected the source project and the new entry appeared in the destination. The viewport had no horizontal overflow. |
+| Persisted records | PASS. The isolated database contained exactly the two submitted records, each under the expected destination project and task with the selected member and a positive interval. |
+| Keyboard and edit | PASS. The creation Project picker exposed its label and accepted arrow keys and Enter. Edit showed read-only Project and Member fields. |
+
+The page retained the desktop table and mobile card structure in Pen frames `te471_1069` and `te471_1569`. The form uses the existing dialog layout with a PrimeVue Project picker for creation. Local run evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/`.
+
+Automated verification passed for all 1,172 admin-web tests, including the 30 focused tests, and all 510 API integration tests in Docker. Repository lint and type checks, OpenAPI export, and strict OpenSpec validation passed. The repository test run hit a five-second timeout in an invoice PDF test. A separate run with a 30-second timeout passed all 822 API unit tests.
+
+## Edit time entry reassignment, 2026-11-25
+
+Chrome exercised the actual `/time-entries` route on `5ac9c1d8` plus the reassignment changes, with the local API and an isolated PostgreSQL database. The two private projects shared an explicitly assigned member. Each test record had a fixed ID in the fixture.
+
+| Scenario | Observed result |
+| --- | --- |
+| Desktop, 1280 × 800 | PASS. Changing only Member retained Task and updated the same row in the source project. Moving a separate entry cleared Task, kept the assigned member and preserved start, end, description and billability. After choosing a destination task and saving, the source row disappeared while the source project stayed selected. The destination list showed the moved entry. |
+| Mobile, 375 × 812 | PASS. Both edits worked in the stacked-card layout. The source and destination lists reflected the new member or project. The dialog and page fit the viewport. |
+| Newly attached draft invoice | PASS. After the editor opened and Member changed, the fixture linked the entry to a draft invoice. Save received 409, kept the draft values and disabled submission. On mobile, the dialog scrolled until both lines of the error were visible above its footer. The refreshed source card showed Invoiced and no longer offered Edit. The database retained the original owner and invoice link. |
+| Persisted records | PASS. All five fixture IDs matched the expected projects, tasks and members. The original time intervals, descriptions, billable values and manual sources were retained. |
+
+The list layouts followed desktop frame `te471_1069` and mobile frame `te471_1569`. The editor kept the established dialog layout and used the same PrimeVue pickers as creation. Neither viewport required a design exception. Evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/` (`edit-desktop.png`, `edit-mobile.png`, `edit-list-desktop.png`, `edit-list-mobile.png`, `edit-invoiced-final.png`, and `edit-entries.txt`).
+
+All 519 API integration tests passed in Docker, including all 24 management time-entry tests. The latter verified reassignment in Reports, access and eligibility boundaries, and concurrent edits, moves, invoice attachment and deletion by the former owner. All 40 focused admin-web tests passed. The default repository test run hit five-second timeouts. A serial rerun with a 60-second Vitest timeout passed all repository tests, including 1,182 admin-web tests. Repository typecheck and lint, OpenAPI export, strict OpenSpec validation and `git diff --check` passed.
+
+## Review fixes, 2026-11-25
+
+Chromium ran against the local API and an isolated PostgreSQL database. At 1280 × 800 and 375 × 812, the toolbar hid `+` when no member was eligible and showed it when an assigned member could track time. Each project selection used one `purpose=create&page=1&limit=1` request for the toolbar. The dialog loaded its own options on open and when the selection changed.
+
+The edit picker showed distinct ID prefixes for two tasks with the same title. Choosing the second task on desktop updated the table, and choosing the first on mobile updated the card. PostgreSQL confirmed the exact task ID submitted in each case. The table and cards followed Pen frames `te471_1069` and `te471_1569`. The mobile page and dropdown fit the viewport. Local evidence is in `/private/tmp/gitiempo-471-followup.Taj5gF/` (`picker-qa-desktop.png` and `picker-qa-mobile.png`).
+
+The view tests verified that typing the shared title alone leaves the task unselected and that `time_entry_concurrent_update` preserves the draft and accepts a second save. Existing invoice conflicts still disable the editor.
+
+All 520 API integration tests passed in isolated Docker. A new PostgreSQL test queued a member reassignment and a combined billable backfill behind the same entry row, verified both requests succeeded, and checked the resulting member, task and billable state. Existing concurrency tests exercised a successful retry when an omitted field changed. The three-attempt exhaustion response was checked through its shared schema and editor handling.
+
+Repository tests passed with a serial Turbo run and a 60-second Vitest timeout, followed by the landing-web and CI target tests. This includes 1,189 admin-web tests. Repository typecheck and lint, OpenAPI export, strict OpenSpec validation and `git diff --check` passed.
+
+## Manual acceptance rerun, 2026-11-25
+
+Chrome opened `/time-entries` at `3be6d3e0` with the review fixes in the working tree. The real route used the local Nest API, isolated `gitiempo_e2e` PostgreSQL and synthetic test sessions. Desktop was 1280 × 800 and mobile was 375 × 812.
+
+| Scenario | Observed result |
+| --- | --- |
+| Layout and navigation | PASS. The desktop project panel measured 312 px with 16 px labels. Table headings followed `te471_1069`. Cards and the project picker followed `te471_1569`, with no horizontal page overflow. At 639 px the list used cards, and at 640 px it used a table. |
+| Access and empty states | PASS. A PM without invoice access saw their assigned projects. An unassigned public project was absent. A PM with no assignments saw the no-project state in both layouts. A member received the access-denied route and a guest was redirected to login. The `+` action appeared only for projects that could accept new entries. |
+| Search, filters and paging | PASS. Case-insensitive partial search and a literal `%` matched across pages. An empty search result showed its own state. Selecting a historical contributor isolated their rows. Date drafts applied only on Confirm, Cancel restored the committed range, and clearing dates preserved the other filters. Project changes reset member selection and pagination. |
+| Keyboard | PASS. After the options loaded, ArrowDown and Enter selected a member filter. Tabbing away from an ambiguous task title cleared the input. ArrowDown and Enter selected the second task by its distinct ID prefix. |
+| Members with matching labels | PASS. Two real members with the same name were distinguishable by email. For a legacy same-name, same-email response, a browser-local override equalized two synthetic emails while retaining the IDs. The picker showed distinct ID prefixes and sent the corresponding real user ID to the task lookup for each selection. |
+| Create, edit, delete | PASS in both layouts. Required fields were validated. Task-first and Member-first creation saved the intended IDs, intervals and billable values. Closing an unsaved creation cleared the draft on reopen. Member-only edits retained the task. Project moves cleared Task, retained the assigned Member and preserved the draft. Delete cancellation preserved the records. Confirmed deletion removed them after reload and in PostgreSQL. An archived project still allowed corrections to completed historical entries. |
+| Concurrent update and retry | PASS. Three real PostgreSQL transactions changed the retained task while the partial PATCH waited. The browser received the retryable 409 and retained the edited member and description, with Save enabled. A second save succeeded on the same entry ID and kept the latest task from the database. An unrelated table row retained its DOM node. |
+| Concurrent edit and project backfill | PASS. Two browser sessions submitted a member change and a backfill for both tasks and time entries. PostgreSQL showed the backfill waiting on the project lock until the edit could advance. Both requests returned 200. The selected member, edited description and resulting billable flags were persisted. |
+| Running and newly invoiced records | PASS. Running records showed the reason their actions were unavailable. Linking a draft invoice while the mobile editor was open preserved the form text on rejection, disabled Save and refreshed the card as Invoiced. The unsaved description never reached PostgreSQL. |
+| Request failure and retry | PASS. Interrupting the list request showed the request error with Try again. Restoring connectivity and using Try again loaded the entries. |
+
+The checked layout matched the Pen requirements without a PrimeVue exception. Local screenshots and test observations are in `/private/tmp/gitiempo-manual-review.0Zb2bE/`, `/private/tmp/gitiempo-471-filters/` and `/private/tmp/gitiempo-471-followup.Taj5gF/` (the `full-manual-*` captures).

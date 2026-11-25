@@ -31,6 +31,7 @@ import type { AuthUser } from '../../auth/types/auth-user';
 import {
   CreateManagedTimeEntryDto,
   ManagedTimeEntryConflictDto,
+  ManagedTimeEntryDeleteConflictDto,
   ManagementProjectsQueryDto,
   ManagementProjectsResponseDto,
   ManagementTimeEntriesQueryDto,
@@ -70,7 +71,7 @@ export class ManagementTimeEntriesController {
   @Get(':projectId/time-entry-members')
   @ApiOperation({
     summary:
-      'List historical owners for filtering or eligible owners for creating entries',
+      'List historical owners or eligible owners, optionally scoped to a task',
   })
   @ApiOkResponse({ type: ManagementTimeEntryMembersResponseDto })
   @ApiNotFoundResponse({ description: 'Project not found' })
@@ -85,7 +86,7 @@ export class ManagementTimeEntriesController {
 
   @Get(':projectId/time-entry-tasks')
   @ApiOperation({
-    summary: 'List tasks an owner can currently track in the managed project',
+    summary: 'List trackable project tasks, optionally scoped to an owner',
   })
   @ApiOkResponse({ type: ManagementTimeEntryTasksResponseDto })
   @ApiNotFoundResponse({ description: 'Project not found' })
@@ -131,11 +132,16 @@ export class ManagementTimeEntriesController {
 
   @Patch(':projectId/time-entries/:entryId')
   @ApiOperation({
-    summary: 'Update a completed unlinked entry in the managed project',
+    summary: 'Update or reassign a completed unlinked entry',
+    description:
+      'The path identifies the current project. Changing the project in the body requires a task in the destination project.',
   })
   @ApiOkResponse({ type: TimeEntryResponseDto })
   @ApiBadRequestResponse({ description: 'Invalid or empty time entry update' })
-  @ApiNotFoundResponse({ description: 'Project, entry or task not found' })
+  @ApiNotFoundResponse({
+    description:
+      'Project, entry or task not found. If both projects and the destination task are in scope, a missing current entry returns code time_entry_not_found.',
+  })
   @ApiUnprocessableEntityResponse({
     description: 'Owner or destination work is ineligible',
   })
@@ -156,8 +162,11 @@ export class ManagementTimeEntriesController {
     summary: 'Delete a completed unlinked entry in the managed project',
   })
   @ApiNoContentResponse()
-  @ApiNotFoundResponse({ description: 'Project or entry not found' })
-  @ApiConflictResponse({ type: ManagedTimeEntryConflictDto })
+  @ApiNotFoundResponse({
+    description:
+      'Project or entry not found. A missing entry in the managed project returns code time_entry_not_found.',
+  })
+  @ApiConflictResponse({ type: ManagedTimeEntryDeleteConflictDto })
   deleteEntry(
     @CurrentUser() user: AuthUser,
     @Param('projectId', ParseUUIDPipe) projectId: string,
