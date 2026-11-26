@@ -58,7 +58,7 @@ The backend MUST expose a protected `GET /invoices` endpoint for `admin` and `pm
 
 ### Requirement: Invoice Can Be Created From Eligible Time Entries
 
-The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `pm` users that creates an invoice from a validated body containing a title, billing date range, optional project scope, hourly rate, optional discount, optional notes, and an optional `roundingStepMinutes` (positive integer between 1 and 60). Rounding is always active — there is no no-rounding option — so the invoice's `roundingStepMinutes` snapshot MUST always be a positive integer between 1 and 60 and MUST never be null. When `roundingStepMinutes` is supplied, the backend MUST use that value as the snapshot. When it is omitted, the backend MUST resolve the snapshot from the scoped project's effective rounding step — the project's own `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes` — and for workspace-wide invoices from the workspace's `timeRoundingStepMinutes`. PMs must also have `canViewInvoices = true` to access the endpoint.
+Protected `POST /invoices` MUST let admins and eligible PMs (`canViewInvoices = true`) create invoices. Validate title, billing period, hourly rate and optional project, discount and notes. Snapshot `roundingStepMinutes` as a 1–60 minute integer from the request, else the project's `timeRoundingStepMinutes` when set or the workspace's when inherited or unscoped. Rounding is always active. The resolved document MUST be valid and complete even with an empty entry selection.
 
 #### Scenario: Admin creates an invoice across a project and date range
 
@@ -158,7 +158,7 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 #### Scenario: Select a subset or create an empty draft
 
-- **GIVEN** several entries are eligible
+- **GIVEN** several entries are eligible and all resolved document fields are complete and valid
 - **WHEN** an authorized caller creates an invoice with an explicit selection
 - **THEN** the API bills exactly those entries, including zero entries and zero totals for an empty selection, and assigns a new reference and draft status.
 
@@ -166,11 +166,11 @@ The backend MUST expose a protected `POST /invoices` endpoint for `admin` and `p
 
 - **GIVEN** workspace invoice defaults exist
 - **WHEN** the caller creates an invoice with individual overrides
-- **THEN** the saved invoice contains the resolved sender, optional logo, payment details, recipient and service description; later default changes do not affect it.
+- **THEN** the saved invoice contains the complete, validated resolved sender, optional logo, payment details, recipient and service description; later default changes do not affect it.
 
 ### Requirement: Invoice Eligibility Excludes Ineligible Time Entries
 
-Invoice creation MUST select only time entries that are completed, billable, belong to the requested workspace, and fall within the requested project and date range, and MUST exclude running, non-billable, and already-invoiced entries. Date range boundaries (`dateFrom` inclusive, `dateTo` inclusive) are interpreted in the workspace's configured IANA timezone (`workspace_settings.time_zone`), not in UTC or the server's local timezone. This ensures that entries near midnight are attributed to the correct calendar day, including across daylight saving time transitions. The same timezone-aware boundaries apply to `previewEligibleEntries` and the `getInvoiceStats` current-month calculation.
+Creation MUST select only completed, billable, uninvoiced entries within the requested workspace, project scope and date range. Interpret inclusive `dateFrom` and `dateTo` in the workspace's configured IANA timezone (`workspace_settings.time_zone`), including across daylight saving changes. Apply the same local boundaries to `previewEligibleEntries` and to the current-month calculation in `getInvoiceStats`.
 
 #### Scenario: Running entries are excluded
 
@@ -228,7 +228,7 @@ Invoice creation MUST select eligible time entries, insert the invoice, and set 
 
 ### Requirement: Invoice Details Can Be Read
 
-The backend MUST expose a protected `GET /invoices/:id` endpoint for `admin` and `pm` users that returns a single invoice with its snapshot fields (including the non-null `roundingStepMinutes` snapshot), status, and the set of linked time entries. Each linked time-entry summary MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the invoice's `roundingStepMinutes` snapshot, so the detail surface can display the rounded billed duration per entry without recomputing it client-side. PMs must also have `canViewInvoices = true` to access the endpoint.
+Protected `GET /invoices/:id` MUST return one invoice's status, snapshot fields (including non-null `roundingStepMinutes`) and linked entries to admins and to PMs with `canViewInvoices = true`. Each entry MUST include raw `durationSeconds` and `roundedDurationSeconds` ceiling-rounded using the snapshot step, so clients can display billed time directly.
 
 #### Scenario: Admin reads any workspace invoice
 
@@ -316,7 +316,7 @@ Deleting an invoice MUST unlink its time entries by clearing their invoice link,
 
 ### Requirement: Invoice Totals Use Snapshot Values
 
-The backend MUST compute invoice totals as the sum of tracked hours of selected entries multiplied by the invoice hourly rate, less the optional percentage discount, and MUST store `hourly_rate`, `currency`, `total_hours`, `total_amount`, and `rounding_step_minutes` as snapshot values at creation time and on an explicit revision to billing inputs or entry selection. Because the snapshot rounding step is always a positive integer between 1 and 60, the backend MUST always apply per-entry ceiling rounding: each eligible time entry's duration is rounded up to the nearest multiple of the step (in seconds) before the rounded durations are summed. Per-entry rounding is always active — there is no raw-sum mode — and with the minimum step of 1 minute each entry is still rounded up to whole minutes. Original time-entry records MUST NOT be modified by the rounding computation.
+Always round each selected entry's duration up to the nearest multiple of the 1–60 minute snapshot step. Sum rounded durations in hours, multiply by the hourly rate and apply any percentage discount. The backend MUST snapshot `hourly_rate`, `currency`, `total_hours`, `total_amount` and `rounding_step_minutes` on creation and explicit revisions to billing inputs or entry selection. Rounding MUST leave original entries unchanged.
 
 #### Scenario: Totals reflect the creation snapshot
 
@@ -387,7 +387,7 @@ The backend MUST compute invoice totals as the sum of tracked hours of selected 
 
 ### Requirement: Eligible Time Entries Can Be Previewed Before Invoice Creation
 
-The backend MUST expose a protected `GET /invoices/eligible-entries` endpoint for `admin` and `pm` users that returns the set of completed, billable, not-yet-invoiced time entries matching a given date range and optional project scope, along with the computed total hours — without creating an invoice or modifying any data. Rounding is always active: the endpoint MUST accept an optional `roundingStepMinutes` query parameter (positive integer between 1 and 60); when supplied, the computed total hours MUST reflect per-entry ceiling rounding using that step. When `roundingStepMinutes` is omitted, the total hours MUST reflect per-entry ceiling rounding with the effective default step: for project-scoped previews the project's `timeRoundingStepMinutes` when set, otherwise the workspace's `timeRoundingStepMinutes`; for workspace-wide previews the workspace's `timeRoundingStepMinutes`. The response MUST always include a non-null `defaultRoundingStepMinutes` — the effective default step — alongside the existing `defaultHourlyRate` and `defaultCurrency`. Each returned entry MUST include both the original raw `durationSeconds` and a `roundedDurationSeconds` value computed by applying per-entry ceiling rounding with the effective rounding step, so the preview surface can display the rounded billed duration per entry. PMs must also have `canViewInvoices = true` to access the endpoint.
+Protected `GET /invoices/eligible-entries` MUST return eligible entries by date range and optional project, with no writes, for admins and permitted PMs (`canViewInvoices = true`). Ceiling-round each entry using optional integer `roundingStepMinutes` (1–60) or the creation default. Return total rounded hours, each entry's raw `durationSeconds` and `roundedDurationSeconds`, `defaultHourlyRate`, `defaultCurrency` and the default step as non-null `defaultRoundingStepMinutes`.
 
 #### Scenario: Admin previews eligible entries across a date range
 
@@ -551,7 +551,7 @@ The backend MUST provide a `GET /invoices/defaults` endpoint that returns the wo
 
 ### Requirement: Invoice Revisions And Status Selection
 
-The protected PATCH /invoices/:id MUST allow Admins and PMs with invoice access to change status, title, project/scope, billing period, hourly rate, currency, discount, rounding, sender, recipient, services, payment instructions, notes and selected entries in every status. A change of status alone MUST have no email, export or billing side effects. Server-assigned identity, audit fields and totals MUST remain server-controlled.
+Protected `PATCH /invoices/:id` MUST let Admins and PMs with invoice access change status, title, project scope, billing period, hourly rate, currency, discount, rounding, sender, recipient, services, payment instructions, notes and selected entries in any status. Status-only changes MUST NOT trigger email, export or billing. The server controls identity, audit fields and totals. Each merged revision MUST pass complete-document validation, including status-only and unchanged-status updates.
 
 #### Scenario: Admin updates invoice status
 
@@ -593,7 +593,7 @@ The protected PATCH /invoices/:id MUST allow Admins and PMs with invoice access 
 
 #### Scenario: Select a previous status
 
-- **GIVEN** an authorized user opens a sent or paid invoice
+- **GIVEN** an authorized user opens a complete valid sent or paid invoice
 - **WHEN** the user selects any supported status, including sent to draft or paid to sent
 - **THEN** selecting the current value is a no-op; for a changed value the saved status is returned and subsequent detail, list, filter and status counts reflect it.
 
@@ -633,7 +633,7 @@ The API MUST support a read-only preview of an authorized create or edit selecti
 
 ### Requirement: Download Saved Invoice PDF
 
-The backend MUST offer an authorized PDF download from a consistent saved invoice revision, with the same workspace, role and project access as reading the invoice detail.
+The backend MUST offer an authorized PDF download from a consistent saved invoice revision, with the same workspace, role and project access as reading the invoice detail. Export MUST use the same complete-document validity rules as saving.
 
 #### Scenario: Export a saved revision
 
@@ -655,9 +655,9 @@ The backend MUST offer an authorized PDF download from a consistent saved invoic
 
 #### Scenario: Complete missing historical fields before export
 
-- **GIVEN** a legacy invoice lacks issuer, recipient, services or payment information
+- **GIVEN** a legacy invoice lacks or violates any required document field
 - **WHEN** an authorized caller requests its PDF
-- **THEN** the API identifies the missing information for correction before download; reading, editing and changing status remain available.
+- **THEN** the API rejects export with actionable field errors before producing document bytes; reading and opening the editor remain available, but document saves and status updates require completion.
 
 ### Requirement: Create From An Accessible Invoice
 
@@ -676,7 +676,7 @@ The API SHALL persist issueDate and nullable dueDate in the invoice revision. Da
 #### Scenario: Export the revised document
 
 - **WHEN** an authorized user exports an invoice with dates and Card payment details
-- **THEN** the PDF includes Issue date, Due date when set, provider, instructions and a clickable HTTPS payment link when supplied
+- **THEN** the PDF includes Issue date, Due date when set, provider, instructions and the required clickable HTTPS payment link
 - **AND** bank-only details retained in the saved object are excluded from Card output
 
 #### Scenario: Preserve a historical invoice
@@ -729,3 +729,132 @@ PDF export SHALL use the saved display mode. Time entry mode SHALL retain the in
 
 - **WHEN** an otherwise exportable Task invoice has no selected entries
 - **THEN** its PDF contains no task lines and shows zero subtotal, discount amount and total
+
+### Requirement: Complete resolved invoice document
+
+Every saved invoice revision SHALL have complete valid document fields regardless of status. Required fields SHALL include title, sender and recipient names, addresses and emails, services, Issue date, both billing-period bounds, rate, currency and applicable payment details. Required text SHALL be nonempty after trimming. Existing access, numeric, date, length, logo and selection constraints SHALL apply.
+
+#### Scenario: Required parties and services cannot be empty
+
+- **GIVEN** an authorized caller submits an invoice write in Draft, Sent or Paid
+- **WHEN** the resolved document lacks either party, either party's name/address/email, or services, including whitespace-only required text
+- **THEN** the API rejects the write with field-addressed validation errors
+- **AND** the invoice, revision, totals, selected-entry links and group membership are unchanged
+
+#### Scenario: Validate values and optional fields
+
+- **GIVEN** a resolved candidate document
+- **WHEN** an email is malformed, a supplied value exceeds its length limit, a date is invalid, a billing period is reversed, Due date precedes Issue date, a numeric billing input violates existing limits, or a supplied logo is invalid
+- **THEN** the API rejects it using the existing validation/error envelope and identifies the offending fields
+- **AND** currency retains existing three-letter normalization/format rules and rate retains existing nonnegative precision and limits, including zero
+- **AND** Tax ID, SWIFT/BIC, Due date, payment terms, notes and logo remain optional, without adding country-specific tax or bank-account verification
+
+#### Scenario: Complete invoices may have no selected work
+
+- **GIVEN** all required document fields and billing inputs are valid
+- **WHEN** no eligible entries exist or an explicit selection is empty
+- **THEN** creation and revision remain valid with zero hours and zero totals in either display mode
+
+### Requirement: Applicable payment completeness
+
+Every invoice write SHALL require a nonblank payment method. Bank transfer SHALL require beneficiary, bank and account/IBAN. Card SHALL require provider and a valid HTTPS payment URL. Other/custom methods SHALL require Payment details and preserve their method name. Completeness SHALL depend only on the active method's fields.
+
+#### Scenario: Validate Bank transfer and Card requirements
+
+- **GIVEN** a complete candidate except for payment
+- **WHEN** Bank transfer lacks beneficiary, provider/bank or account, or Card lacks provider or payment URL
+- **THEN** the API rejects the write and identifies each missing field
+- **AND** a Card URL with a non-HTTPS scheme or invalid URL syntax is rejected
+- **AND** SWIFT/BIC is optional for Bank transfer and instructions are optional for every method
+
+#### Scenario: Validate Other and custom methods
+
+- **GIVEN** Other or a nonblank custom method is selected
+- **WHEN** Payment details are empty or whitespace-only
+- **THEN** the API rejects the write at the existing Payment details field (`payment.account`)
+- **WHEN** valid Payment details are supplied
+- **THEN** beneficiary, provider and instructions may remain empty and the custom method is not renamed
+
+#### Scenario: Inactive fields do not invalidate an applicable document
+
+- **GIVEN** Card has complete valid provider and HTTPS payment URL but no bank fields, or Bank transfer has complete bank fields but no Card URL
+- **WHEN** the invoice is saved
+- **THEN** missing inactive fields do not block saving
+- **AND** inactive payment fields are excluded from the active saved document projection and PDF
+
+#### Scenario: Direct payloads retain structural validation
+
+- **GIVEN** a direct API payload supplies a malformed or incorrectly typed inactive payment value
+- **WHEN** the request is validated
+- **THEN** existing structural/type/format validation can reject it before document projection
+- **AND** completeness does not require inactive values to be supplied; clients omit inactive malformed local edits
+
+### Requirement: Resolve invoice candidates before mutation
+
+Creation SHALL validate the final document after supported defaults are resolved. PATCH SHALL validate the saved document merged with supplied changes, rather than requiring every field in the request. Validation SHALL precede document, entry-link and group writes. Unsupported or invalid input SHALL not bypass validation through defaults or a status-only path.
+
+#### Scenario: Use valid defaults on creation
+
+- **GIVEN** the caller omits sender, payment, rate, currency or Issue date and supported defaults supply valid values
+- **WHEN** the resolved document is otherwise complete
+- **THEN** creation succeeds with those resolved values
+- **AND** an explicit empty or invalid override is rejected rather than replaced with a default
+- **AND** existing rate/currency-required domain errors remain compatible when neither input nor defaults supply them
+
+#### Scenario: Validate a merged partial update
+
+- **GIVEN** a complete saved invoice and a current revision
+- **WHEN** a valid partial update omits unchanged required fields
+- **THEN** the API retains those saved values and accepts the complete merged document
+- **WHEN** a partial update empties or clears a required field
+- **THEN** it is rejected without any mutation
+
+#### Scenario: Complete a historical invoice in one revision
+
+- **GIVEN** an incomplete historical invoice
+- **WHEN** a caller supplies all missing/invalid fields in one otherwise valid update
+- **THEN** the complete merged document is saved atomically, preserving omitted saved business values
+- **AND** current workspace defaults do not silently replace historical saved values
+
+#### Scenario: Status updates cannot bypass completeness
+
+- **GIVEN** an incomplete historical invoice in any supported status
+- **WHEN** a caller submits a status-only update, including the already saved status, or an unrelated document field update
+- **THEN** the API rejects it with actionable document errors and leaves the saved revision and status unchanged
+- **AND** the existing authorization and stale-revision checks still apply
+
+#### Scenario: Retain atomicity and conflict handling
+
+- **GIVEN** a write changes entries or personal group together with document fields
+- **WHEN** completeness fails, eligibility fails or a concurrent revision/entry claim wins
+- **THEN** no invoice field, total, link or group mutation from the rejected write is committed
+- **AND** stale revisions and conflicting entry claims retain their existing conflict behavior
+
+### Requirement: Compatible historical reads defaults and previews
+
+Stricter document writes SHALL preserve authorized reads of historical invoices, partial workspace billing defaults and calculation previews while a form is incomplete. No business details SHALL be fabricated or backfilled to satisfy completeness. Standalone personal organization and existing deletion rules SHALL remain independent of document completeness.
+
+#### Scenario: Read incomplete historical data
+
+- **GIVEN** an accessible historical invoice lacks document fields
+- **WHEN** it is listed or read, or opened as a create-from source
+- **THEN** its available data is returned without enforcing new write completeness or inventing missing party/payment details
+
+#### Scenario: Keep partial workspace defaults
+
+- **GIVEN** an Admin configures only part of the sender or payment defaults
+- **WHEN** settings are saved and authorized callers retrieve invoice defaults
+- **THEN** partial defaults remain accepted and readable under existing settings rules
+- **AND** they do not make an incomplete invoice eligible for saving
+
+#### Scenario: Preview calculations during document entry
+
+- **GIVEN** a user has supplied valid billing scope and calculation inputs but has not filled party, services or payment fields
+- **WHEN** the user requests eligible entries or a billing revision preview
+- **THEN** preview works under existing authorization, eligibility and arithmetic rules without requiring complete document fields or writing data
+
+#### Scenario: Organize or delete without completing document fields
+
+- **GIVEN** a historical invoice is incomplete
+- **WHEN** a user performs a permitted standalone personal group move or an Admin deletes an eligible Draft
+- **THEN** existing organization/deletion behavior succeeds independently of document completeness
