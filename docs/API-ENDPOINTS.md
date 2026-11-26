@@ -209,8 +209,8 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 
 - `GET /time-entries/current` returns `{ timeEntry: TimeEntryResponse | null }`. It is user-global: it returns the caller's own running timer even when the entry belongs to a different workspace than the active JWT workspace claim.
 - `/time-entries/timer/start` requires `taskId` to reference a visible active open task; closed or inactive work is rejected with `422 Unprocessable Entity`.
-- For a saved managed task linked to a GitHub issue, an ordinary member must be explicitly assigned to its GiTiempo project, including public projects. This applies whether their personal GitHub account is connected, disconnected, absent, or expired. Missing assignment to a public project returns `403` with code `project_assignment_required` and message `You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.` An invisible private target remains `404` without protected details.
-- Assigned members can start saved GitHub tasks after personal disconnect. GitHub issue assignee status grants no GiTiempo project access. Administrators retain implicit project access; PMs retain visibility-based access. Eligible manual tasks, including those in GitHub-backed public projects, retain existing access rules. This start-specific rule does not change completed manual entries, historical edits, or running-task reassignment.
+- Active workspace members can start timers on active open tasks in active public projects without a project assignment. The rule applies to manual tasks and saved GitHub-linked tasks regardless of personal GitHub connection state or issue assignee status. Saved starts for inaccessible private tasks return `404` without protected details.
+- Managed GitHub starts and capability checks use the same public-project rule after workspace installation and issue verification. An ordinary member without access to a mapped private project receives `403 project_assignment_required` on a managed GitHub start.
 - `/time-entries/timer/start` remains scoped to the active JWT workspace through task visibility. If the user already has any running timer in any workspace, it rejects with `409 Conflict` and leaves the existing running timer unchanged.
 - `/time-entries/timer/start-from-github` creates or reuses the local GitHub issue mapping, but an existing closed mapped task is rejected with `422 Unprocessable Entity` and no running entry is created.
 - `/time-entries/timer/stop` accepts an optional `{ expectedTimerId: string }` body. Current web and extension clients send the authoritative id; the API conditionally stops only that still-running entry and returns `409 Conflict` if it changed. A bodyless request remains temporarily supported for installed legacy extension builds and retains the previous user-global stop behavior. Both forms stop only the caller's own timer and can stop a timer from another workspace while preserving its original workspace identity in the response.
@@ -224,6 +224,32 @@ Time entry responses include safe display summaries for `project`, `task`, `user
 | Method | Path                         | Auth | Role | Description                                                                                                                                               |
 | ------ | ---------------------------- | ---- | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/projects/:id/time-entries` | JWT  | Any  | List entries within the resolved project scope, with optional task-title search. Own-time external access returns owned entries and totals only; explicit project access retains established team reads. |
+
+### Administrative time entry management
+
+All routes below require an active Admin or PM membership in the session workspace. Admins can manage every workspace project. PMs need an explicit assignment to the requested project, including public projects. Invoice-view permission is independent of this access.
+
+| Method | Path | Input | Result |
+| --- | --- | --- | --- |
+| GET | `/management/projects` | `page`, `limit` | Manageable projects, including archived projects. Options include `id`, `name` and `isActive`. |
+| GET | `/management/projects/:projectId/time-entry-members` | `purpose` (`filter` or `create`), optional `taskId` for create, `page`, `limit` | Distinct owners with `id`, `displayName` and `email`. Filter includes historical owners. Create includes current members eligible for the specified task or for at least one project task when omitted. |
+| GET | `/management/projects/:projectId/time-entry-tasks` | Optional `userId`, `page`, `limit` | Distinct tasks with `id`, `title` and `defaultBillableForTimeEntries`. Without an owner, the list includes tasks trackable by at least one current workspace member. With an owner, it includes that owner's trackable tasks and returns `isOwnerAssigned` even on empty pages. |
+| GET | `/management/projects/:projectId/time-entries` | `page`, `limit`, optional `userId`, `search`, `dateFrom` and `dateTo` | Individual records, including running and invoiced time. |
+| POST | `/management/projects/:projectId/time-entries` | `userId` plus the manual-entry fields | 201 with a completed entry owned by the selected user. |
+| PATCH | `/management/projects/:projectId/time-entries/:entryId` | At least one of `projectId`, `userId`, `taskId`, `startedAt`, `endedAt`, `description` and `isBillable` | 200 with the same entry ID and its resulting project, member and task. |
+| DELETE | `/management/projects/:projectId/time-entries/:entryId` | None | 204. |
+
+Lists return `items` and `meta` with `page`, `limit`, `total` and `totalPages`. Entry search matches partial task titles case-insensitively. The date filters apply to the start time, with an inclusive lower bound and exclusive upper bound.
+
+A current workspace member explicitly assigned to an active project can track every active, non-closed task in it. Public-project access and exact-task access through previous time entries can make an unassigned member eligible, while `isOwnerAssigned` reflects explicit assignment.
+
+The PATCH path always identifies the current project. To move an entry, send `projectId` and a `taskId` from the destination project. The caller must be able to manage both projects. Omit `userId` to keep the current owner, provided they can track the destination task. Omitted interval, description and billable values retain their stored values. An empty patch, a project change without `taskId`, or an invalid interval returns 400.
+
+The server returns 401 for missing authentication, 403 for an insufficient workspace role and 404 for an out-of-scope project, entry or write destination task. If the requested projects and destination task are in scope but the entry is absent from the current project, administrative PATCH and DELETE include `time_entry_not_found` in the 404 response. A create-member lookup whose `taskId` is absent from the requested project returns an empty page. Creation and changes to project, owner or task require the resulting owner's current tracking access. The server rejects an ineligible owner or inactive work with 422. A completed, unlinked entry can receive interval, description or billable corrections with its existing project, owner and task, or be deleted, even after its owner's access ends or the work is archived.
+
+Administrative PATCH and DELETE return 409 with `time_entry_running` when the timer must be stopped, or `time_entry_invoiced` when the entry belongs to an invoice in any status, including draft. These protections apply to this management API. Personal time-entry and timer routes follow the rules in section 8.
+
+Administrative PATCH also returns 409 with `time_entry_concurrent_update` if concurrent edits prevent it from resolving an omitted member or task after three attempts. The client can retry the update.
 
 ---
 

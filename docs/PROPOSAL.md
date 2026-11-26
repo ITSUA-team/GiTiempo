@@ -153,6 +153,7 @@ For a managed GitHub-backed start, the server can materialize the issue only in 
 | Create manual tasks | ✅ | ✅ (assigned projects) | ✅ (assigned projects) |
 | Connect GitHub account | ✅ | ✅ | ✅ |
 | View team time entries | ✅ (all) | ✅ (assigned projects) | ✅ (assigned projects, read-only) |
+| Manage team time entries | ✅ (current workspace) | ✅ (explicit assignments, including public projects) | ❌ |
 | Access admin frontend | ✅ | ✅ | ❌ |
 | Generate reports | ✅ (all) | ✅ (assigned) | ❌ |
 | Manage invoices | ✅ (all) | ✅ (assigned) | ❌ |

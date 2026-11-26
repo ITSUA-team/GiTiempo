@@ -153,6 +153,7 @@ describe("admin router", () => {
     expect(router.hasRoute(routeNames.reports)).toBe(true);
     expect(router.hasRoute(routeNames.invoiceDetail)).toBe(true);
     expect(router.hasRoute(routeNames.invoices)).toBe(true);
+    expect(router.hasRoute(routeNames.timeEntries)).toBe(true);
     expect(router.hasRoute(routeNames.members)).toBe(true);
     expect(router.hasRoute(routeNames.addProject)).toBe(true);
     expect(router.hasRoute(routeNames.forbidden)).toBe(true);
@@ -189,6 +190,11 @@ describe("admin router", () => {
         allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
         path: "/invoices/inv-1",
         name: routeNames.invoiceDetail,
+      },
+      {
+        allowedRoles: [WorkspaceRoles.Admin, WorkspaceRoles.PM],
+        path: "/time-entries",
+        name: routeNames.timeEntries,
       },
       {
         allowedRoles: [WorkspaceRoles.Admin],
@@ -572,6 +578,20 @@ describe("admin router", () => {
     await router.isReady();
 
     expect(router.currentRoute.value.name).toBe(routeNames.forbidden);
+  });
+
+  it.each([
+    [WorkspaceRoles.Admin, routeNames.timeEntries],
+    [WorkspaceRoles.PM, routeNames.timeEntries],
+    [WorkspaceRoles.Member, routeNames.forbidden],
+  ])("applies time entry route permission for %s independently of invoice permission", async (role, expected) => {
+    const pinia = createPinia();
+    setAuthenticatedUser(pinia, role, false);
+    const router = createAppRouter({ history: createMemoryHistory(), pinia });
+
+    await router.push("/time-entries");
+
+    expect(router.currentRoute.value.name).toBe(expected);
   });
 
   it("allows PM users with invoice view permission to open invoice pages", async () => {

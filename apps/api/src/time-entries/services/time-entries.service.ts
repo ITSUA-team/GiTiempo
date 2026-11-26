@@ -69,6 +69,13 @@ import { UsersActivityService } from '../../users/services/users-activity.servic
 import { workspaces } from '../../workspaces/schemas/workspaces.schema';
 import { calculateDurationSeconds } from '../time-entry-duration';
 import {
+  allowsTrackingFromOwnTime,
+  hasImplicitTrackingAccess,
+  ownTaskTimeCondition,
+  taskTrackingBlockReason,
+  trackingAssignmentCondition,
+} from '../tracking-access';
+import {
   timeEntries,
   timeEntryRowSelection,
 } from '../schemas/time-entries.schema';
@@ -139,6 +146,34 @@ export class TimeEntriesService {
     return this.listEntries(this.db, conditions, query.page, query.limit);
   }
 
+  listManagedProjectEntries(
+    db: QueryExecutor,
+    workspaceId: string,
+    projectId: string,
+    query: TimeEntryListQuery & { userId?: string },
+  ): Promise<TimeEntryListResponse> {
+    const conditions = this.buildListConditions(workspaceId, {
+      ...query,
+      projectId,
+    });
+    if (query.userId !== undefined) {
+      conditions.push(eq(timeEntries.userId, query.userId));
+    }
+    return this.listEntries(db, conditions, query.page, query.limit, true);
+  }
+
+  getManagedEntryResponse(
+    db: QueryExecutor,
+    workspaceId: string,
+    projectId: string,
+    entryId: string,
+  ): Promise<TimeEntryResponse> {
+    return this.requireEntryResponse(db, entryId, [
+      eq(timeEntries.workspaceId, workspaceId),
+      eq(tasksTable.projectId, projectId),
+    ]);
+  }
+
   async createManualEntry(
     user: AuthUser,
     input: CreateManualTimeEntryInput,
@@ -147,7 +182,7 @@ export class TimeEntriesService {
     const endedAt = new Date(input.endedAt);
     const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
 
-    const entryId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const { task } = await this.tasks.requireTrackableTaskForUpdate(
         user,
         input.taskId,
@@ -173,10 +208,9 @@ export class TimeEntriesService {
           'Failed to create time entry',
         );
       }
-      return row.id;
+      return this.requireEntryResponse(tx, row.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, entryId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -201,7 +235,7 @@ export class TimeEntriesService {
       input.endedAt !== undefined ||
       input.isBillable !== undefined;
 
-    const updatedId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .select(timeEntryRowSelection)
         .from(timeEntries)
@@ -251,7 +285,7 @@ export class TimeEntriesService {
             'Failed to update time entry',
           );
         }
-        return updated.id;
+        return this.requireEntryResponse(tx, updated.id);
       }
 
       const nextTaskId =
@@ -295,10 +329,9 @@ export class TimeEntriesService {
           'Failed to update time entry',
         );
       }
-      return updated.id;
+      return this.requireEntryResponse(tx, updated.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, updatedId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -309,19 +342,26 @@ export class TimeEntriesService {
       throw new ConflictException('Stop the timer before deleting it');
     }
 
-    await this.db.delete(timeEntries).where(eq(timeEntries.id, row.id));
+    const [deleted] = await this.db
+      .delete(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.id, row.id),
+          eq(timeEntries.workspaceId, user.workspaceId),
+          eq(timeEntries.userId, user.sub),
+        ),
+      )
+      .returning({ id: timeEntries.id });
+    if (!deleted) throw new NotFoundException('Time entry not found');
     void this.usersActivity.touchLastActive(user.sub);
   }
 
   async getCurrentTimer(user: AuthUser): Promise<CurrentTimeEntryResponse> {
-    const [row] = await this.db
-      .select({ id: timeEntries.id })
-      .from(timeEntries)
-      .where(and(eq(timeEntries.userId, user.sub), isNull(timeEntries.endedAt)))
-      .limit(1);
-
-    if (!row) return { timeEntry: null };
-    return { timeEntry: await this.requireEntryResponse(this.db, row.id) };
+    const timeEntry = await this.findEntryResponse(this.db, [
+      eq(timeEntries.userId, user.sub),
+      isNull(timeEntries.endedAt),
+    ]);
+    return { timeEntry };
   }
 
   async startTimer(
@@ -394,7 +434,7 @@ export class TimeEntriesService {
     }
 
     try {
-      const entryId = await this.db.transaction(async (tx) => {
+      const result = await this.db.transaction(async (tx) => {
         // Locks serialize membership removal/role changes and assignment deletion
         // against materialization, including changes committed during provider IO.
         const [membership] = await tx
@@ -431,25 +471,19 @@ export class TimeEntriesService {
         if (!project) throw new NotFoundException('Project not found');
         if (!project.isActive)
           throw new UnprocessableEntityException('Project is inactive');
-        if (!this.isManagedProjectAuthorized(membership.role, project, false)) {
+        if (!hasImplicitTrackingAccess(membership.role, project.visibility)) {
           const [assignment] = await tx
             .select({ id: projectAssignments.id })
             .from(projectAssignments)
             .where(
-              and(
-                eq(projectAssignments.workspaceId, user.workspaceId),
-                eq(projectAssignments.projectId, project.id),
-                eq(projectAssignments.userId, user.sub),
+              trackingAssignmentCondition(
+                user.workspaceId,
+                project.id,
+                user.sub,
               ),
             )
             .for('update');
-          if (
-            !this.isManagedProjectAuthorized(
-              membership.role,
-              project,
-              assignment !== undefined,
-            )
-          ) {
+          if (!assignment) {
             if (membership.role === 'member') {
               throw new DomainError(
                 'project_assignment_required',
@@ -498,10 +532,9 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return entry.id;
+        return this.requireEntryResponse(tx, entry.id);
       });
 
-      const result = await this.requireEntryResponse(this.db, entryId);
       void this.usersActivity.touchLastActive(user.sub);
       return result;
     } catch (error) {
@@ -589,7 +622,10 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return { managed: false as const, entryId: entry.id };
+        return {
+          managed: false as const,
+          entry: await this.requireEntryResponse(tx, entry.id),
+        };
       });
 
       if (result.managed) {
@@ -598,9 +634,8 @@ export class TimeEntriesService {
           issueNumber: input.issueNumber,
         });
       }
-      const response = await this.requireEntryResponse(this.db, result.entryId);
       void this.usersActivity.touchLastActive(user.sub);
-      return response;
+      return result.entry;
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -650,6 +685,7 @@ export class TimeEntriesService {
       return this.trackingCapability(hasProjectAccess ? 'project' : 'own-time');
     }
 
+    let verifiedProject: ProjectRow;
     try {
       const verified = await this.installations.prepareIssue(
         user,
@@ -658,16 +694,16 @@ export class TimeEntriesService {
         input.issueNumber,
       );
       const verifiedIssueKey = `${verified.repository.fullName}#${verified.issue.number}`;
-      const verifiedProject = await this.githubTasks.findExistingIssueProject(
+      const currentProject = await this.githubTasks.findExistingIssueProject(
         this.db,
         user.workspaceId,
         verified.repository.fullName,
         verifiedIssueKey,
       );
       if (
-        !verifiedProject ||
-        verifiedProject.id !== project.id ||
-        !verifiedProject.isActive ||
+        !currentProject ||
+        currentProject.id !== project.id ||
+        !currentProject.isActive ||
         !(await this.isExistingReferenceTaskTrackable(
           user.workspaceId,
           verifiedIssueKey,
@@ -675,16 +711,18 @@ export class TimeEntriesService {
       ) {
         return this.deniedTrackingCapability();
       }
+      verifiedProject = currentProject;
     } catch (error) {
       return this.deniedTrackingCapability(
         this.trackingCapabilityErrorReason(error),
       );
     }
 
-    const canUseManagedProject = this.isManagedProjectAuthorized(
+    const canUseManagedProject = await this.hasFullProjectAccess(
+      user,
+      verifiedProject.id,
+      verifiedProject.visibility,
       membership.role,
-      project,
-      await this.hasProjectAssignment(user, project.id),
     );
     return canUseManagedProject
       ? this.trackingCapability('project')
@@ -699,7 +737,7 @@ export class TimeEntriesService {
     user: AuthUser,
     input: StopTimerInput,
   ): Promise<TimeEntryResponse> {
-    const entryId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const expectedTimerId = input.expectedTimerId;
       const [row] = await tx
         .select(timeEntryRowSelection)
@@ -747,10 +785,9 @@ export class TimeEntriesService {
 
         throw new NotFoundException('No running timer found');
       }
-      return updated.id;
+      return this.requireEntryResponse(tx, updated.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, entryId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -762,7 +799,7 @@ export class TimeEntriesService {
     description: string | null = null,
   ): Promise<TimeEntryResponse> {
     try {
-      const entryId = await this.db.transaction(async (tx) => {
+      return await this.db.transaction(async (tx) => {
         const task = await this.requireTaskForTimerStart(tx, user, taskId);
         const [row] = await tx
           .insert(timeEntries)
@@ -782,10 +819,8 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return row.id;
+        return this.requireEntryResponse(tx, row.id);
       });
-
-      return this.requireEntryResponse(this.db, entryId);
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -839,62 +874,28 @@ export class TimeEntriesService {
       throw new NotFoundException('Project not found');
     }
 
-    const [githubIssue] = await db
-      .select({ id: taskExternalRefs.id })
-      .from(taskExternalRefs)
-      .where(
-        and(
-          eq(taskExternalRefs.workspaceId, user.workspaceId),
-          eq(taskExternalRefs.projectId, project.id),
-          eq(taskExternalRefs.taskId, taskId),
-          eq(taskExternalRefs.provider, 'github'),
-          eq(taskExternalRefs.externalType, 'issue'),
-        ),
-      )
-      .limit(1);
-
     const hasOwnExternalTaskEntry =
-      project.trackingMode === 'external-reference' &&
+      allowsTrackingFromOwnTime(project.trackingMode) &&
       (
         await db
           .select({ id: timeEntries.id })
           .from(timeEntries)
-          .where(
-            and(
-              eq(timeEntries.workspaceId, user.workspaceId),
-              eq(timeEntries.userId, user.sub),
-              eq(timeEntries.taskId, taskId),
-            ),
-          )
+          .where(ownTaskTimeCondition(user.workspaceId, user.sub, taskId))
           .limit(1)
       )[0] !== undefined;
 
-    const requiresAssignment =
-      membership.role !== 'admin' &&
-      (project.visibility === 'private' ||
-        (membership.role === 'member' && Boolean(githubIssue)));
-    if (requiresAssignment && !hasOwnExternalTaskEntry) {
+    if (
+      !hasImplicitTrackingAccess(membership.role, project.visibility) &&
+      !hasOwnExternalTaskEntry
+    ) {
       const [assignment] = await db
         .select({ id: projectAssignments.id })
         .from(projectAssignments)
         .where(
-          and(
-            eq(projectAssignments.workspaceId, user.workspaceId),
-            eq(projectAssignments.projectId, project.id),
-            eq(projectAssignments.userId, user.sub),
-          ),
+          trackingAssignmentCondition(user.workspaceId, project.id, user.sub),
         )
         .for('update');
-      if (!assignment) {
-        if (project.visibility === 'private') {
-          throw new NotFoundException('Project not found');
-        }
-        throw new DomainError(
-          'project_assignment_required',
-          githubTrackingErrorMessages.project_assignment_required,
-          githubTrackingErrorStatuses.project_assignment_required,
-        );
-      }
+      if (!assignment) throw new NotFoundException('Project not found');
     }
 
     const task = await this.requireTaskRowForUpdate(
@@ -903,12 +904,8 @@ export class TimeEntriesService {
       project.id,
       taskId,
     );
-    if (!task.isActive) {
-      throw new UnprocessableEntityException('Task is inactive');
-    }
-    if (task.status === 'closed') {
-      throw new UnprocessableEntityException('Task is closed');
-    }
+    const blockReason = taskTrackingBlockReason(task);
+    if (blockReason) throw new UnprocessableEntityException(blockReason);
     return task;
   }
 
@@ -932,7 +929,7 @@ export class TimeEntriesService {
     if (query.search !== undefined) {
       const searchPattern = `%${escapeLikePattern(query.search)}%`;
       conditions.push(
-        sql`${tasksTable.title} ILIKE ${searchPattern} ESCAPE '\'`,
+        sql`${tasksTable.title} ILIKE ${searchPattern} ESCAPE '!'`,
       );
     }
     return conditions;
@@ -943,6 +940,7 @@ export class TimeEntriesService {
     conditions: SQL[],
     page: number,
     limit: number,
+    stableOrder = false,
   ): Promise<TimeEntryListResponse> {
     const where = and(...conditions);
     const offset = (page - 1) * limit;
@@ -963,7 +961,11 @@ export class TimeEntriesService {
         ),
       )
       .where(where)
-      .orderBy(desc(timeEntries.startedAt), desc(timeEntries.createdAt))
+      .orderBy(
+        desc(timeEntries.startedAt),
+        desc(timeEntries.createdAt),
+        ...(stableOrder ? [desc(timeEntries.id)] : []),
+      )
       .limit(limit)
       .offset(offset);
 
@@ -990,15 +992,17 @@ export class TimeEntriesService {
     entryId: string,
     extraConditions: SQL[] = [],
   ): Promise<TimeEntryResponse> {
-    const row = await this.findEntryResponse(db, entryId, extraConditions);
+    const row = await this.findEntryResponse(db, [
+      eq(timeEntries.id, entryId),
+      ...extraConditions,
+    ]);
     if (!row) throw new NotFoundException('Time entry not found');
     return row;
   }
 
   private async findEntryResponse(
     db: QueryExecutor,
-    entryId: string,
-    extraConditions: SQL[] = [],
+    conditions: SQL[],
   ): Promise<TimeEntryResponse | null> {
     const [row] = await db
       .select(this.entrySelection())
@@ -1015,7 +1019,7 @@ export class TimeEntriesService {
           eq(taskExternalRefs.externalType, 'issue'),
         ),
       )
-      .where(and(eq(timeEntries.id, entryId), ...extraConditions))
+      .where(and(...conditions))
       .limit(1);
 
     return row ? this.toResponse(row) : null;
@@ -1173,7 +1177,7 @@ export class TimeEntriesService {
       )
       .limit(1);
 
-    return task === undefined || (task.isActive && task.status !== 'closed');
+    return task === undefined || !taskTrackingBlockReason(task);
   }
 
   private async hasFullProjectAccess(
@@ -1182,20 +1186,8 @@ export class TimeEntriesService {
     visibility: 'public' | 'private',
     role: 'admin' | 'pm' | 'member',
   ): Promise<boolean> {
-    if (role === 'admin' || visibility === 'public') return true;
+    if (hasImplicitTrackingAccess(role, visibility)) return true;
     return this.hasProjectAssignment(user, projectId);
-  }
-
-  private isManagedProjectAuthorized(
-    role: 'admin' | 'pm' | 'member',
-    project: Pick<ProjectRow, 'visibility'>,
-    hasAssignment: boolean,
-  ): boolean {
-    return (
-      role === 'admin' ||
-      (role === 'pm' && project.visibility === 'public') ||
-      hasAssignment
-    );
   }
 
   private async hasProjectAssignment(
@@ -1205,13 +1197,7 @@ export class TimeEntriesService {
     const [assignment] = await this.db
       .select({ id: projectAssignments.id })
       .from(projectAssignments)
-      .where(
-        and(
-          eq(projectAssignments.workspaceId, user.workspaceId),
-          eq(projectAssignments.projectId, projectId),
-          eq(projectAssignments.userId, user.sub),
-        ),
-      )
+      .where(trackingAssignmentCondition(user.workspaceId, projectId, user.sub))
       .limit(1);
     return assignment !== undefined;
   }
@@ -1228,5 +1214,5 @@ export class TimeEntriesService {
 }
 
 function escapeLikePattern(value: string): string {
-  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+  return value.replace(/[!%_]/g, '!$&');
 }

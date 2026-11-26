@@ -5,6 +5,7 @@ import { nextTick } from 'vue';
 import {
   buildWorkspaceGitHubOrganizationRecoveryPayload,
   type WorkspaceGitHubOrganizationRecoveryPayload,
+  WorkspaceRoles,
 } from '@gitiempo/shared';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
@@ -313,6 +314,16 @@ function mountSettingsView({
 
   const authStore = useAuthStore(pinia);
   authStore.accessToken = 'access-token';
+  authStore.profile = {
+    avatarUrl: null,
+    canViewInvoices: true,
+    createdAt: '2026-05-01T10:00:00.000Z',
+    displayName: 'Workspace Admin',
+    email: 'admin@example.test',
+    id: '44444444-4444-4444-8444-444444444444',
+    role: WorkspaceRoles.Admin,
+    updatedAt: '2026-05-01T10:00:00.000Z',
+  };
 
   return mount(SettingsView, {
     global: {

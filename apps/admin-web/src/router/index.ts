@@ -29,6 +29,7 @@ const ProjectsView = () => import('@/views/ProjectsView.vue');
 const ResetPasswordView = () => import('@/views/ResetPasswordView.vue');
 const ReportsView = () => import('@/views/ReportsView.vue');
 const SettingsView = () => import('@/views/SettingsView.vue');
+const TimeEntriesView = () => import('@/views/TimeEntriesView.vue');
 
 type AdminRouteName = (typeof routeNames)[keyof typeof routeNames];
 type AdminNonProductRouteName =
@@ -57,6 +58,7 @@ export const adminRouteAllowedRoles = {
   [routeNames.projects]: adminOnlyRoles,
   [routeNames.reports]: managementRoles,
   [routeNames.settings]: adminOnlyRoles,
+  [routeNames.timeEntries]: managementRoles,
 } as const satisfies Record<AdminProductRouteName, readonly WorkspaceRole[]>;
 
 const publicRoutes: RouteRecordRaw[] = [
@@ -111,6 +113,15 @@ const protectedRoutes: RouteRecordRaw[] = [
     meta: {
       allowedRoles: adminRouteAllowedRoles[routeNames.reports],
       pageName: 'Reports',
+    },
+  },
+  {
+    path: 'time-entries',
+    name: routeNames.timeEntries,
+    component: TimeEntriesView,
+    meta: {
+      allowedRoles: adminRouteAllowedRoles[routeNames.timeEntries],
+      pageName: 'Time Entries',
     },
   },
   {

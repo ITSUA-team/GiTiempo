@@ -82,11 +82,17 @@ const actions = computed(() => {
         data-testid="invoice-back-button"
         @click="emit('back')"
       />
-      <h1
-        class="text-text-dark min-w-0 text-xl font-semibold break-all sm:text-2xl"
-      >
-        {{ invoice.reference || invoice.title }}
-      </h1>
+      <div class="min-w-0">
+        <h1 class="text-text-dark text-xl font-semibold break-all sm:text-2xl">
+          {{ invoice.reference || invoice.title }}
+        </h1>
+        <p
+          v-if="invoice.reference"
+          class="text-text-muted text-sm break-words"
+        >
+          {{ invoice.title }}
+        </p>
+      </div>
     </div>
     <div
       class="flex flex-col gap-4 sm:col-span-2 sm:row-start-2 sm:flex-row sm:items-center sm:gap-3"

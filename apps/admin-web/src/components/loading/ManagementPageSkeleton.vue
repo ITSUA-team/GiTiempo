@@ -1,9 +1,16 @@
 <script setup lang="ts">
-import { SurfaceCard } from '@gitiempo/web-shared';
+import {
+  SurfaceCard,
+  getManagementTableColumnStyle,
+  managementTableHeaderCellClass,
+} from '@gitiempo/web-shared';
 import Skeleton from 'primevue/skeleton';
+import { computed } from 'vue';
 
 import ManagementDesktopRowSkeleton from '@/components/loading/ManagementDesktopRowSkeleton.vue';
 import ManagementMobileCardSkeleton from '@/components/loading/ManagementMobileCardSkeleton.vue';
+import { adminTableHeaderClass, adminTableMinWidthClass } from '@/lib/admin-table-classes';
+import { membersTableColumns, projectsTableColumns } from '@/lib/management-table-columns';
 
 type ManagementPageSkeletonVariant = 'members' | 'projects' | 'reports' | 'invoices';
 
@@ -16,13 +23,13 @@ const skeletonConfig = {
     filterCount: 0,
     statCount: 3,
     tableActionWidth: '17.5rem',
-    tableHeaderWidths: ['120px', '220px', '140px', '150px'],
+    tableColumns: Object.values(membersTableColumns),
   },
   projects: {
     filterCount: 0,
     statCount: 3,
     tableActionWidth: '16rem',
-    tableHeaderWidths: ['140px', '220px', '120px', '120px', '150px'],
+    tableColumns: Object.values(projectsTableColumns),
   },
   invoices: {
     filterCount: 0,
@@ -40,6 +47,8 @@ const skeletonConfig = {
     tableHeaderWidths: ['180px', '140px', '140px'],
   },
 } as const;
+
+const tableConfig = computed(() => skeletonConfig[props.variant]);
 </script>
 
 <template>
@@ -159,40 +168,66 @@ const skeletonConfig = {
       </div>
 
       <div
-        class="border-divider hidden overflow-hidden rounded-[6px] border sm:block"
+        class="border-divider hidden rounded-[6px] border sm:block"
+        :class="'tableColumns' in tableConfig ? 'overflow-x-auto' : 'overflow-hidden'"
       >
-        <div class="bg-app-bg flex h-[44px] items-center gap-3 px-3">
-          <Skeleton
-            class="flex-1"
-            height="0.75rem"
-            border-radius="4px"
-          />
-          <Skeleton
-            v-for="(width, widthIndex) in skeletonConfig[props.variant].tableHeaderWidths"
-            :key="`${width}-${widthIndex}`"
-            :width="width"
-            height="0.75rem"
-            border-radius="4px"
-          />
-        </div>
+        <template v-if="'tableColumns' in tableConfig">
+          <div
+            v-for="row in ['header', 'filters']"
+            :key="row"
+            :class="row === 'header'
+              ? adminTableHeaderClass
+              : ['border-divider flex items-center border-b py-3', adminTableMinWidthClass]"
+          >
+            <div
+              v-for="column in tableConfig.tableColumns"
+              :key="column.key"
+              :class="row === 'header' ? managementTableHeaderCellClass : 'pr-3 first:pl-3'"
+              :style="getManagementTableColumnStyle(column)"
+            >
+              <Skeleton
+                :width="row === 'header' ? '4.5rem' : undefined"
+                :height="row === 'header' ? '0.75rem' : '2.375rem'"
+                :border-radius="row === 'header' ? '4px' : '6px'"
+              />
+            </div>
+          </div>
+        </template>
 
-        <div
-          v-if="skeletonConfig[props.variant].tableHeaderWidths.length > 0"
-          class="border-divider flex h-[44px] items-center gap-3 border-t px-3"
-        >
-          <Skeleton
-            class="flex-1"
-            height="0.75rem"
-            border-radius="4px"
-          />
-          <Skeleton
-            v-for="(width, widthIndex) in skeletonConfig[props.variant].tableHeaderWidths"
-            :key="`filter-${width}-${widthIndex}`"
-            :width="width"
-            height="0.75rem"
-            border-radius="4px"
-          />
-        </div>
+        <template v-else>
+          <div class="bg-app-bg flex h-[44px] items-center gap-3 px-3">
+            <Skeleton
+              class="flex-1"
+              height="0.75rem"
+              border-radius="4px"
+            />
+            <Skeleton
+              v-for="(width, widthIndex) in tableConfig.tableHeaderWidths"
+              :key="`${width}-${widthIndex}`"
+              :width="width"
+              height="0.75rem"
+              border-radius="4px"
+            />
+          </div>
+
+          <div
+            v-if="tableConfig.tableHeaderWidths.length > 0"
+            class="border-divider flex h-[44px] items-center gap-3 border-t px-3"
+          >
+            <Skeleton
+              class="flex-1"
+              height="0.75rem"
+              border-radius="4px"
+            />
+            <Skeleton
+              v-for="(width, widthIndex) in tableConfig.tableHeaderWidths"
+              :key="`filter-${width}-${widthIndex}`"
+              :width="width"
+              height="0.75rem"
+              border-radius="4px"
+            />
+          </div>
+        </template>
 
         <ManagementDesktopRowSkeleton
           v-for="index in 6"

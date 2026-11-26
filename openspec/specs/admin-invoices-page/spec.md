@@ -67,7 +67,7 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** an authenticated admin opens the create dialog
 - **WHEN** the dialog renders
-- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (defaults from settings when available), Currency (workspace currency options), Discount (optional, default 0), and Notes (optional)
+- **THEN** it shows fields: Title (required), Project (optional), Date range (required), Hourly rate (required, defaults from settings when available), Currency (required, workspace currency options), Discount (optional, default 0), and Notes (optional)
 - **AND** the admin may leave Project empty to create a workspace-wide invoice
 - **AND** no Status field is shown — the invoice is always created as `draft`
 
@@ -100,11 +100,11 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 - **GIVEN** the eligible-entries preview returns zero entries
 - **WHEN** the preview result is displayed
 - **THEN** the dialog explains there are no eligible entries and suggests changing the project or period
-- **AND** the `Create invoice` button remains enabled because the API allows empty invoices
+- **AND** zero entries alone do not block creation; all required document fields and billing inputs must still be valid
 
 #### Scenario: Successful creation
 
-- **GIVEN** the user has filled required fields
+- **GIVEN** the user has filled all required document fields and supplied valid billing inputs
 - **WHEN** the user activates `Create invoice`
 - **THEN** the page sends a POST request with only contract-supported fields
 - **AND** on success the dialog closes and the invoice list refreshes without a redundant success/info notification
@@ -113,14 +113,14 @@ The invoices page MUST provide a create dialog that submits only contract-suppor
 
 - **GIVEN** the user submits without an hourly rate or currency and the workspace has no default
 - **WHEN** the API returns 422 with `invoice_rate_required` or `invoice_currency_required`
-- **THEN** the page shows an error toast with the API message
+- **THEN** the page shows the API message beside the corresponding rate or currency field
 - **AND** the dialog remains open with the user's input preserved
 
 #### Scenario: Domain error on total overflow
 
 - **GIVEN** the computed total amount exceeds the maximum
 - **WHEN** the API returns 422 with `invoice_total_overflow`
-- **THEN** the page shows an error toast with the API message
+- **THEN** the page shows the API message beside the corresponding rate or currency field
 - **AND** the dialog remains open
 
 #### Scenario: Create with billing details and selected entries
@@ -144,7 +144,7 @@ The detail page MUST display the saved invoice and let an authorized user edit i
 
 #### Scenario: Change status
 
-- **GIVEN** the detail is open in any status
+- **GIVEN** the detail is open in any status and its saved document is complete and valid
 - **WHEN** the user selects Draft, Sent or Paid, including Sent to Draft
 - **THEN** the page saves the status without sending email or exporting a PDF, refreshes detail, list, filters and summary counts, and offers Delete only to an Admin viewing a draft
 
@@ -152,7 +152,7 @@ The detail page MUST display the saved invoice and let an authorized user edit i
 
 - **GIVEN** the user opens Edit invoice in any status
 - **WHEN** they change title, group, project, period, services, rate, currency, discount, rounding, From, Bill to, payment details, notes or selected entries
-- **THEN** the form previews the resulting charges before saving and permits adding eligible entries or excluding linked entries without changing tracked time
+- **THEN** the form requires a complete valid document and previews the resulting charges before saving and permits adding eligible entries or excluding linked entries without changing tracked time
 
 #### Scenario: Save revision
 
@@ -325,7 +325,7 @@ The invoices page MUST format all monetary amounts using the API-provided curren
 
 ### Requirement: Invoice Create Dialog Includes Time Rounding Step
 
-The invoice create dialog MUST include a time rounding step field — a PrimeVue `<Select>` with presets 1, 5, 10, 15, 30, 60 and no no-rounding option — that is pre-filled from the effective rounding step returned by the eligible-entries preview response, updates dynamically when the selected project changes — both immediately from the project's own `timeRoundingStepMinutes` value (or the workspace default when the project inherits) and via the eligible-entries preview response, and is overridable per-invoice without changing the project's `timeRoundingStepMinutes` setting.
+The invoice create dialog MUST use a PrimeVue `<Select>` with minute presets 1, 5, 10, 15, 30 and 60 and no option to disable rounding. Prefill it from the eligible-entries preview. On project changes, update an untouched field immediately from the project's `timeRoundingStepMinutes` or the inherited workspace default, then use the preview response. Per-invoice overrides MUST leave the project's step unchanged.
 
 #### Scenario: Rounding step field is pre-filled from preview
 
@@ -541,7 +541,7 @@ The editor SHALL expose an editable Issue date followed by an optional Due date,
 
 ### Requirement: Payment method specific fields
 
-Invoice editors SHALL adapt payment fields to the selected method. Bank transfer SHALL expose beneficiary, bank, account or IBAN and optional SWIFT/BIC. Card SHALL expose provider and an optional HTTPS payment link. Other and custom methods SHALL expose flexible legacy payment details. Terms and instructions SHALL remain available for every method.
+Invoice editors SHALL adapt payment fields to the selected method. Bank transfer SHALL require beneficiary, bank and account or IBAN, with optional SWIFT/BIC. Card SHALL require provider and an HTTPS payment link. Other and custom methods SHALL require their method name and Payment details, with optional beneficiary and provider. Terms and instructions SHALL remain available for every method.
 
 #### Scenario: Switch payment methods without losing edits
 
@@ -603,3 +603,126 @@ Invoice details SHALL show the saved format on desktop and mobile. In Task mode 
 
 - **WHEN** a saved invoice in Task mode has no included entries
 - **THEN** details show an empty work section and zero totals
+
+### Requirement: Complete invoice document form
+
+The create, edit and create-from editor SHALL apply the same complete-document rules for Draft, Sent and Paid. It SHALL require title, both parties' names, addresses and emails, services, Issue date, billing period, rate and currency, plus the selected method's required payment fields. Existing PM project requirements SHALL continue to apply.
+
+#### Scenario: Missing or whitespace-only required fields
+
+- **GIVEN** a user has entered incomplete From, Bill to, services or payment details in any editor mode
+- **WHEN** the user activates the primary save action
+- **THEN** no save request is sent and every missing required field is identified inline, including whitespace-only values
+- **AND** the form retains all input and entry selections for correction
+
+#### Scenario: Optional fields remain optional
+
+- **GIVEN** all required document fields are valid
+- **WHEN** Tax ID, SWIFT/BIC, Due date, payment terms, notes or logo are absent
+- **THEN** saving is permitted, subject to existing billing and access rules
+- **AND** optional values supplied by the user must satisfy their existing format, length, date and logo constraints
+- **AND** Payment instructions remain optional for every method; the existing Payment details field is required for Other/custom methods
+
+#### Scenario: Validate field values and cross-field constraints
+
+- **GIVEN** an editor contains a malformed email, non-HTTPS Card link, overlong text, invalid calendar date, reversed billing period, Due date before Issue date, or a numeric value outside existing billing limits
+- **WHEN** the user attempts to save
+- **THEN** each invalid field shows an actionable error and saving is blocked until it is corrected
+- **AND** empty Issue date is invalid even though new invoices normally prefill today's date
+- **AND** zero rate remains valid under existing nonnegative-rate rules
+
+#### Scenario: Empty work selection is a complete invoice
+
+- **GIVEN** the document fields are complete and valid and there are no selected entries
+- **WHEN** the user saves in Time entry or Task mode
+- **THEN** the invoice is saved with zero hours and zero totals, without requiring a work entry
+
+### Requirement: Required indicators and accessible invoice errors
+
+Invoice forms SHALL mark required controls with an asterisk and accessible required semantics. Labels SHALL omit “optional” suffixes. Invalid controls SHALL have visible error styling, an accessible invalid state and an associated inline explanation. Errors SHALL clear independently as the corresponding values become valid.
+
+#### Scenario: Required indicators follow the active payment method
+
+- **GIVEN** the user opens create, edit or create-from
+- **WHEN** the user switches between Bank transfer, Card and Other/custom methods
+- **THEN** required indicators follow the currently applicable payment requirements, and optional fields have no required indicator
+- **AND** no optional label suffix is shown
+- **AND** partial workspace defaults are not presented as an error before the user attempts to save the invoice
+
+#### Scenario: Submit and correct several invalid controls
+
+- **GIVEN** several controls are invalid, including Issue date
+- **WHEN** the user attempts to save
+- **THEN** all errors become visible, the first invalid control is brought into view and receives focus, and invalid dates have a visible input border and associated message
+- **WHEN** one field is corrected
+- **THEN** only its resolved error clears and the remaining errors stay visible
+- **AND** purely local validation does not produce a generic failure toast
+
+#### Scenario: Server validation preserves correction context
+
+- **GIVEN** a save is rejected with field-addressed document validation errors
+- **WHEN** the response is displayed
+- **THEN** each error is shown beside the corresponding control while the dialog, values and selected entries remain available for correction
+
+#### Scenario: Invalid hidden payment edits remain correctable
+
+- **GIVEN** the user enters an invalid Card URL then switches to Bank transfer and supplies complete bank details
+- **WHEN** the user switches back to Card before saving
+- **THEN** the entered URL is restored and must be corrected before a Card save
+- **WHEN** the user returns to complete Bank transfer details and saves
+- **THEN** the inactive local Card URL is omitted from the submitted applicable payment fields and does not block saving
+
+### Requirement: Invoice editor follows PDF document order
+
+The editor SHALL follow the PDF's semantic reading order on desktop and mobile: document dates and period, From, Bill to, services and project, work lines and pricing, totals, How to pay, then Notes. Non-PDF controls SHALL be secondary to their related section. Repeated PDF header/footer values SHALL have one editable source.
+
+#### Scenario: Read and navigate the form in document order
+
+- **GIVEN** a create, edit or create-from editor is open on desktop or mobile
+- **WHEN** the user reads or tabs through document fields
+- **THEN** Issue date precedes Due date and billing period; From precedes Bill to; both precede services and project; work selection and rate/currency precede discount and computed total; payment follows totals and notes follow payment
+- **AND** within each party, name precedes address, email and Tax ID
+- **AND** the generated invoice reference is read-only when available and is never manually required on creation
+- **AND** title and personal group are clearly secondary invoice-management controls; time display and rounding controls remain beside the work/pricing section
+- **AND** the layout does not imitate page-break-dependent PDF totals placement
+
+#### Scenario: Payment controls follow their document block
+
+- **GIVEN** the How to pay section is visible
+- **WHEN** the user reads or tabs through its applicable controls
+- **THEN** method and terms precede beneficiary/provider/account for Bank transfer or Other/custom, or provider/payment link for Card; Bank transfer SWIFT/BIC follows account; optional Payment instructions are last
+
+### Requirement: One strict save path and historical correction
+
+The editor SHALL offer one primary save action and no Save as Draft action. New invoices SHALL be created as Draft; existing status selection SHALL remain separate. Historical incomplete invoices SHALL remain viewable and openable for correction, but SHALL require completion before a document save or status update.
+
+#### Scenario: Create and edit use the same completeness rules
+
+- **GIVEN** a valid complete form
+- **WHEN** the user saves a new invoice or creates one from a source
+- **THEN** a new Draft is saved with its own reference
+- **WHEN** the user saves an existing invoice
+- **THEN** its current status is preserved unless explicitly changed through the separate status action
+- **AND** Draft never bypasses validation
+
+#### Scenario: Correct a historical invoice before changing status
+
+- **GIVEN** an accessible saved invoice has incomplete document fields
+- **WHEN** the user opens it or opens its editor
+- **THEN** existing information is displayed without invented business data
+- **WHEN** the user attempts a document save or status change
+- **THEN** the action is blocked with specific missing/invalid fields and a path to edit them, and the saved status is preserved
+- **AND** completing and saving the document makes the separate status action available under normal access and revision rules
+
+#### Scenario: Copy an incomplete historical source
+
+- **GIVEN** an accessible historical invoice is incomplete
+- **WHEN** the user creates from it
+- **THEN** the source values are available for review, but saving the new Draft requires all document fields to be complete and valid
+- **AND** the source remains unchanged
+
+#### Scenario: Organization and deletion remain available
+
+- **GIVEN** a historical invoice is incomplete
+- **WHEN** an authorized user changes its personal group through organization controls or an Admin deletes an eligible Draft
+- **THEN** existing organization and deletion rules apply without requiring document completion

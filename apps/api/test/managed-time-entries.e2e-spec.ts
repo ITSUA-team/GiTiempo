@@ -1,0 +1,1324 @@
+import { randomUUID } from 'node:crypto';
+import type { INestApplication } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { and, eq, inArray } from 'drizzle-orm';
+import type { Pool } from 'pg';
+import request from 'supertest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { AppModule } from '../src/app.module';
+import { DRIZZLE, PG_POOL } from '../src/db/db.constants';
+import type { DrizzleDB } from '../src/db/db.types';
+import {
+  invoices,
+  projectAssignments,
+  projects,
+  tasks,
+  timeEntries,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../src/db/schema';
+import { bearer, login } from './helpers/auth';
+import { getSeededAdminWorkspace } from './helpers/seeded-workspace';
+
+const start = '2031-06-03T10:00:00.000Z';
+const end = '2031-06-03T11:00:00.000Z';
+const upper = '2031-06-04T10:00:00.000Z';
+
+describe('Managed time entries (e2e)', () => {
+  let app: INestApplication;
+  let db: DrizzleDB;
+  let workspaceId: string;
+  let adminId: string;
+  let adminToken: string;
+  let pmId: string;
+  let pmToken: string;
+  let memberId: string;
+  let memberToken: string;
+  let foreignToken: string;
+  let originalInvoicePermission: boolean;
+  const formerOwnerId = randomUUID();
+  const foreignAdminId = randomUUID();
+  const foreignWorkspaceId = randomUUID();
+  const publicProject = randomUUID();
+  const privateProject = randomUUID();
+  const archivedProject = randomUUID();
+  const externalProject = randomUUID();
+  const foreignProject = randomUUID();
+  const unassignedProject = randomUUID();
+  const emptyProject = randomUUID();
+  const projectIds = [
+    privateProject,
+    publicProject,
+    archivedProject,
+    externalProject,
+    foreignProject,
+    unassignedProject,
+    emptyProject,
+  ];
+  const publicTask = randomUUID();
+  const alternateTask = randomUUID();
+  const privateTask = randomUUID();
+  const archivedTask = randomUUID();
+  const externalTask = randomUUID();
+  const siblingTask = randomUUID();
+  const hiddenTask = randomUUID();
+  const foreignTask = randomUUID();
+  const selectedProjects = '/management/projects';
+  const projectPath = (id: string) => `${selectedProjects}/${id}`;
+  const entriesPath = (id: string) => `${projectPath(id)}/time-entries`;
+  const records = entriesPath(publicProject);
+  const get = (url: string, token = adminToken) =>
+    request(app.getHttpServer()).get(url).set('Authorization', bearer(token));
+  const create = (
+    projectId: string,
+    token: string,
+    userId: string,
+    taskId: string,
+  ) =>
+    request(app.getHttpServer())
+      .post(entriesPath(projectId))
+      .set('Authorization', bearer(token))
+      .send({ userId, taskId, startedAt: start, endedAt: end });
+  const patch = (
+    projectId: string,
+    id: string,
+    body: object,
+    token = adminToken,
+  ) =>
+    request(app.getHttpServer())
+      .patch(`${entriesPath(projectId)}/${id}`)
+      .set('Authorization', bearer(token))
+      .send(body);
+  const remove = (projectId: string, id: string, token = adminToken) =>
+    request(app.getHttpServer())
+      .delete(`${entriesPath(projectId)}/${id}`)
+      .set('Authorization', bearer(token));
+  const read = async (id: string) =>
+    (await db.select().from(timeEntries).where(eq(timeEntries.id, id)))[0];
+  const pmMembership = () =>
+    and(
+      eq(workspaceMembers.workspaceId, workspaceId),
+      eq(workspaceMembers.userId, pmId),
+    );
+
+  beforeAll(async () => {
+    const module = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = module.createNestApplication();
+    await app.init();
+    db = app.get<DrizzleDB>(DRIZZLE);
+
+    const { admin, workspace } = await getSeededAdminWorkspace(db);
+    workspaceId = workspace.id;
+    adminId = admin.id;
+    const findUser = async (uid: string) => {
+      const [user] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.firebaseUid, uid));
+      if (!user) throw new Error(`Missing seeded user ${uid}`);
+      return user.id;
+    };
+    pmId = await findUser('seed-user-1');
+    memberId = await findUser('seed-user-2');
+    const [membership] = await db
+      .select()
+      .from(workspaceMembers)
+      .where(pmMembership());
+    originalInvoicePermission = membership.canViewInvoices;
+    await db
+      .update(workspaceMembers)
+      .set({ canViewInvoices: false })
+      .where(pmMembership());
+
+    await db.insert(workspaces).values({
+      id: foreignWorkspaceId,
+      name: 'Time management foreign fixture',
+    });
+    const suffix = publicProject.slice(0, 8);
+    await db.insert(users).values([
+      {
+        id: formerOwnerId,
+        firebaseUid: `former-${suffix}`,
+        email: `former-${suffix}@example.com`,
+        displayName: 'Former contributor',
+      },
+      {
+        id: foreignAdminId,
+        firebaseUid: `foreign-${suffix}`,
+        email: `foreign-${suffix}@example.com`,
+        displayName: 'Foreign admin',
+      },
+    ]);
+    await db.insert(workspaceMembers).values({
+      workspaceId: foreignWorkspaceId,
+      userId: foreignAdminId,
+      role: 'admin',
+    });
+    await db.insert(projects).values([
+      {
+        id: publicProject,
+        workspaceId,
+        name: `Management public ${suffix}`,
+        visibility: 'public',
+      },
+      { id: privateProject, workspaceId, name: `Management private ${suffix}` },
+      { id: emptyProject, workspaceId, name: `Management empty ${suffix}` },
+      {
+        id: archivedProject,
+        workspaceId,
+        name: `Management archived ${suffix}`,
+        isActive: false,
+      },
+      {
+        id: externalProject,
+        workspaceId,
+        name: `Management external ${suffix}`,
+        trackingMode: 'external-reference',
+      },
+      {
+        id: unassignedProject,
+        workspaceId,
+        name: `Management hidden ${suffix}`,
+        visibility: 'public',
+      },
+      {
+        id: foreignProject,
+        workspaceId: foreignWorkspaceId,
+        name: `Management foreign ${suffix}`,
+      },
+    ]);
+    await db.insert(projectAssignments).values(
+      [publicProject, privateProject, archivedProject, externalProject].map(
+        (projectId) => ({
+          projectId,
+          workspaceId,
+          userId: pmId,
+          assignedBy: adminId,
+        }),
+      ),
+    );
+    await db.insert(tasks).values([
+      {
+        id: publicTask,
+        workspaceId,
+        projectId: publicProject,
+        title: 'API 100% readiness',
+        defaultBillableForTimeEntries: false,
+      },
+      {
+        id: alternateTask,
+        workspaceId,
+        projectId: publicProject,
+        title: 'API 100X readiness',
+      },
+      {
+        id: privateTask,
+        workspaceId,
+        projectId: privateProject,
+        title: 'API 100% readiness',
+      },
+      {
+        id: archivedTask,
+        workspaceId,
+        projectId: archivedProject,
+        title: 'Archived task',
+        status: 'closed',
+      },
+      {
+        id: externalTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Participated task',
+      },
+      {
+        id: siblingTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Sibling task',
+      },
+      {
+        id: hiddenTask,
+        workspaceId,
+        projectId: unassignedProject,
+        title: 'API 100% readiness',
+      },
+      {
+        id: foreignTask,
+        workspaceId: foreignWorkspaceId,
+        projectId: foreignProject,
+        title: 'Foreign task',
+      },
+    ]);
+    adminToken = (await login(app)).accessToken;
+    pmToken = (await login(app, 'test:seed-user-1:alice@gitiempo.dev:Alice'))
+      .accessToken;
+    memberToken = (await login(app, 'test:seed-user-2:bob@gitiempo.dev:Bob'))
+      .accessToken;
+    foreignToken = (
+      await login(
+        app,
+        `test:foreign-${suffix}:foreign-${suffix}@example.com:Foreign admin`,
+      )
+    ).accessToken;
+  });
+
+  afterAll(async () => {
+    try {
+      if (db) {
+        const fixtureTasks = db
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(inArray(tasks.projectId, projectIds));
+        await db
+          .delete(timeEntries)
+          .where(inArray(timeEntries.taskId, fixtureTasks));
+        await db
+          .delete(invoices)
+          .where(inArray(invoices.projectId, projectIds));
+        await db.delete(tasks).where(inArray(tasks.projectId, projectIds));
+        await db.delete(projects).where(inArray(projects.id, projectIds));
+        await db
+          .delete(users)
+          .where(inArray(users.id, [formerOwnerId, foreignAdminId]));
+        await db
+          .delete(workspaces)
+          .where(eq(workspaces.id, foreignWorkspaceId));
+        if (originalInvoicePermission !== undefined) {
+          await db
+            .update(workspaceMembers)
+            .set({ canViewInvoices: originalInvoicePermission })
+            .where(pmMembership());
+        }
+      }
+    } finally {
+      await app?.close();
+    }
+  });
+
+  async function insertEntry(
+    overrides: Partial<typeof timeEntries.$inferInsert> = {},
+  ) {
+    const id = overrides.id ?? randomUUID();
+    await db.insert(timeEntries).values({
+      id,
+      workspaceId,
+      userId: memberId,
+      taskId: publicTask,
+      startedAt: new Date(start),
+      endedAt: new Date(end),
+      durationSeconds: 3600,
+      ...overrides,
+    });
+    return id;
+  }
+
+  async function queueOnEntry(
+    entryId: string,
+    first: request.Test,
+    second: request.Test,
+  ) {
+    const pool = app.get<Pool>(PG_POOL);
+    const lock = await pool.connect();
+    const pending: Promise<request.Response>[] = [];
+    const waitForRequests = (lockPid: number, count: number) =>
+      vi.waitFor(
+        async () => {
+          const { rows } = await pool.query<{ count: number }>(
+            `WITH RECURSIVE waiting AS MATERIALIZED (
+               SELECT pid, pg_blocking_pids(pid) AS blockers
+               FROM pg_stat_activity
+               WHERE datname = current_database() AND wait_event_type = 'Lock'
+             ), blocked(pid) AS (
+               SELECT $1::int
+               UNION
+               SELECT waiting.pid FROM waiting
+               JOIN blocked ON blocked.pid = ANY(waiting.blockers)
+             )
+             SELECT count(*)::int AS count FROM blocked WHERE pid <> $1`,
+            [lockPid],
+          );
+          expect(rows[0]?.count).toBe(count);
+        },
+        { interval: 10, timeout: 5000 },
+      );
+
+    try {
+      await lock.query('BEGIN');
+      const {
+        rows: [{ pid }],
+      } = await lock.query<{ pid: number }>('SELECT pg_backend_pid() AS pid');
+      await lock.query('SELECT id FROM time_entries WHERE id = $1 FOR UPDATE', [
+        entryId,
+      ]);
+      pending.push(first.then((response) => response));
+      await waitForRequests(pid, 1);
+      pending.push(second.then((response) => response));
+      await waitForRequests(pid, 2);
+      await lock.query('COMMIT');
+      return await Promise.all(pending);
+    } finally {
+      await lock.query('ROLLBACK');
+      lock.release();
+      await Promise.allSettled(pending);
+    }
+  }
+
+  it('authorizes lookups and direct requests by current workspace role and assignment', async () => {
+    const pmProjects = await get(
+      `${selectedProjects}?limit=100`,
+      pmToken,
+    ).expect(200);
+    const pmIds = pmProjects.body.items.map((item: { id: string }) => item.id);
+    expect(pmIds).toEqual(
+      expect.arrayContaining([publicProject, archivedProject, externalProject]),
+    );
+    expect(pmIds).not.toContain(unassignedProject);
+    const adminProjects = await get(`${selectedProjects}?limit=100`).expect(
+      200,
+    );
+    expect(adminProjects.body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: privateProject }),
+        expect.objectContaining({ id: archivedProject, isActive: false }),
+      ]),
+    );
+    expect(adminProjects.body.items).not.toContainEqual(
+      expect.objectContaining({ id: foreignProject }),
+    );
+    await get(`${selectedProjects}?limit=1`, pmToken)
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.items).toHaveLength(1);
+        expect(body.meta.total).toBe(pmProjects.body.meta.total);
+      });
+    await request(app.getHttpServer()).get(records).expect(401);
+    await get(selectedProjects, memberToken).expect(403);
+    await get(records, memberToken).expect(403);
+    await get(
+      `${projectPath(publicProject)}/time-entry-tasks?userId=${memberId}`,
+      memberToken,
+    ).expect(403);
+    await create(publicProject, memberToken, memberId, publicTask).expect(403);
+    await get(entriesPath(foreignProject), foreignToken).expect(200);
+    await get(records, foreignToken).expect(404);
+    await get(entriesPath(foreignProject)).expect(404);
+    await get(entriesPath(unassignedProject), pmToken).expect(404);
+    await get(
+      `${projectPath(unassignedProject)}/time-entry-members?purpose=create`,
+      pmToken,
+    ).expect(404);
+    await create(unassignedProject, pmToken, memberId, hiddenTask).expect(404);
+    const hiddenEntry = await insertEntry({ taskId: hiddenTask });
+    await patch(
+      unassignedProject,
+      hiddenEntry,
+      { description: 'Unauthorized' },
+      memberToken,
+    ).expect(403);
+    await remove(unassignedProject, hiddenEntry, memberToken).expect(403);
+    await patch(
+      unassignedProject,
+      hiddenEntry,
+      { description: 'Unauthorized' },
+      pmToken,
+    ).expect(404);
+    await remove(unassignedProject, hiddenEntry, pmToken).expect(404);
+    await patch(publicProject, hiddenEntry, {
+      description: 'Wrong project',
+    }).expect(404);
+    expect((await read(hiddenEntry)).description).toBeNull();
+  });
+
+  it('distinguishes historical filter owners from eligible create owners and task options', async () => {
+    await insertEntry({ userId: formerOwnerId, taskId: archivedTask });
+    const filterMembers = await get(
+      `${projectPath(archivedProject)}/time-entry-members?purpose=filter`,
+      pmToken,
+    ).expect(200);
+    expect(filterMembers.body.items).toEqual([
+      expect.objectContaining({ id: formerOwnerId }),
+    ]);
+    const archivedMembers = await get(
+      `${projectPath(archivedProject)}/time-entry-members?purpose=create`,
+      pmToken,
+    ).expect(200);
+    expect(archivedMembers.body.items).toEqual([]);
+    const eligibleMembers = await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=create&limit=100`,
+      pmToken,
+    ).expect(200);
+    expect(eligibleMembers.body.items).toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    expect(eligibleMembers.body.items).not.toContainEqual(
+      expect.objectContaining({ id: formerOwnerId }),
+    );
+    const pagedMembers = await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=create&page=2&limit=1`,
+      pmToken,
+    ).expect(200);
+    expect(pagedMembers.body.items).toEqual(
+      eligibleMembers.body.items.slice(1, 2),
+    );
+    expect(pagedMembers.body.meta.total).toBe(eligibleMembers.body.meta.total);
+    const privateMembers = await get(
+      `${projectPath(privateProject)}/time-entry-members?purpose=create&limit=100`,
+    ).expect(200);
+    expect(privateMembers.body.items).not.toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    const externalEntry = await insertEntry({ taskId: externalTask });
+    const eligibleTasks = await get(
+      `${projectPath(externalProject)}/time-entry-tasks?userId=${memberId}`,
+      pmToken,
+    ).expect(200);
+    expect(eligibleTasks.body.items).toEqual([
+      expect.objectContaining({ id: externalTask }),
+    ]);
+    expect(eligibleTasks.body.isOwnerAssigned).toBe(false);
+    const externalMembers = `${projectPath(externalProject)}/time-entry-members?purpose=create`;
+    const exactTaskMembers = await get(
+      `${externalMembers}&taskId=${externalTask}`,
+      pmToken,
+    ).expect(200);
+    const siblingTaskMembers = await get(
+      `${externalMembers}&taskId=${siblingTask}`,
+      pmToken,
+    ).expect(200);
+    expect(exactTaskMembers.body.items).toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    expect(siblingTaskMembers.body.items).not.toContainEqual(
+      expect.objectContaining({ id: memberId }),
+    );
+    expect(exactTaskMembers.body.meta.total).toBe(
+      siblingTaskMembers.body.meta.total + 1,
+    );
+    await create(externalProject, pmToken, memberId, externalTask).expect(201);
+    const sibling = await create(
+      externalProject,
+      pmToken,
+      memberId,
+      siblingTask,
+    );
+    expect(sibling.status).toBe(422);
+    await patch(
+      externalProject,
+      externalEntry,
+      { taskId: siblingTask },
+      pmToken,
+    ).expect(422);
+    expect((await read(externalEntry)).taskId).toBe(externalTask);
+    const taskPage = await get(
+      `${projectPath(publicProject)}/time-entry-tasks?userId=${memberId}&page=2&limit=1`,
+      pmToken,
+    ).expect(200);
+    expect(taskPage.body.items).toHaveLength(1);
+    expect(taskPage.body.isOwnerAssigned).toBe(false);
+    expect(taskPage.body.meta).toEqual({
+      page: 2,
+      limit: 1,
+      total: 2,
+      totalPages: 2,
+    });
+
+    const allTasksPath = `${projectPath(publicProject)}/time-entry-tasks?limit=1`;
+    const taskPages = await Promise.all(
+      [1, 2].map((page) =>
+        get(`${allTasksPath}&page=${page}`, pmToken).expect(200),
+      ),
+    );
+    const taskIds = taskPages.flatMap(({ body }) =>
+      body.items.map(({ id }: { id: string }) => id),
+    );
+    expect(taskIds.sort()).toEqual([publicTask, alternateTask].sort());
+    for (const { body } of taskPages) {
+      expect(body.meta.total).toBe(2);
+      expect(body).not.toHaveProperty('isOwnerAssigned');
+    }
+    const scopedMembers = await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=create&taskId=${publicTask}&limit=1`,
+      pmToken,
+    ).expect(200);
+    expect(scopedMembers.body.items).toEqual(
+      eligibleMembers.body.items.slice(0, 1),
+    );
+    expect(scopedMembers.body.meta.total).toBe(eligibleMembers.body.meta.total);
+    await get(
+      `${projectPath(publicProject)}/time-entry-members?purpose=filter&taskId=${publicTask}`,
+      pmToken,
+    ).expect(400);
+  });
+
+  it('returns explicit assignment independently of task availability', async () => {
+    await db.insert(projectAssignments).values({
+      workspaceId,
+      projectId: emptyProject,
+      userId: memberId,
+      assignedBy: adminId,
+    });
+    const query = `${projectPath(emptyProject)}/time-entry-tasks?userId=${memberId}`;
+    const empty = await get(query).expect(200);
+    expect(empty.body).toMatchObject({
+      items: [],
+      isOwnerAssigned: true,
+      meta: { total: 0 },
+    });
+
+    const openTasks = [randomUUID(), randomUUID()];
+    await db.insert(tasks).values([
+      ...openTasks.map((id, index) => ({
+        id,
+        workspaceId,
+        projectId: emptyProject,
+        title: `New task ${index}`,
+      })),
+      {
+        workspaceId,
+        projectId: emptyProject,
+        title: 'Old task',
+        status: 'closed',
+      },
+      {
+        workspaceId,
+        projectId: emptyProject,
+        title: 'Inactive task',
+        isActive: false,
+      },
+    ]);
+    const populated = await get(query).expect(200);
+    expect(populated.body).toMatchObject({
+      items: openTasks.map((id) => ({ id })),
+      isOwnerAssigned: true,
+      meta: { total: 2 },
+    });
+    for (const id of openTasks) {
+      await create(emptyProject, adminToken, memberId, id).expect(201);
+    }
+  });
+
+  it('combines literal search, owner and date bounds before stable pagination', async () => {
+    const createdAt = new Date(start);
+    const first = await insertEntry({ createdAt });
+    const second = await insertEntry({ createdAt });
+    await insertEntry({ userId: adminId });
+    await insertEntry({ taskId: alternateTask });
+    await insertEntry({ taskId: hiddenTask });
+    await insertEntry({ taskId: privateTask });
+    await insertEntry({ startedAt: new Date('2031-06-03T09:59:59.999Z') });
+    await insertEntry({
+      startedAt: new Date(upper),
+      endedAt: new Date('2031-06-04T11:00:00.000Z'),
+    });
+    const query = {
+      userId: memberId,
+      search: 'aPi 100%',
+      dateFrom: start,
+      dateTo: upper,
+      limit: 1,
+    };
+    const ids = [first, second].sort().reverse();
+    for (const page of [1, 2, 3]) {
+      const result = await get(records, pmToken)
+        .query({ ...query, page })
+        .expect(200);
+      expect(
+        result.body.items.map((entry: { id: string }) => entry.id),
+      ).toEqual(ids.slice(page - 1, page));
+      expect(result.body.meta).toEqual({
+        page,
+        limit: 1,
+        total: 2,
+        totalPages: 2,
+      });
+    }
+    const personal = await get('/time-entries', memberToken)
+      .query({
+        projectId: publicProject,
+        search: query.search,
+        dateFrom: start,
+        dateTo: upper,
+      })
+      .expect(200);
+    expect(
+      personal.body.items.map((entry: { id: string }) => entry.id).sort(),
+    ).toEqual([first, second].sort());
+  });
+
+  it('creates for another owner and preserves ownership through edits and deletion', async () => {
+    const created = await create(
+      publicProject,
+      pmToken,
+      memberId,
+      publicTask,
+    ).expect(201);
+    const id: string = created.body.id;
+    expect(created.body).toMatchObject({
+      userId: memberId,
+      projectId: publicProject,
+      taskId: publicTask,
+      source: 'manual',
+      durationSeconds: 3600,
+      isBillable: false,
+    });
+    const edited = await patch(
+      publicProject,
+      id,
+      {
+        taskId: alternateTask,
+        endedAt: '2031-06-03T11:30:00.000Z',
+        description: 'Corrected',
+        isBillable: true,
+      },
+      pmToken,
+    ).expect(200);
+    expect(edited.body).toMatchObject({
+      userId: memberId,
+      projectId: publicProject,
+      taskId: alternateTask,
+      durationSeconds: 5400,
+      description: 'Corrected',
+      isBillable: true,
+    });
+    await patch(publicProject, id, { taskId: privateTask }, pmToken).expect(
+      404,
+    );
+    await patch(
+      publicProject,
+      id,
+      { projectId: privateProject },
+      pmToken,
+    ).expect(400);
+    await patch(publicProject, id, { startedAt: upper }, pmToken).expect(400);
+    expect(await read(id)).toMatchObject({
+      userId: memberId,
+      taskId: alternateTask,
+      durationSeconds: 5400,
+    });
+    await remove(publicProject, id, pmToken).expect(204);
+    expect(await read(id)).toBeUndefined();
+
+    await create(privateProject, adminToken, memberId, privateTask).expect(422);
+    await create(publicProject, adminToken, formerOwnerId, publicTask).expect(
+      422,
+    );
+    await create(publicProject, adminToken, memberId, privateTask).expect(404);
+    const override = await request(app.getHttpServer())
+      .post(records)
+      .set('Authorization', bearer(adminToken))
+      .send({
+        userId: memberId,
+        taskId: publicTask,
+        startedAt: start,
+        endedAt: end,
+        isBillable: true,
+      })
+      .expect(201);
+    expect(override.body.isBillable).toBe(true);
+  });
+
+  it('changes the member and moves the original entry with or without a replacement member', async () => {
+    const reportStart = '2031-07-03T10:00:00.000Z';
+    const reportEnd = '2031-07-03T11:00:00.000Z';
+    const id = await insertEntry({
+      startedAt: new Date(reportStart),
+      endedAt: new Date(reportEnd),
+      source: 'extension',
+      description: 'Original description',
+      isBillable: false,
+    });
+    const originalFields = {
+      id,
+      startedAt: reportStart,
+      endedAt: reportEnd,
+      durationSeconds: 3600,
+      source: 'extension',
+      description: 'Original description',
+      isBillable: false,
+    };
+    const before = await read(id);
+    const expectReport = async (projectId: string, userId: string) => {
+      const report = await request(app.getHttpServer())
+        .post('/reports/time')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          dateFrom: reportStart,
+          dateTo: reportEnd,
+          groupBy: ['project', 'user'],
+        })
+        .expect(200);
+      expect(report.body.summary).toMatchObject({
+        entryCount: 1,
+        totalSeconds: 3600,
+      });
+      expect(report.body.items).toEqual([
+        expect.objectContaining({
+          project: expect.objectContaining({ id: projectId }),
+          user: expect.objectContaining({ id: userId }),
+          entryCount: 1,
+        }),
+      ]);
+    };
+    await expectReport(publicProject, memberId);
+
+    const reassigned = await patch(
+      publicProject,
+      id,
+      { userId: pmId },
+      pmToken,
+    ).expect(200);
+    expect(reassigned.body).toMatchObject({
+      ...originalFields,
+      projectId: publicProject,
+      taskId: publicTask,
+      userId: pmId,
+    });
+
+    const moved = await patch(
+      publicProject,
+      id,
+      { projectId: privateProject, taskId: privateTask },
+      pmToken,
+    ).expect(200);
+    expect(moved.body).toMatchObject({
+      ...originalFields,
+      projectId: privateProject,
+      taskId: privateTask,
+      userId: pmId,
+    });
+    const source = await get(records, pmToken)
+      .query({ userId: pmId, limit: 100 })
+      .expect(200);
+    const destination = await get(entriesPath(privateProject), pmToken)
+      .query({ userId: pmId, limit: 100 })
+      .expect(200);
+    expect(source.body.items).not.toContainEqual(
+      expect.objectContaining({ id }),
+    );
+    expect(destination.body.items).toContainEqual(
+      expect.objectContaining({ id, userId: pmId }),
+    );
+    await expectReport(privateProject, pmId);
+
+    const combined = await patch(privateProject, id, {
+      projectId: unassignedProject,
+      taskId: hiddenTask,
+      userId: memberId,
+    }).expect(200);
+    expect(combined.body).toMatchObject({
+      ...originalFields,
+      projectId: unassignedProject,
+      taskId: hiddenTask,
+      userId: memberId,
+    });
+    await expectReport(unassignedProject, memberId);
+    expect(await read(id)).toMatchObject({
+      taskId: hiddenTask,
+      userId: memberId,
+      createdAt: before.createdAt,
+    });
+    await remove(privateProject, id).expect(404);
+    await remove(unassignedProject, id).expect(204);
+  });
+
+  it('rejects reassignment outside the manager scope or when the resulting combination is ineligible', async () => {
+    const id = await insertEntry();
+    const before = await read(id);
+    const foreign = await patch(publicProject, id, {
+      projectId: foreignProject,
+      taskId: foreignTask,
+    }).expect(404);
+    expect(foreign.body.code).not.toBe('time_entry_not_found');
+    const wrongTask = await patch(publicProject, id, {
+      projectId: privateProject,
+      taskId: publicTask,
+    }).expect(404);
+    expect(wrongTask.body.code).not.toBe('time_entry_not_found');
+    await patch(
+      publicProject,
+      id,
+      { projectId: unassignedProject, taskId: hiddenTask },
+      pmToken,
+    ).expect(404);
+    await patch(publicProject, id, {
+      projectId: archivedProject,
+      taskId: archivedTask,
+      userId: adminId,
+    }).expect(422);
+    await patch(
+      publicProject,
+      id,
+      { projectId: privateProject, taskId: privateTask },
+      pmToken,
+    ).expect(422);
+    await patch(publicProject, id, { userId: formerOwnerId }).expect(422);
+    await patch(publicProject, id, { userId: foreignAdminId }).expect(422);
+    expect(await read(id)).toEqual(before);
+
+    for (const projectId of [publicProject, privateProject]) {
+      const pmAssignment = and(
+        eq(projectAssignments.workspaceId, workspaceId),
+        eq(projectAssignments.projectId, projectId),
+        eq(projectAssignments.userId, pmId),
+      );
+      const [revoked] = await db
+        .delete(projectAssignments)
+        .where(pmAssignment)
+        .returning();
+      try {
+        await patch(
+          publicProject,
+          id,
+          {
+            projectId: privateProject,
+            taskId: privateTask,
+            userId: adminId,
+          },
+          pmToken,
+        ).expect(404);
+        expect(await read(id)).toEqual(before);
+      } finally {
+        await db.insert(projectAssignments).values(revoked);
+      }
+    }
+  });
+
+  it('corrects and deletes historical entries on archived work without reviving owner access', async () => {
+    const id = await insertEntry({
+      taskId: archivedTask,
+      userId: formerOwnerId,
+    });
+    await create(archivedProject, pmToken, memberId, archivedTask).expect(422);
+    await patch(
+      archivedProject.toUpperCase(),
+      id,
+      {
+        projectId: archivedProject,
+        taskId: archivedTask.toUpperCase(),
+        userId: formerOwnerId.toUpperCase(),
+        description: 'Historical correction',
+        isBillable: false,
+      },
+      pmToken,
+    ).expect(200);
+    expect(await read(id)).toMatchObject({
+      taskId: archivedTask,
+      userId: formerOwnerId,
+      description: 'Historical correction',
+      isBillable: false,
+    });
+    await remove(archivedProject, id, pmToken).expect(204);
+  });
+
+  it('keeps running and each invoiced status visible while rejecting edits and deletes atomically', async () => {
+    const running = await insertEntry({
+      userId: formerOwnerId,
+      endedAt: null,
+      durationSeconds: null,
+    });
+    const locks = [{ id: running, code: 'time_entry_running' }];
+    for (const status of ['draft', 'sent', 'paid'] as const) {
+      const invoiceId = randomUUID();
+      await db.insert(invoices).values({
+        id: invoiceId,
+        workspaceId,
+        projectId: publicProject,
+        title: status,
+        status,
+        dateFrom: '2031-06-01',
+        dateTo: '2031-06-30',
+        hourlyRate: 100,
+        currency: 'USD',
+        createdBy: adminId,
+      });
+      locks.push({
+        id: await insertEntry({ invoiceId }),
+        code: 'time_entry_invoiced',
+      });
+    }
+    const listed = await get(records, pmToken)
+      .query({ limit: 100 })
+      .expect(200);
+    for (const { id, code } of locks) {
+      expect(listed.body.items).toContainEqual(expect.objectContaining({ id }));
+      const before = await read(id);
+      const expectedMessage =
+        code === 'time_entry_running' ? /stop.*timer/i : /included.*invoice/i;
+      for (const response of [
+        await patch(publicProject, id, { description: 'Reject me' }, pmToken),
+        await patch(
+          publicProject,
+          id,
+          { projectId: privateProject, taskId: privateTask, userId: adminId },
+          pmToken,
+        ),
+        await remove(publicProject, id, pmToken),
+      ]) {
+        expect(response.status).toBe(409);
+        expect(response.body).toMatchObject({
+          code,
+          message: expect.stringMatching(expectedMessage),
+        });
+        expect(await read(id)).toEqual(before);
+      }
+    }
+    await db.delete(timeEntries).where(eq(timeEntries.id, running));
+  });
+
+  it('checks destination eligibility again after owner access changes', async () => {
+    await db.insert(projectAssignments).values({
+      workspaceId,
+      projectId: privateProject,
+      userId: memberId,
+      assignedBy: adminId,
+    });
+    const query = `${projectPath(privateProject)}/time-entry-tasks?userId=${memberId}`;
+    const initial = await get(query).expect(200);
+    expect(initial.body.items).toContainEqual(
+      expect.objectContaining({ id: privateTask }),
+    );
+    await db
+      .delete(projectAssignments)
+      .where(
+        and(
+          eq(projectAssignments.projectId, privateProject),
+          eq(projectAssignments.userId, memberId),
+        ),
+      );
+    await create(privateProject, adminToken, memberId, privateTask).expect(422);
+    const id = await insertEntry();
+    const before = await read(id);
+    await patch(publicProject, id, {
+      projectId: privateProject,
+      taskId: privateTask,
+    }).expect(422);
+    expect(await read(id)).toEqual(before);
+  });
+
+  it('expires a revoked PM assignment without changing personal and team time operations', async () => {
+    const id = await insertEntry();
+    await db
+      .delete(projectAssignments)
+      .where(
+        and(
+          eq(projectAssignments.projectId, publicProject),
+          eq(projectAssignments.userId, pmId),
+        ),
+      );
+    try {
+      await get(records, pmToken).expect(404);
+      await patch(publicProject, id, { description: 'Denied' }, pmToken).expect(
+        404,
+      );
+      await remove(publicProject, id, pmToken).expect(404);
+      const team = await get(
+        `/projects/${publicProject}/time-entries`,
+        pmToken,
+      ).expect(200);
+      expect(team.body.items).toContainEqual(expect.objectContaining({ id }));
+      await request(app.getHttpServer())
+        .patch(`/time-entries/${id}`)
+        .set('Authorization', bearer(pmToken))
+        .send({ description: 'Denied' })
+        .expect(404);
+      await request(app.getHttpServer())
+        .patch(`/time-entries/${id}`)
+        .set('Authorization', bearer(memberToken))
+        .send({ description: 'Personal edit' })
+        .expect(200);
+      await request(app.getHttpServer())
+        .delete(`/time-entries/${id}`)
+        .set('Authorization', bearer(memberToken))
+        .expect(204);
+
+      const active = await request(app.getHttpServer())
+        .post('/time-entries/timer/start')
+        .set('Authorization', bearer(memberToken))
+        .send({ taskId: publicTask })
+        .expect(201);
+      try {
+        await request(app.getHttpServer())
+          .patch(`/time-entries/${String(active.body.id)}`)
+          .set('Authorization', bearer(memberToken))
+          .send({ description: 'Personal running edit' })
+          .expect(200);
+      } finally {
+        await db
+          .delete(timeEntries)
+          .where(eq(timeEntries.id, String(active.body.id)));
+      }
+    } finally {
+      await db.insert(projectAssignments).values({
+        workspaceId,
+        projectId: publicProject,
+        userId: pmId,
+        assignedBy: adminId,
+      });
+    }
+  });
+
+  it.each([
+    ['edit', 'invoice'],
+    ['edit', 'management'],
+    ['move', 'invoice'],
+    ['move', 'management'],
+    ['delete', 'invoice'],
+    ['delete', 'management'],
+  ] as const)(
+    'serializes invoice attachment with administrative %s when %s locks the entry first',
+    async (operation, first) => {
+      const id = await insertEntry({ isBillable: true });
+      const title = `Time management ${operation} race, ${first} first`;
+      const invoiceRequest = request(app.getHttpServer())
+        .post('/invoices')
+        .set('Authorization', bearer(adminToken))
+        .send({
+          title,
+          projectId: publicProject,
+          timeEntryIds: [id],
+          dateFrom: '2031-06-01',
+          dateTo: '2031-06-30',
+          hourlyRate: 100,
+          sender: {
+            name: 'Issuer',
+            address: 'Kyiv',
+            email: 'issuer@example.com',
+            taxId: '',
+          },
+          recipient: {
+            name: 'Client',
+            address: 'Berlin',
+            email: 'client@example.com',
+            taxId: '',
+          },
+          services: 'Development',
+          payment: {
+            method: 'Bank transfer',
+            beneficiary: 'Issuer',
+            provider: 'Bank',
+            account: 'ACCOUNT',
+            terms: '',
+            instructions: '',
+          },
+        });
+      const edits = {
+        edit: { endedAt: '2031-06-03T12:00:00.000Z' },
+        move: { projectId: privateProject, taskId: privateTask, userId: pmId },
+      };
+      const mutation =
+        operation === 'delete'
+          ? remove(publicProject, id, pmToken)
+          : patch(publicProject, id, edits[operation], pmToken);
+      const [invoice, result] =
+        first === 'invoice'
+          ? await queueOnEntry(id, invoiceRequest, mutation)
+          : (await queueOnEntry(id, mutation, invoiceRequest)).reverse();
+      const final = await read(id);
+      const savedInvoices = await db
+        .select({ id: invoices.id, totalHours: invoices.totalHours })
+        .from(invoices)
+        .where(
+          and(eq(invoices.projectId, publicProject), eq(invoices.title, title)),
+        );
+      if (first === 'invoice') {
+        expect(result.status).toBe(409);
+        expect(result.body.code).toBe('time_entry_invoiced');
+        expect(invoice.status).toBe(201);
+        expect(invoice.body.totalHours).toBe(1);
+        expect(savedInvoices).toEqual([{ id: invoice.body.id, totalHours: 1 }]);
+        expect(final).toMatchObject({
+          invoiceId: invoice.body.id,
+          durationSeconds: 3600,
+          taskId: publicTask,
+          userId: memberId,
+        });
+      } else if (operation === 'edit') {
+        expect(result.status).toBe(200);
+        expect(invoice.status).toBe(201);
+        expect(invoice.body.totalHours).toBe(2);
+        expect(savedInvoices).toEqual([{ id: invoice.body.id, totalHours: 2 }]);
+        expect(final).toMatchObject({
+          invoiceId: invoice.body.id,
+          durationSeconds: 7200,
+        });
+      } else {
+        expect(result.status).toBe(operation === 'move' ? 200 : 204);
+        expect(invoice.status).toBe(409);
+        expect(invoice.body.code).toBe('invoice_entry_conflict');
+        expect(savedInvoices).toEqual([]);
+        if (operation === 'move') {
+          expect(final).toMatchObject({
+            taskId: privateTask,
+            userId: pmId,
+            invoiceId: null,
+          });
+        } else {
+          expect(final).toBeUndefined();
+        }
+      }
+    },
+  );
+
+  it('rejects a competing move addressed to the old source project', async () => {
+    const id = await insertEntry({ userId: pmId });
+    const [move, stale] = await queueOnEntry(
+      id,
+      patch(
+        publicProject,
+        id,
+        { projectId: privateProject, taskId: privateTask },
+        pmToken,
+      ),
+      patch(publicProject, id, {
+        projectId: unassignedProject,
+        taskId: hiddenTask,
+        userId: memberId,
+      }),
+    );
+    expect(move.status).toBe(200);
+    expect(stale.status).toBe(404);
+    expect(stale.body.code).toBe('time_entry_not_found');
+    expect(await read(id)).toMatchObject({ taskId: privateTask, userId: pmId });
+  });
+
+  it.each(['task', 'member'] as const)(
+    'revalidates the inferred %s after a concurrent same-project change',
+    async (inferred) => {
+      const id = await insertEntry();
+      const task = { taskId: alternateTask };
+      const member = { userId: pmId };
+      const [first, second] = await queueOnEntry(
+        id,
+        patch(publicProject, id, inferred === 'task' ? task : member),
+        patch(publicProject, id, inferred === 'task' ? member : task),
+      );
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+      expect(second.body).toMatchObject({ ...task, ...member });
+      expect(await read(id)).toMatchObject({ ...task, ...member });
+    },
+  );
+
+  it('serializes member reassignment with task and entry billable backfill', async () => {
+    const id = await insertEntry();
+    const [moved, backfilled] = await queueOnEntry(
+      id,
+      patch(publicProject, id, { userId: pmId }),
+      request(app.getHttpServer())
+        .post(`/projects/${publicProject}/billable-default/backfill`)
+        .set('Authorization', bearer(adminToken))
+        .send({ updateTasks: true, updateTimeEntries: true }),
+    );
+    expect(moved.status).toBe(200);
+    expect(backfilled.status).toBe(200);
+    const [task] = await db
+      .select({ billable: tasks.defaultBillableForTimeEntries })
+      .from(tasks)
+      .where(eq(tasks.id, publicTask));
+    expect(await read(id)).toMatchObject({
+      userId: pmId,
+      taskId: publicTask,
+      isBillable: task.billable,
+    });
+  });
+
+  it('rejects a personal delete that raced with reassignment to another member', async () => {
+    const id = await insertEntry();
+    const [move, deletion] = await queueOnEntry(
+      id,
+      patch(publicProject, id, { userId: pmId }),
+      request(app.getHttpServer())
+        .delete(`/time-entries/${id}`)
+        .set('Authorization', bearer(memberToken)),
+    );
+    expect(move.status).toBe(200);
+    expect(deletion.status).toBe(404);
+    expect(await read(id)).toMatchObject({ taskId: publicTask, userId: pmId });
+  });
+
+  it('checks exact-task own-time participation for a new member without changing the task', async () => {
+    const taskId = randomUUID();
+    await db.insert(tasks).values({
+      id: taskId,
+      workspaceId,
+      projectId: externalProject,
+      title: 'Member reassignment participation',
+    });
+    const [id, proofId] = [randomUUID(), randomUUID()].sort();
+    await insertEntry({ id, taskId, userId: pmId });
+    await insertEntry({ taskId: siblingTask, userId: memberId });
+    await patch(externalProject, id, { userId: memberId }).expect(422);
+    await insertEntry({ id: proofId, taskId, userId: memberId });
+    await patch(externalProject, id, { userId: memberId }).expect(200);
+    expect(await read(id)).toMatchObject({ taskId, userId: memberId });
+  });
+
+  it('locks competing task moves in ID order and rechecks exact-task participation', async () => {
+    const lowerTask = randomUUID();
+    const higherTask = randomUUID();
+    await db.insert(tasks).values([
+      {
+        id: lowerTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Move source',
+      },
+      {
+        id: higherTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Move destination',
+      },
+    ]);
+    const [lowerId, higherId] = [randomUUID(), randomUUID()].sort();
+    const source = await insertEntry({ id: lowerId, taskId: lowerTask });
+    const target = await insertEntry({ id: higherId, taskId: higherTask });
+    const [move, reverse] = await queueOnEntry(
+      source,
+      patch(externalProject, source, { taskId: higherTask }, pmToken),
+      patch(externalProject, target, { taskId: lowerTask }),
+    );
+    expect(move.status).toBe(200);
+    expect(reverse.status).toBe(422);
+    expect(await read(source)).toMatchObject({ taskId: higherTask });
+    expect(await read(target)).toMatchObject({ taskId: higherTask });
+  });
+
+  it('uses another participation record when the first proof disappears during a move', async () => {
+    const fromTask = randomUUID();
+    const toTask = randomUUID();
+    await db.insert(tasks).values([
+      {
+        id: fromTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Alternate proof source',
+      },
+      {
+        id: toTask,
+        workspaceId,
+        projectId: externalProject,
+        title: 'Alternate proof destination',
+      },
+    ]);
+    const [firstId, alternateId, sourceId] = [
+      randomUUID(),
+      randomUUID(),
+      randomUUID(),
+    ].sort();
+    const firstProof = await insertEntry({ id: firstId, taskId: toTask });
+    await insertEntry({ id: alternateId, taskId: toTask });
+    const source = await insertEntry({ id: sourceId, taskId: fromTask });
+    const [deletion, move] = await queueOnEntry(
+      firstProof,
+      remove(externalProject, firstProof, pmToken),
+      patch(externalProject, source, { taskId: toTask }),
+    );
+    expect(deletion.status).toBe(204);
+    expect(move.status).toBe(200);
+    expect(await read(source)).toMatchObject({ taskId: toTask });
+  });
+});

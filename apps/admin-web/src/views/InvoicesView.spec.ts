@@ -20,6 +20,7 @@ import { getErrorMessage } from '@gitiempo/web-shared';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
+import type * as InvoicesData from '@/composables/invoices/useInvoicesData';
 import { routeNames } from '@/constants/routes';
 import { createTestQueryPlugin } from '@/test/query-client';
 import { useAuthStore } from '@/stores/auth';
@@ -33,11 +34,15 @@ const mobileViewportMock = vi.hoisted(() => ({
 
 const testMocks = vi.hoisted(() => ({
   createInvoice: vi.fn(),
+  deleteGroup: vi.fn(),
   errorToast: vi.fn(),
   getInvoiceDefaults: vi.fn(),
+  getInvoiceStats: vi.fn(),
   listGroups: vi.fn(),
+  listInvoices: vi.fn(),
   moveInvoices: vi.fn(),
   refetch: vi.fn(),
+  requireConfirmation: vi.fn(),
   routerPush: vi.fn(),
   successToast: vi.fn(),
   useInvoicesData: vi.fn(),
@@ -46,8 +51,11 @@ const testMocks = vi.hoisted(() => ({
 
 vi.mock('@/services/admin-invoices-client', () => ({
   adminInvoicesClient: {
+    deleteGroup: testMocks.deleteGroup,
     getInvoiceDefaults: testMocks.getInvoiceDefaults,
+    getInvoiceStats: testMocks.getInvoiceStats,
     listGroups: testMocks.listGroups,
+    listInvoices: testMocks.listInvoices,
     moveInvoices: testMocks.moveInvoices,
   },
 }));
@@ -85,6 +93,13 @@ vi.mock('@/composables/feedback/useToasts', () => ({
   useToasts: () => ({
     errorToast: testMocks.errorToast,
     successToast: testMocks.successToast,
+  }),
+}));
+
+vi.mock('@/composables/feedback/useConfirmation', () => ({
+  useConfirmation: () => ({
+    dismissConfirmation: vi.fn(),
+    requireConfirmation: testMocks.requireConfirmation,
   }),
 }));
 
@@ -550,6 +565,63 @@ describe('InvoicesView', () => {
     table.vm.$emit('clear-filters');
     await flushPromises();
     expect(getCapturedQueryValue()).toMatchObject({ groupId: 'group-1', page: 1, search: undefined });
+  });
+
+  it('refreshes All invoices without requesting the deleted group again', async () => {
+    const groupId = 'group-1';
+    const { useInvoicesData } = await vi.importActual<typeof InvoicesData>(
+      '@/composables/invoices/useInvoicesData',
+    );
+    testMocks.useInvoicesData.mockImplementationOnce(useInvoicesData);
+    testMocks.getInvoiceStats.mockResolvedValue(createStatsResponse());
+    testMocks.listGroups.mockResolvedValue({
+      groups: [{ id: groupId, name: 'Retainers', count: 1 }],
+      allCount: 1,
+      ungroupedCount: 0,
+    });
+    testMocks.listInvoices.mockResolvedValue(createListResponse([createInvoiceItem()]));
+    testMocks.deleteGroup.mockImplementationOnce(async () => {
+      testMocks.listInvoices.mockClear();
+      testMocks.listInvoices.mockImplementation(async (query: Partial<InvoiceListQuery>) => {
+        if (query.groupId === groupId) {
+          throw new ApiError('Group not found', { status: 404 });
+        }
+        return createListResponse([createInvoiceItem()]);
+      });
+      testMocks.listGroups.mockResolvedValue({ groups: [], allCount: 1, ungroupedCount: 1 });
+    });
+    testMocks.requireConfirmation.mockImplementationOnce(
+      (_message, _header, _label, accept: () => Promise<void>) => accept(),
+    );
+    const wrapper = mountInvoicesView();
+
+    try {
+      await vi.waitFor(() => expect(wrapper.text()).toContain('Retainers'));
+      await wrapper
+        .findAll('button')
+        .find(button => button.text().includes('Retainers'))!
+        .trigger('click');
+      await vi.waitFor(() =>
+        expect(testMocks.listInvoices).toHaveBeenCalledWith(expect.objectContaining({ groupId })),
+      );
+      await wrapper.get('button[aria-label="Delete group"]').trigger('click');
+
+      await vi.waitFor(() => {
+        expect(testMocks.deleteGroup).toHaveBeenCalledWith(groupId);
+        const allInvoices = wrapper.findAll('button').find(button => button.text().includes('All invoices'));
+        expect(allInvoices?.attributes('aria-pressed')).toBe('true');
+        expect(wrapper.text()).not.toContain('Retainers');
+        expect(testMocks.listInvoices).toHaveBeenCalledWith(
+          expect.objectContaining({ groupId: undefined, page: 1 }),
+        );
+      });
+      expect(testMocks.listInvoices).not.toHaveBeenCalledWith(expect.objectContaining({ groupId }));
+      expect(testMocks.errorToast).not.toHaveBeenCalled();
+      expect(wrapper.find('[data-testid="invoices-load-error"]').exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      testMocks.listInvoices.mockReset();
+    }
   });
 
   it('renders a retryable error card when the invoices request fails', async () => {

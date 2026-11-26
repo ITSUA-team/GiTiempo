@@ -13,4 +13,5 @@ export const routeNames = {
   reports: 'admin-reports',
   resetPassword: 'reset-password',
   settings: 'admin-settings',
+  timeEntries: 'admin-time-entries',
 } as const;

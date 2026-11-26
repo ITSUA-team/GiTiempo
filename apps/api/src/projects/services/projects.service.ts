@@ -471,6 +471,22 @@ export class ProjectsService {
         projectId,
         tx,
       );
+      let { defaultBillableForTasks } = project;
+      if (input.updateTasks === true && input.updateTimeEntries === true) {
+        // Serialize with managed edits before locking tasks and entries in reverse order.
+        const [locked] = await tx
+          .select({ defaultBillableForTasks: projects.defaultBillableForTasks })
+          .from(projects)
+          .where(
+            and(
+              eq(projects.id, project.id),
+              eq(projects.workspaceId, user.workspaceId),
+            ),
+          )
+          .for('no key update');
+        if (!locked) throw new NotFoundException('Project not found');
+        defaultBillableForTasks = locked.defaultBillableForTasks;
+      }
       const updatedAt = new Date();
       let tasksUpdated = 0;
       let timeEntriesUpdated = 0;
@@ -480,7 +496,7 @@ export class ProjectsService {
           tx,
           user.workspaceId,
           project.id,
-          project.defaultBillableForTasks,
+          defaultBillableForTasks,
           updatedAt,
         );
       }
@@ -490,7 +506,7 @@ export class ProjectsService {
           tx,
           user.workspaceId,
           project.id,
-          project.defaultBillableForTasks,
+          defaultBillableForTasks,
           updatedAt,
         );
       }

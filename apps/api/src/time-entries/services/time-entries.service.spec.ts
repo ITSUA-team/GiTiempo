@@ -95,7 +95,6 @@ function timerStartRows(
   options: {
     role?: string;
     visibility?: string;
-    githubLinked?: boolean;
     assigned?: boolean;
     taskActive?: boolean;
     taskStatus?: string;
@@ -116,15 +115,12 @@ function timerStartRows(
     defaultBillableForTimeEntries: false,
   };
   const needsAssignment =
-    (options.role ?? 'member') !== 'admin' &&
-    (project.visibility === 'private' ||
-      ((options.role ?? 'member') === 'member' && options.githubLinked));
+    (options.role ?? 'member') !== 'admin' && project.visibility === 'private';
 
   return [
     [{ role: options.role ?? 'member' }],
     [{ projectId: project.id }],
     [project],
-    options.githubLinked ? [{ id: 'github-issue-ref-1' }] : [],
     ...(needsAssignment
       ? [options.assigned === false ? [] : [{ id: 'assignment-1' }]]
       : []),
@@ -517,15 +513,7 @@ describe('TimeEntriesService', () => {
       source: 'web' as const,
       workspaceId: 'workspace-2',
     };
-    const db = {
-      select: vi.fn().mockReturnValue(
-        selectRows([
-          {
-            id: otherWorkspaceRunningEntry.id,
-          },
-        ]),
-      ),
-    };
+    const db = {};
     const service = new TimeEntriesService(
       db as never,
       {} as never,
@@ -535,28 +523,25 @@ describe('TimeEntriesService', () => {
       mockGithubTasks,
       mockGithub(),
     );
-    const requireEntryResponse = vi
+    const findEntryResponse = vi
       .fn()
       .mockResolvedValue(otherWorkspaceRunningEntry);
-    Object.defineProperty(service, 'requireEntryResponse', {
-      value: requireEntryResponse,
+    Object.defineProperty(service, 'findEntryResponse', {
+      value: findEntryResponse,
     });
 
     await expect(service.getCurrentTimer(user)).resolves.toEqual({
       timeEntry: otherWorkspaceRunningEntry,
     });
-    expect(requireEntryResponse).toHaveBeenCalledWith(
-      db,
-      otherWorkspaceRunningEntry.id,
-    );
+    expect(findEntryResponse).toHaveBeenCalledWith(db, [
+      expect.anything(),
+      expect.anything(),
+    ]);
   });
 
   it('returns an empty current timer response when no user timer is running', async () => {
-    const db = {
-      select: vi.fn().mockReturnValue(selectRows([])),
-    };
     const service = new TimeEntriesService(
-      db as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -564,6 +549,9 @@ describe('TimeEntriesService', () => {
       mockGithubTasks,
       mockGithub(),
     );
+    Object.defineProperty(service, 'findEntryResponse', {
+      value: vi.fn().mockResolvedValue(null),
+    });
 
     await expect(service.getCurrentTimer(user)).resolves.toEqual({
       timeEntry: null,
@@ -613,13 +601,13 @@ describe('TimeEntriesService', () => {
   });
 
   it.each(['member', 'admin'] as const)(
-    'denies an unassigned current member even with a %s token role',
+    'denies an unassigned current member in a private project even with a %s token role',
     async (tokenRole) => {
       const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
       const values = vi.fn().mockReturnValue({ returning });
       const tx = {
         select: selectRowsInOrder(
-          timerStartRows({ assigned: false, githubLinked: true }),
+          timerStartRows({ assigned: false, visibility: 'private' }),
         ),
         insert: vi.fn().mockReturnValue({ values }),
       };
@@ -639,53 +627,19 @@ describe('TimeEntriesService', () => {
 
       await expect(
         service.startTimer({ ...user, role: tokenRole }, { taskId: 'task-1' }),
-      ).rejects.toMatchObject({
-        response: expect.objectContaining({
-          code: 'project_assignment_required',
-        }),
-        message:
-          'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
-      });
+      ).rejects.toBeInstanceOf(NotFoundException);
       expect(tx.insert).not.toHaveBeenCalled();
     },
   );
 
-  it('does not disclose an unassigned private saved GitHub task', async () => {
-    const tx = {
-      select: selectRowsInOrder(
-        timerStartRows({
-          assigned: false,
-          githubLinked: true,
-          visibility: 'private',
-        }),
-      ),
-      insert: vi.fn(),
-    };
-    const db = { transaction: vi.fn((callback) => callback(tx)) };
-    const service = new TimeEntriesService(
-      db as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-      mockGithubTasks,
-      mockGithub(),
-    );
-
-    await expect(
-      service.startTimer(user, { taskId: 'task-1' }),
-    ).rejects.toBeInstanceOf(NotFoundException);
-    expect(tx.insert).not.toHaveBeenCalled();
-  });
-
   it.each([
-    ['member', 'public', true],
+    ['member', 'public', false],
     ['member', 'private', true],
     ['admin', 'private', false],
     ['pm', 'public', false],
     ['pm', 'private', true],
   ])(
-    'allows current %s access to saved GitHub tasks in %s projects with assignment=%s',
+    'allows current %s to start a saved task in a %s project with assignment=%s',
     async (role, visibility, assigned) => {
       const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
       const values = vi.fn().mockReturnValue({ returning });
@@ -693,7 +647,6 @@ describe('TimeEntriesService', () => {
         select: selectRowsInOrder(
           timerStartRows({
             assigned: Boolean(assigned),
-            githubLinked: true,
             role,
             visibility,
           }),
@@ -720,33 +673,6 @@ describe('TimeEntriesService', () => {
       expect(tx.insert).toHaveBeenCalledOnce();
     },
   );
-
-  it('keeps public manual tasks trackable when their project has GitHub mapping', async () => {
-    const returning = vi.fn().mockResolvedValue([{ id: completedEntry.id }]);
-    const values = vi.fn().mockReturnValue({ returning });
-    const tx = {
-      select: selectRowsInOrder(timerStartRows()),
-      insert: vi.fn().mockReturnValue({ values }),
-    };
-    const db = { transaction: vi.fn((callback) => callback(tx)) };
-    const service = new TimeEntriesService(
-      db as never,
-      {} as never,
-      {} as never,
-      {} as never,
-      mockUsersActivity as never,
-      mockGithubTasks,
-      mockGithub(),
-    );
-    Object.defineProperty(service, 'requireEntryResponse', {
-      value: vi.fn().mockResolvedValue(completedEntry),
-    });
-
-    await expect(
-      service.startTimer(user, { taskId: 'task-1' }),
-    ).resolves.toEqual(completedEntry);
-    expect(tx.insert).toHaveBeenCalledOnce();
-  });
 
   it('uses the current locked membership role and denies removed members', async () => {
     const tx = {
@@ -845,7 +771,7 @@ describe('TimeEntriesService', () => {
       }),
     );
     expect(requireEntryResponse).toHaveBeenCalledWith(
-      db,
+      tx,
       otherWorkspaceRunningEntry.id,
     );
   });
@@ -1092,8 +1018,7 @@ describe('TimeEntriesService installation authorization', () => {
     const rows = [
       [{ role: options.role ?? 'member' }],
       [project],
-      ...(options.role === 'admin' ||
-      (options.role === 'pm' && project.visibility === 'public')
+      ...(options.role === 'admin' || project.visibility === 'public'
         ? []
         : [options.assigned === false ? [] : [{ id: 'assignment-1' }]]),
       [task],
@@ -1204,28 +1129,26 @@ describe('TimeEntriesService installation authorization', () => {
       f.installations.assertCurrent.mock.invocationCallOrder[0]!,
     );
   });
-  it.each(['public', 'private'])(
-    'requires member assignment for %s projects before materializing',
-    async (visibility) => {
-      const f = fixture({ assigned: false, visibility });
-      await expect(
-        f.service.startTimerFromGitHub(user, input),
-      ).rejects.toMatchObject({
-        response: expect.objectContaining({
-          code: 'project_assignment_required',
-        }),
-        message:
-          'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
-      });
-      expect(f.githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
-      expect(f.tx.insert).not.toHaveBeenCalled();
-    },
-  );
+  it('requires member assignment for private projects before materializing', async () => {
+    const f = fixture({ assigned: false, visibility: 'private' });
+    await expect(
+      f.service.startTimerFromGitHub(user, input),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'project_assignment_required',
+      }),
+      message:
+        'You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time.',
+    });
+    expect(f.githubTasks.findOrCreateTaskForIssue).not.toHaveBeenCalled();
+    expect(f.tx.insert).not.toHaveBeenCalled();
+  });
   it.each([
     ['admin', 'private'],
     ['admin', 'public'],
     ['pm', 'public'],
-  ])('preserves %s access to %s projects', async (role, visibility) => {
+    ['member', 'public'],
+  ])('allows %s access to %s projects', async (role, visibility) => {
     const f = fixture({ role, visibility, assigned: false });
     await expect(f.service.startTimerFromGitHub(user, input)).resolves.toEqual(
       completedEntry,

@@ -1,7 +1,7 @@
 # time-tracking-api Specification
 
 ## Purpose
-TBD - created by archiving change add-time-entries-and-timers-api. Update Purpose after archive.
+The time tracking API lets authenticated workspace members record time manually, check, start and stop timers, and manage their own entries. It also supports authorized project time history and tracking time on GitHub issues.
 ## Requirements
 ### Requirement: Own Time Entries Can Be Listed And Filtered
 The backend MUST allow authenticated workspace members to list only their own time entries with shared pagination and time-entry filters, including task-title search.
@@ -83,7 +83,7 @@ The backend MUST allow authenticated workspace members to create completed manua
 - **THEN** the backend rejects the request with 422 Unprocessable Entity
 
 ### Requirement: Own Time Entries Can Be Read Updated And Deleted
-The backend MUST allow authenticated users to read, update, and delete their own completed time entries, including moving completed entries to another visible active open task, and MUST allow limited task and description updates to their own running time entry when target tasks remain visible, active, and open while preventing running-entry interval, billable, and delete mutations. This broadens the prior running task-only reassignment behavior by allowing `description` as the only additional running-entry update field.
+The backend MUST let authenticated users read, update and delete their own completed time entries, including moving them to a visible, active, open task. For their own running entry, it MUST allow only task and description updates, with reassignment limited to visible, active, open tasks. It MUST reject changes to a running entry's interval or billable state and reject deletion.
 
 #### Scenario: User reads own entry
 - **GIVEN** an authenticated user owns a time entry
@@ -235,8 +235,7 @@ The backend SHALL expose the authenticated user's single running timer regardles
 - **THEN** the backend does not return or stop the other user's timer
 
 ### Requirement: Timer Can Be Started Against Existing Task
-The backend MUST allow an authenticated workspace member to start one running timer against a visible active open task and optionally store a time-entry description on that running timer. For a saved GitHub-linked task, an ordinary member MUST additionally be explicitly assigned to the task's GiTiempo project, including when the project is public. This assignment requirement MUST apply independently of personal GitHub connection state and client entry point. Existing admin access and PM visibility-based access MUST remain unchanged. Tasks without a GitHub issue reference MUST retain the existing visibility-based start policy.
- For an external-reference task, current own-time or separate project authorization SHALL replace the ordinary GitHub assignment prerequisite. A saved identifier without authorized task visibility MUST NOT create participation; first participation uses reference start. All scopes MUST retain active/open and global-timer checks.
+The backend MUST allow an active workspace member to start one timer, with an optional description, on any active open task in an active public project regardless of project assignment or GitHub linkage. Private managed tasks require existing project access. Private external-reference tasks accept a separate project grant or current own-time access on the exact task. Every start MUST enforce the user-global running-timer limit.
 
 #### Scenario: User starts timer with no active timer
 - **GIVEN** the request uses a managed task under the existing start policy
@@ -262,7 +261,7 @@ The backend MUST allow an authenticated workspace member to start one running ti
 - **AND** an authenticated user has no running timer
 - **AND** the user is not assigned to a project
 - **AND** the project is public and active
-- **AND** the task is active and open and has no GitHub issue reference
+- **AND** the task is active and open, with or without a GitHub issue reference
 - **WHEN** the user starts a timer for that task
 - **THEN** the backend creates a running time entry owned by that user
 
@@ -300,17 +299,14 @@ The backend MUST allow an authenticated workspace member to start one running ti
 - **WHEN** they start its saved identifier with no running timer and no GitHub link
 - **THEN** a web-source timer is created without requiring project assignment
 
-### Requirement: Saved GitHub Task Starts Require Project Authorization Across Connection States
-The backend MUST identify saved GitHub-linked tasks through their persisted workspace-scoped GitHub issue references. For ordinary members targeting managed projects, starting those tasks MUST require current explicit assignment to the owning GiTiempo project. For managed targets, public project visibility, previous tracking history, and personal GitHub connection state MUST NOT grant that assignment. External-reference saved tasks SHALL instead accept current explicit project authorization or own-time access to that exact task, without assignment or personal GitHub linking; a guessed or stale hidden task ID MUST be denied. The backend MUST enforce the requirement before creating the running entry and MUST reject denied starts without creating tracking records or changing an existing timer. Assignment SHALL mean GiTiempo project membership, not GitHub issue assignee status. Personal disconnect MUST NOT delete existing tasks or history or prevent assigned members from starting otherwise eligible saved tasks.
+### Requirement: Saved GitHub Task Starts Follow Project Visibility Across Connection States
+The backend MUST authorize saved GitHub task starts from current workspace membership and project visibility independently of personal GitHub connection and issue assignee status. Public projects admit every active workspace member. Private managed projects require project access. A private external task also admits an exact-task own-time reader. Denied starts MUST preserve records and any running timer.
 
-#### Scenario: Disconnected member cannot start a saved GitHub task in an unassigned public project
-- **GIVEN** the saved task belongs to a managed project
-- **AND** an active ordinary member has disconnected their personal GitHub account
-- **AND** an active open GitHub-linked task remains saved in an active public project to which the member is not assigned
-- **WHEN** they start that task using its saved identifier
-- **THEN** the backend returns HTTP 403 with code `project_assignment_required`
-- **AND** the message is "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time."
-- **AND** no running entry is created and existing task, reference, and history records remain unchanged
+#### Scenario: Disconnected member starts an unassigned public task
+- **GIVEN** an active member without a running timer has disconnected GitHub and has no assignment to an active public project containing a saved active open GitHub issue
+- **WHEN** the member starts the saved task
+- **THEN** the backend returns a running web entry without requesting GitHub credentials or creating a project assignment
+- **AND** the saved task, reference and previous history survive disconnect
 
 #### Scenario: Disconnected assigned member can start a saved GitHub task
 - **GIVEN** the saved task belongs to a managed project
@@ -321,12 +317,10 @@ The backend MUST identify saved GitHub-linked tasks through their persisted work
 - **AND** the start does not request or refresh personal GitHub credentials
 - **AND** it preserves the task billing default, optional description, and source `web`
 
-#### Scenario: Personal connection state cannot bypass missing assignment
-- **GIVEN** the saved task belongs to a managed project
-- **AND** an ordinary member is not assigned to an active public project containing a saved GitHub-linked task
-- **AND** their personal GitHub connection is connected, absent, or expired
-- **WHEN** they start the saved task
-- **THEN** the backend returns HTTP 403 with code `project_assignment_required` and creates no time entry
+#### Scenario: Public tracking across personal GitHub connection states
+- **GIVEN** an active member with no project assignment or running timer targets a saved active open GitHub task in an active public project
+- **WHEN** they start it with a connected, absent or expired personal GitHub connection
+- **THEN** the backend creates their running timer in each case
 
 #### Scenario: Disconnected unassigned member cannot access a private task
 - **GIVEN** the saved task belongs to a managed project
@@ -335,16 +329,14 @@ The backend MUST identify saved GitHub-linked tasks through their persisted work
 - **THEN** the backend returns 404 Not Found without exposing protected task or project details
 - **AND** creates no time entry
 
-#### Scenario: Previous use and start surface cannot bypass assignment
-- **GIVEN** the saved task belongs to a managed project
-- **AND** an ordinary member previously tracked a saved GitHub task in a public project but is no longer assigned to that project
-- **WHEN** they start it from Projects, the existing-task timer picker, a prior time entry, or a direct API request
-- **THEN** the backend denies each start with `project_assignment_required`
-- **AND** no client reports a successful start or leaves a false running state
+#### Scenario: Public saved starts use the same rule on every surface
+- **GIVEN** an active member previously tracked an open active GitHub task and their assignment to its active public project was removed
+- **WHEN** they start it with no running timer from Projects, the existing-task picker, a previous time entry or the API
+- **THEN** each surface can start the timer and returns the new running entry
 
 #### Scenario: Assignment removal is observed at the write boundary
 - **GIVEN** the saved task belongs to a managed project
-- **AND** a member selected an eligible saved GitHub task while assigned
+- **AND** a member selected an eligible saved GitHub task in a private project while assigned
 - **AND** removal of their project assignment completes before the start's authorization and write boundary
 - **WHEN** the start request checks current authorization
 - **THEN** it is denied and creates no time entry
@@ -363,12 +355,10 @@ The backend MUST identify saved GitHub-linked tasks through their persisted work
 - **THEN** the start succeeds under the existing privileged-role rules
 - **AND** a PM without access to a private project remains denied
 
-#### Scenario: Task linkage controls the assignment exception
-- **GIVEN** the saved task belongs to a managed project
-- **AND** an ordinary member is not assigned to an active public project
-- **WHEN** they start a saved task linked to a GitHub issue in that project, including a board-backed project
-- **THEN** the start is denied even when the parent project has no GitHub repository reference
-- **AND** an otherwise eligible manual task without a GitHub issue reference retains visibility-based timer access even if its parent project has a GitHub reference
+#### Scenario: Public project grants access to both linked and manual tasks
+- **GIVEN** an active member without an assignment or a running timer targets an active open task in an active public project
+- **WHEN** they start a manual task or a task with a persisted GitHub issue reference
+- **THEN** each start succeeds, including in projects linked to a repository or a GitHub Projects board
 
 #### Scenario: GitHub issue assignee does not replace project assignment
 - **GIVEN** the saved task belongs to a managed project
@@ -391,7 +381,7 @@ The backend MUST identify saved GitHub-linked tasks through their persisted work
 - **THEN** a running web entry is created without assignment or GitHub credential checks
 
 #### Scenario: External history on a sibling cannot authorize a saved task
-- **GIVEN** the member has own time on one task but none on the requested external task and no separate project grant
+- **GIVEN** the member has own time on one task in a private external project but none on the requested task and no separate project grant
 - **WHEN** they submit the other task identifier
 - **THEN** the backend denies the start without disclosing the hidden task or creating an entry
 
@@ -435,8 +425,7 @@ The backend MUST preserve canonical GitHub provider mappings when starting timer
 - **AND** does not create duplicate GitHub provider references for the casing variant
 
 ### Requirement: Starting A Timer From A GitHub Issue Is Authorized Against The Repository
-This requirement SHALL govern installation-authorized starts and managed targets reached through reference routing. The backend MUST verify the submitted repository and issue through the current workspace's verified organization GitHub App installation and enforce the workspace organization policy. This policy SHALL apply to every caller of the GitHub start endpoint, including extension and user-web clients. Personal GitHub connection state MUST NOT be a prerequisite or a fallback. GitHub-reported canonical identities and metadata MUST be used; page-supplied display data MUST NOT substitute for provider verification. All required provider checks MUST succeed before tracking records are written.
- The external-reference path for new or stored external-reference targets SHALL instead follow the external-github-tracking capability and MUST NOT be used as fallback after failure of this requirement.
+Every installation-authorized or managed reference start MUST enforce workspace organization policy and verify the repository and issue via the current workspace's verified organization GitHub App installation before writing tracking records. Use canonical GitHub identities and metadata. Page data MUST NOT replace verification. Never require or fall back to personal GitHub connections. Route external-reference targets via `external-github-tracking`, with no fallback to that path.
 
 #### Scenario: Repository outside the workspace organization policy is refused
 - **GIVEN** the target uses managed installation-authorized tracking
@@ -565,8 +554,7 @@ The backend MUST initialize new time-entry billable state from the selected task
 - **AND** the created running time entry has `isBillable: false`
 
 ### Requirement: GitHub Starts Require An Existing Authorized Project
-This requirement SHALL govern installation-authorized starts and managed targets reached through reference routing. The backend MUST resolve the verified issue to an existing GiTiempo project in the current workspace before creating task or time records or returning protected metadata. An existing issue-task mapping SHALL retain its owning project; otherwise a repository mapping SHALL take precedence over a verified board mapping. A supplied GitHub Project identifier SHALL be treated as a hint whose organization, installation access, and relationship to the issue must be verified before it can influence resolution. Without a unique eligible mapping the start MUST fail. Timer starts MUST NOT create projects or project assignments.
- The external-reference path for new or stored external-reference targets SHALL instead follow the external-github-tracking capability and MUST NOT be used as fallback after failure of this requirement.
+Installation-authorized and managed reference starts MUST resolve the verified issue to a unique eligible existing workspace project before creating tasks or time entries or returning protected metadata. Use issue-task, repository and board mappings in that order. Verify board hints for organization, installation access and issue membership before use. Starts MUST NOT create projects or assignments. Route external-reference targets via `external-github-tracking`, with no fallback to that path.
 
 #### Scenario: Existing issue keeps its owning project across surfaces
 - **GIVEN** the target uses managed installation-authorized tracking
@@ -607,12 +595,11 @@ This requirement SHALL govern installation-authorized starts and managed targets
 - **AND** the request returns no protected project metadata
 
 ### Requirement: GitHub Tracking Authorization Precedes Materialization
-This requirement SHALL govern installation-authorized starts and managed targets reached through reference routing. GitHub starts MUST require active workspace membership, an active resolved project, and tracking authorization before materialization. Ordinary members MUST be explicitly assigned even when a project is public. Existing privileged-role rules SHALL remain: admins do not require assignments; PMs retain their current visibility-based project access. Provider installation access MUST NOT itself confer GiTiempo access. Authorization MUST be rechecked within the write boundary so concurrent membership, project, or assignment changes cannot cause unauthorized writes.
- The external-reference path for new or stored external-reference targets SHALL instead follow the external-github-tracking capability and MUST NOT be used as fallback after failure of this requirement.
+For managed GitHub starts and capability checks, the backend MUST authorize active workspace members for active public projects without assignment. Private projects require existing role or assignment access. Starts MUST verify the workspace installation and target, then recheck authorization at write time before materializing records. External-reference targets follow external-github-tracking. Managed denials MUST NOT fall back to external tracking.
 
 #### Scenario: Unassigned ordinary member is denied
 - **GIVEN** the target uses managed installation-authorized tracking
-- **AND** an active ordinary member is not assigned to the mapped project, whether public or private
+- **AND** an active ordinary member is not assigned to the mapped private project
 - **WHEN** they start a GitHub timer despite valid installation access
 - **THEN** the backend returns HTTP 403 with code `project_assignment_required`
 - **AND** the message is "You are not assigned to this project. Contact your workspace administrator or project manager to get access and start tracking time."
@@ -636,9 +623,21 @@ This requirement SHALL govern installation-authorized starts and managed targets
 
 #### Scenario: Access changes during verification
 - **GIVEN** the target uses managed installation-authorized tracking
-- **AND** a member was authorized before a provider lookup but their assignment is removed before task creation
+- **AND** a member was assigned to a private project before a provider lookup but their assignment is removed before task creation
 - **WHEN** the write transaction rechecks authorization
 - **THEN** the start fails without leaving task, reference, time-entry, or assignment writes
+
+#### Scenario: Public managed GitHub starts agree with capability
+- **GIVEN** an active member without a project assignment or running timer targets an eligible issue mapped to an active public project and workspace installation verification succeeds
+- **WHEN** the extension checks capability for the issue
+- **THEN** it receives `canStartTracking: true`, scope `project` and a null reason
+- **WHEN** the member starts through the managed GitHub endpoint or through reference routing to that managed project
+- **THEN** the backend creates the running entry, reusing the mapped task or materializing it in that project, without creating a project assignment
+
+#### Scenario: Public project becomes private between capability and start
+- **GIVEN** an unassigned member receives an allowed capability for a public managed project
+- **WHEN** the project becomes private before the start request's authorization and write boundary
+- **THEN** the start is denied and creates no task, reference, entry or assignment
 
 ### Requirement: Installation Starts Preserve Timer Invariants
 Authorized installation-based starts MUST preserve local active/open task checks, active project checks, task and project billing defaults, canonical deduplication, one-running-timer constraints, and `source: extension`. Stopping an owned running timer MUST depend only on the existing GiTiempo stop authorization and concurrency contract, without personal GitHub credentials or fresh GitHub API calls.
@@ -664,3 +663,107 @@ Authorized installation-based starts MUST preserve local active/open task checks
 - **WHEN** they stop that timer with valid GiTiempo authorization
 - **THEN** the existing stop operation succeeds without a GitHub API call
 - **AND** conditional-stop protection against stopping a replacement timer remains enforced
+
+### Requirement: Project time management scope
+The backend SHALL authorize every management request against current active workspace membership. An Admin can manage every project in that workspace. A PM can manage only explicitly assigned projects, regardless of visibility or invoice-view permission. These grants cover entries belonging to any owner in the authorized project.
+
+#### Scenario: Manager works across owners
+- **GIVEN** an Admin in the current workspace or a PM explicitly assigned to the selected project
+- **WHEN** they list entries, create a completed entry for an eligible colleague, or edit or delete that colleague's completed unlinked entry
+- **THEN** each operation succeeds within the selected project, including for a PM without invoice-view permission
+
+#### Scenario: Public visibility and former assignments confer no management grant
+- **GIVEN** a PM has no current assignment to a public project, including after removal of an earlier assignment
+- **WHEN** they open project selection or directly request entries, create-form choices or a mutation for that project
+- **THEN** selection omits it and targeted requests return 404 without revealing entries, choices or lock reasons
+
+#### Scenario: Direct requests cannot cross workspace or project boundaries
+- **GIVEN** a manager can access project A
+- **WHEN** they request a project from another workspace, address a project B entry under A, or supply a task outside the declared destination project
+- **THEN** the request returns 404 and neither project's records change
+- **WHEN** they request create-member choices in A with a task filter from B
+- **THEN** the lookup returns an empty page
+
+#### Scenario: A project move requires management access at both ends
+- **GIVEN** a PM is assigned to the source and destination projects in the current workspace
+- **WHEN** they move a completed entry with no invoice link to an eligible member and task in the destination
+- **THEN** the move succeeds
+- **WHEN** the PM lacks an assignment to either project at save time, or the destination is outside the current workspace
+- **THEN** the request returns 404 and the entry stays in its original project
+
+#### Scenario: Ordinary member cannot manage entries
+- **GIVEN** an authenticated workspace member with no Admin or PM role
+- **WHEN** they call any management operation, including for a project where they track time
+- **THEN** the backend returns 403
+
+### Requirement: Project time management list
+The backend SHALL return individual entries, including running and invoiced entries, for one manageable project. Search, member and started-at date filters SHALL compose before pagination, and the returned total SHALL count only matching entries.
+
+#### Scenario: Combined filters exclude another project
+- **GIVEN** two manageable projects contain matching task titles and time from the same member
+- **WHEN** a manager requests one project's entries with a literal, case-insensitive partial task-title search, owner and date range
+- **THEN** only matching entries in that project contribute to the page and total
+
+#### Scenario: Historical filter choices and current creation choices
+- **GIVEN** a manageable project has a former member with recorded time and a current member eligible for an active open task
+- **WHEN** a manager opens the member filter, then requests creation choices
+- **THEN** the filter includes the historical owner, while creation offers only current members and tasks that form at least one eligible pair
+
+#### Scenario: Project assignment grants access to all trackable project tasks
+- **GIVEN** a current workspace member is explicitly assigned to an active private project with several active, non-closed tasks, including one they have never tracked and one assigned to someone else
+- **WHEN** an authorized manager lists task options for that member or creates a valid completed entry for them on any of those tasks
+- **THEN** every such task is selectable and creation succeeds irrespective of task assignee or tracking history
+- **AND** closed and inactive tasks remain unavailable for creation
+
+### Requirement: Administrative creation and historical correction
+The backend SHALL create completed manual entries for the selected owner using that person's current tracking access to the destination task. A change to project, member or task SHALL verify the resulting combination against current tracking rules and update the existing entry atomically. Changes to the interval SHALL preserve a positive duration calculated from the resulting endpoints.
+
+#### Scenario: Eligible owner differs from the acting manager
+- **GIVEN** an active workspace member can track an open active task in an active public project without assignment
+- **WHEN** an authorized manager creates an entry for that member on that task
+- **THEN** the completed entry belongs to the selected member and its interval determines its duration
+
+#### Scenario: Ineligible owner or work is rejected
+- **GIVEN** the owner lacks current membership or access, or the selected destination task is closed or inactive or its project archived
+- **WHEN** a manager creates an entry or changes an entry's project, owner or task to that combination
+- **THEN** the backend rejects the ineligible combination with 422 without recording or moving time
+
+#### Scenario: Reassign a completed entry without recreating it
+- **GIVEN** a completed entry with no invoice link and a valid destination within scope
+- **WHEN** a manager saves a different project or member, optionally with a different task
+- **THEN** the original entry keeps its ID and source and reflects the resulting project, member and task
+- **AND** its start, end, description and billable flag keep their stored values unless the patch changes them
+- **AND** the source and destination lists and reports account for the entry once under its resulting project and member
+
+#### Scenario: External own-time access applies to the exact task
+- **GIVEN** an active owner only has own-time access to one active open task in a private external project
+- **WHEN** an authorized manager creates time for that owner
+- **THEN** creation is permitted for that exact task and denied for a sibling task the owner cannot track
+
+#### Scenario: In-place corrections survive changes in tracking eligibility
+- **GIVEN** a manager retains scope and a completed unlinked entry's project was archived, its task closed, or its owner lost access
+- **WHEN** the manager corrects the interval, description or billable flag while keeping the original project, member and task, or deletes it
+- **THEN** the operation succeeds without requiring renewed tracking access
+
+### Requirement: Administrative write protection for running and invoiced entries
+Management edits and deletions SHALL check record state at the time of mutation. A running or invoice-linked entry SHALL remain visible, and a rejected request SHALL leave its fields and links intact. These rules apply to the management operations.
+
+#### Scenario: Timer must be stopped before any management change
+- **GIVEN** an entry is running
+- **WHEN** a manager attempts any edit, including description alone, or deletes it
+- **THEN** the backend returns 409 with code `time_entry_running` and an instruction to stop its timer first
+
+#### Scenario: Invoice linkage protects every status
+- **GIVEN** an entry is linked to a draft, sent or paid invoice
+- **WHEN** a manager attempts to edit or delete it
+- **THEN** the backend returns 409 with code `time_entry_invoiced` and explains that the entry is included in an invoice
+
+#### Scenario: Invoice attachment wins a race with an administrative mutation
+- **GIVEN** a manager viewed an editable entry and another request links it to an invoice before the manager's mutation takes effect
+- **WHEN** the manager submits an edit or deletion using that earlier view
+- **THEN** the backend returns the invoice conflict and preserves the linked entry and invoice
+
+#### Scenario: Personal access remains independent
+- **GIVEN** a caller has an active personal timer and can read a colleague's time through the project team list
+- **WHEN** the caller uses the personal update endpoint
+- **THEN** the caller can update their running timer's description under the personal rules and cannot update the colleague's entry through that endpoint
