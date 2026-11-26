@@ -124,6 +124,19 @@ describe('Time Entries', () => {
     wrapper.unmount();
   });
 
+  it.each([false, true])('shows the date and time of both endpoints when an entry crosses midnight (mobile: %s)', async viewport => {
+    mobile.value = viewport;
+    const startedAt = new Date(2026, 10, 2, 23, 24).toISOString();
+    const endedAt = new Date(2026, 10, 3, 1, 24).toISOString();
+    mocks.list.mockResolvedValue(response([{ ...editable, startedAt, endedAt }]));
+    const { wrapper } = render();
+    await flushPromises();
+
+    const dateRange = wrapper.get(viewport ? 'dd:nth-of-type(2)' : 'td:nth-child(3)');
+    expect(dateRange.text()).toBe('2 Nov 2026, 23:24 – 3 Nov 2026, 01:24');
+    wrapper.unmount();
+  });
+
   it.each([false, true])('updates one entry in place after saving (mobile: %s)', async viewport => {
     mobile.value = viewport;
     mocks.list.mockResolvedValue(response([editable, otherEditable]));
@@ -662,7 +675,8 @@ describe('Time Entries', () => {
     expect(mocks.tasks).toHaveBeenCalledWith(alpha.id, active.id, expect.any(Function));
     await taskField!.get('button.p-autocomplete-dropdown').trigger('click');
     await vi.waitFor(() => expect(taskField!.get('[role="option"]').text()).toBe(task.title));
-    expect(taskField!.get('.p-autocomplete-overlay').classes()).toContain('max-w-[calc(100vw-2rem)]');
+    expect(taskField!.get('.p-autocomplete-overlay').classes()).toContain('max-w-0');
+    expect(taskField!.get('[role="option"] span').attributes('title')).toBe(task.title);
     await taskField!.get('[role="option"]').trigger('click');
     const [start, end] = dialog.findAllComponents(DatePicker);
     start?.vm.$emit('update:modelValue', new Date(startedAt));

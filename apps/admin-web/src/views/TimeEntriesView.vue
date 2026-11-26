@@ -109,11 +109,16 @@ const columnPt = {
 };
 const endAlignedColumnPt = { ...columnPt, columnHeaderContent: 'justify-end' };
 
+function spansMultipleDays(entry: TimeEntryResponse): entry is TimeEntryResponse & { endedAt: string } {
+  return entry.endedAt !== null && getLocalDateKey(entry.startedAt) !== getLocalDateKey(entry.endedAt);
+}
+
+function dateAndTime(value: string) {
+  return `${shortDate.format(new Date(value))}, ${formatLocalTime(value)}`;
+}
+
 function timeInterval(entry: TimeEntryResponse) {
-  if (!entry.endedAt) return `${formatLocalTime(entry.startedAt)} – ongoing`;
-  const end = getLocalDateKey(entry.startedAt) === getLocalDateKey(entry.endedAt)
-    ? formatLocalTime(entry.endedAt)
-    : `${shortDate.format(new Date(entry.endedAt))} ${formatLocalTime(entry.endedAt)}`;
+  const end = entry.endedAt ? formatLocalTime(entry.endedAt) : 'ongoing';
   return `${formatLocalTime(entry.startedAt)} – ${end}`;
 }
 
@@ -273,7 +278,7 @@ function confirmDelete(entry: TimeEntryResponse) {
 </script>
 
 <template>
-  <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[312px_minmax(0,1fr)] sm:gap-5">
+  <div class="grid min-w-0 grid-cols-1 items-start gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(20rem,2fr)] sm:gap-5 md:grid-cols-[312px_minmax(0,1fr)]">
     <SurfaceCard
       body-class="flex flex-col gap-2"
       padding-class="p-0 sm:p-3"
@@ -381,7 +386,7 @@ function confirmDelete(entry: TimeEntryResponse) {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 items-center gap-2 sm:flex sm:flex-wrap">
+        <div class="grid items-center gap-2 sm:flex sm:flex-wrap">
           <FilterAutoComplete
             :model-value="selectedMember"
             aria-label="Filter by member"
@@ -407,7 +412,7 @@ function confirmDelete(entry: TimeEntryResponse) {
             show-icon
             icon-display="input"
             size="small"
-            class="min-h-[38px] w-full min-w-0 sm:w-64"
+            class="min-h-[38px] w-full min-w-0 sm:w-72"
             @show="datePicker.handleShow"
             @hide="dateDraft = dates"
             @update:model-value="updateDateDraft"
@@ -522,7 +527,12 @@ function confirmDelete(entry: TimeEntryResponse) {
               <dt class="sr-only">
                 Date &amp; time
               </dt>
-              <dd>{{ shortDate.format(new Date(entry.startedAt)) }} · {{ timeInterval(entry) }}</dd>
+              <dd v-if="spansMultipleDays(entry)">
+                <span class="inline-block">{{ dateAndTime(entry.startedAt) }}</span> <span class="inline-block">– {{ dateAndTime(entry.endedAt) }}</span>
+              </dd>
+              <dd v-else>
+                {{ shortDate.format(new Date(entry.startedAt)) }} · {{ timeInterval(entry) }}
+              </dd>
               <dt class="sr-only">
                 Duration
               </dt>
@@ -552,7 +562,7 @@ function confirmDelete(entry: TimeEntryResponse) {
           class="border-divider overflow-hidden rounded-sm border"
           :pt="{
             tableContainer: 'overflow-x-auto',
-            table: { class: 'w-full min-w-[42rem] table-fixed border-collapse', 'aria-label': 'Project time entries' },
+            table: { class: 'w-full min-w-[43rem] table-fixed border-collapse', 'aria-label': 'Project time entries' },
           }"
         >
           <Column
@@ -580,11 +590,20 @@ function confirmDelete(entry: TimeEntryResponse) {
           </Column>
           <Column
             header="Date and time"
-            style="width: 148px"
+            style="width: 160px"
             :pt="columnPt"
           >
             <template #body="{ data: entry }">
-              <div class="flex min-w-24 flex-col gap-1">
+              <div
+                v-if="spansMultipleDays(entry)"
+                class="text-[13px] leading-5 [&>span]:whitespace-nowrap"
+              >
+                <span class="inline-block">{{ dateAndTime(entry.startedAt) }}</span> <span class="inline-block">– {{ dateAndTime(entry.endedAt) }}</span>
+              </div>
+              <div
+                v-else
+                class="flex min-w-24 flex-col gap-1"
+              >
                 <span>{{ shortDate.format(new Date(entry.startedAt)) }}</span>
                 <span class="text-text-muted text-xs">{{ timeInterval(entry) }}</span>
               </div>
@@ -639,7 +658,7 @@ function confirmDelete(entry: TimeEntryResponse) {
             ? 'PrevPageLink PageLinks NextPageLink'
             : 'CurrentPageReport PrevPageLink PageLinks NextPageLink'"
           current-page-report-template="Showing {first}–{last} of {totalRecords}"
-          :pt="{ root: 'justify-end gap-1 p-0', current: 'mr-auto px-0' }"
+          :pt="{ root: 'justify-center gap-1 p-0 sm:justify-end', current: 'mr-auto px-0' }"
           @page="page = $event.page + 1"
         />
       </template>
