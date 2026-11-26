@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, shallowRef, watch, onBeforeUnmount } from 'vue';
 import { type TimeEntryResponse } from '@gitiempo/shared';
-import { giTiempoAutoCompleteDropdownPt, giTiempoDatePickerPt, giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
+import { giTiempoAnchorWidthOverlayClass, giTiempoAutoCompleteDropdownPt, giTiempoDatePickerPt, giTiempoFieldWidthSelectPt } from '@gitiempo/web-config/theme';
 import { AppDialog, DatePickerButtonBar, filterAutocompleteOptions, getErrorMessage, useDatePickerConfirmCancel } from '@gitiempo/web-shared';
 import { isApiErrorStatus } from '@gitiempo/web-shared/http';
 import AutoComplete from 'primevue/autocomplete';
@@ -80,6 +80,13 @@ const dialogAutoCompletePt = {
       class: [giTiempoAutoCompleteDropdownPt.pcInputText?.root?.class, '[.p-autocomplete-clearable_&]:pr-7'].join(' '),
     },
   },
+};
+const taskAutoCompletePt = {
+  ...dialogAutoCompletePt,
+  // PrimeVue anchors to the input. Include the trigger width and keep long labels inside the panel.
+  overlay: { class: `${giTiempoAnchorWidthOverlayClass} box-content pr-9` },
+  listContainer: { class: '-mr-9 overflow-x-hidden' },
+  list: { class: 'px-0' },
 };
 const description = ref(entry?.description ?? '');
 const isBillable = ref(entry?.isBillable ?? false);
@@ -373,7 +380,7 @@ async function submit(event: SubmitEvent) {
         </label>
         <AutoComplete
           input-id="managed-entry-task"
-          :pt="requiredFieldPt(dialogAutoCompletePt, taskError ? 'managed-entry-task-error' : undefined)"
+          :pt="requiredFieldPt(taskAutoCompletePt, taskError ? 'managed-entry-task-error' : undefined)"
           :model-value="displayedTask"
           :suggestions="taskSuggestions"
           complete-on-focus
@@ -392,7 +399,14 @@ async function submit(event: SubmitEvent) {
           fluid
           @complete="taskSearch = $event"
           @update:model-value="selectTask"
-        />
+        >
+          <template #option="{ option }">
+            <span
+              class="min-w-0 truncate"
+              :title="option.label"
+            >{{ option.label }}</span>
+          </template>
+        </AutoComplete>
         <small
           v-if="taskError"
           id="managed-entry-task-error"
