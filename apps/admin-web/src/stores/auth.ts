@@ -6,6 +6,7 @@ import {
   createAuthProfilePresentation,
   createAuthSessionCore,
   createWorkspaceMembershipSession,
+  SessionContextChangedError,
 } from "@gitiempo/web-shared/auth";
 import { isApiErrorStatus } from "@gitiempo/web-shared/http";
 
@@ -71,7 +72,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function reconcileOwnRoleChange(
     expected: { userId: string; workspaceId: string },
-    expectedRole?: WorkspaceRole,
+    expectedRole: WorkspaceRole,
   ): Promise<"admin" | "restricted" | "unavailable" | "superseded"> {
     const scope = readAccessTokenServerStateScope(session.accessToken.value);
     if (
@@ -91,15 +92,18 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       // A rotation already in flight when the mutation committed can still carry the old role.
       for (let attempt = 0; attempt < 2; attempt += 1) {
+        if (session.storedSessionChanged()) throw new SessionContextChangedError();
         const token = await session.refreshAccessToken();
         if (roleRenewal !== renewal) return "superseded";
         const renewed = readAccessTokenServerStateScope(token);
         if (renewed.userId !== expected.userId || renewed.workspaceId !== expected.workspaceId) {
-          break;
+          throw new SessionContextChangedError();
         }
 
         const context = await loadAuthorizationContext(token);
         if (roleRenewal !== renewal) return "superseded";
+        if (session.storedSessionChanged()) throw new SessionContextChangedError();
+        if (session.accessToken.value !== token) continue;
         const [profile, memberships] = context;
         const membership = memberships.items.find((item) => item.isCurrent);
         if (profile.id !== expected.userId || membership?.workspaceId !== expected.workspaceId) {
@@ -109,7 +113,7 @@ export const useAuthStore = defineStore("auth", () => {
         if (
           profile.role === renewed.role &&
           membership.role === renewed.role &&
-          (expectedRole === undefined || renewed.role === expectedRole)
+          renewed.role === expectedRole
         ) {
           setAuthorizationContext(context);
           return profile.role === "admin" ? "admin" : "restricted";
@@ -117,9 +121,13 @@ export const useAuthStore = defineStore("auth", () => {
       }
       session.clearSession();
       return "unavailable";
-    } catch {
-      if (roleRenewal !== renewal && session.accessToken.value) return "superseded";
-      session.clearSession();
+    } catch (error) {
+      if (roleRenewal !== renewal) return session.accessToken.value ? "superseded" : "unavailable";
+      if (error instanceof SessionContextChangedError || session.storedSessionChanged()) {
+        session.invalidateLocalSession();
+      } else {
+        session.clearSession();
+      }
       return "unavailable";
     } finally {
       if (roleRenewal === renewal) roleRenewal = null;

@@ -51,7 +51,7 @@ export function useMemberRoleActions({ getVisit, onError }: Options) {
       }
       if (!sameSession) return;
       if (self) {
-        const outcome = await auth.reconcileOwnRoleChange({ userId, workspaceId }, updated?.role);
+        const outcome = await auth.reconcileOwnRoleChange({ userId, workspaceId }, role);
         if (outcome === 'restricted' && sameSession) {
           await router.replace({ name: routeNames.forbidden });
         } else if (outcome === 'unavailable' && (!auth.isAuthenticated || sameSession)) {

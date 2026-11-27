@@ -279,6 +279,26 @@ describe('useMembersTableState', () => {
     expect(state.expandedRows.value).toEqual({});
   });
 
+  it('clears a retained assignment edit when the editor changes or filters are reapplied', async () => {
+    const { members, state } = createState();
+    const [first, second] = members.value;
+    state.toggleExpansion(first!);
+    state.retainAssignmentEdit(first!, ['project-1']);
+    state.toggleExpansion(second!);
+    expect(state.pendingAssignmentEdit.value).toBeNull();
+
+    state.updateFilters({ role: 'pm' });
+    state.toggleExpansion(first!);
+    state.retainAssignmentEdit(first!, []);
+    members.value = members.value.map((member) => member.id === first!.id ? { ...member, role: 'member' } : member);
+    expect(rowNames(state)).toEqual(['Pat PM']);
+    state.updateFilters({ role: 'pm' });
+    await nextTick();
+    expect(state.pendingAssignmentEdit.value).toBeNull();
+    expect(rowNames(state)).toEqual([]);
+    expect(state.expandedRows.value).toEqual({});
+  });
+
   it('collapses rows after parent expanded-row updates', () => {
     const { state } = createState();
     const member = state.rows.value[0]!.member;

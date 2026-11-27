@@ -95,6 +95,8 @@ const {
   expandedRows: memberTableExpandedRows,
   filters: memberTableFilters,
   lastActiveFilterOptions,
+  pendingAssignmentEdit,
+  retainAssignmentEdit,
   projectFilterOptions,
   roleFilterOptions,
   rows: memberTableRows,
@@ -149,6 +151,9 @@ async function saveMemberSettings(row: MembersTableRow, input: MemberSettingsInp
     }
 
     if (input.projectIds && row.canAssignPm && member.role !== 'admin') {
+      if (input.role || pendingAssignmentEdit.value?.memberId === member.id) {
+        retainAssignmentEdit(member, input.projectIds);
+      }
       await handleAssignmentsSubmitted({ ...row, member }, { projectIds: input.projectIds });
     } else {
       collapseMemberRow(member);
@@ -300,6 +305,7 @@ watch(
                 :can-assign-pm="row.canAssignPm"
                 :can-remove="row.canManage"
                 :member="row.member"
+                :initial-project-ids="pendingAssignmentEdit && pendingAssignmentEdit.memberId === row.id ? pendingAssignmentEdit.projectIds : undefined"
                 :projects="projects"
                 :saving="savingMemberSettings || updatingPermissionMemberId !== null"
                 @remove="row.canManage && handleRemoveMember(row.member)"

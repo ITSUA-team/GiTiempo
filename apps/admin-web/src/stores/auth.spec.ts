@@ -240,19 +240,62 @@ describe("useAuthStore", () => {
       expect(store.accessToken).toBe(token("member"));
     });
 
-    it("restores confirmed admin access after an uncertain write", async () => {
-      const store = await arrange("admin");
-      expect(await store.reconcileOwnRoleChange(expected)).toBe("admin");
-      expect(store.profile?.role).toBe("admin");
-    });
-
-    it("clears a renewed session that disagrees with a confirmed demotion", async () => {
+    it("requires explicit recovery when the requested demotion is still unconfirmed", async () => {
       const store = await arrange("admin");
       expect(await store.reconcileOwnRoleChange(expected, "pm")).toBe("unavailable");
+      expect(await store.refreshAuthorizationContext()).toBe(false);
+      expect(store.profile).toBeNull();
       expect(store.isAuthenticated).toBe(false);
+      expect(getRefreshToken()).toBeNull();
       expect(store.workspaceMemberships).toEqual([]);
       expectAuthenticatedQueryCacheCleared();
     });
+
+    it("keeps a credential that another tab replaced before reconciliation", async () => {
+      const store = await arrange("admin");
+      await store.establishSessionFromTokenPair({
+        accessToken: token("admin"), refreshToken: "original", accessTokenExpiresIn: 900,
+      });
+      setRefreshToken("other-tab");
+      const refreshSession = vi.fn<AuthRuntime["refreshSession"]>();
+      setAuthRuntimeForTesting(createRuntimeMock({ refreshSession }));
+
+      expect(await store.reconcileOwnRoleChange(expected, "member")).toBe("unavailable");
+      await expect(store.refreshAccessToken()).rejects.toThrow("Your session changed");
+      expect(refreshSession).not.toHaveBeenCalled();
+      expect(getRefreshToken()).toBe("other-tab");
+      expect(store.isAuthenticated).toBe(false);
+      expect(store.profile).toBeNull();
+    });
+
+    it.each(["rotation", "authorization context"] as const)(
+      "preserves another tab's credential during %s and clears local access",
+      async (phase) => {
+        const store = await arrange("member");
+        const runtime = createRuntimeMock();
+        const profile = await runtime.getCurrentUser("unused");
+        setAuthRuntimeForTesting(createRuntimeMock({
+          refreshSession: async () => {
+            if (phase === "rotation") setRefreshToken("other-tab");
+            return { accessToken: token("member"), refreshToken: "local", accessTokenExpiresIn: 900 };
+          },
+          getCurrentUser: async () => {
+            if (phase === "authorization context") setRefreshToken("other-tab");
+            return { ...profile, id: expected.userId, role: "member" };
+          },
+          listCurrentUserWorkspaces: async () => ({
+            items: [{ isCurrent: true, role: "member", workspaceId: expected.workspaceId, workspaceName: "First" }],
+          }),
+        }));
+
+        expect(await store.reconcileOwnRoleChange(expected, "member")).toBe("unavailable");
+        expect(getRefreshToken()).toBe("other-tab");
+        expect(store.isAuthenticated).toBe(false);
+        expect(store.profile).toBeNull();
+        expect(store.workspaceMemberships).toEqual([]);
+        expect(await store.refreshAuthorizationContext()).toBe(false);
+      },
+    );
 
     it("denies access when renewal fails", async () => {
       const store = await arrange("pm");

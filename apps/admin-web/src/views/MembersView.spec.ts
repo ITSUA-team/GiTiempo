@@ -314,30 +314,56 @@ describe('MembersView', () => {
     wrapper.unmount();
   });
 
-  it('retries failed project assignments without resending an already saved role', async () => {
-    const member = { ...createMember(), workspaceId: 'A' };
+  it('keeps a filtered editor and its assignment draft until a partial save succeeds on retry', async () => {
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: false, media, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }));
+    const member = { ...createMember(), workspaceId: 'A', projectsAssignedCount: 2 };
     const updated = { ...member, role: 'member' };
-    testMocks.listMembers.mockResolvedValueOnce([member]).mockResolvedValue([updated]);
-    testMocks.listProjects.mockResolvedValue([]);
+    const projects = ['Orion', 'Vega'].map((name) => ({
+      id: name, name, isActive: true, members: [member],
+    }));
+    testMocks.listMembers.mockResolvedValueOnce([member]).mockResolvedValue([{ ...updated, projectsAssignedCount: 1 }]);
+    testMocks.listProjects.mockResolvedValueOnce(projects).mockResolvedValue([
+      { ...projects[0], members: [] }, projects[1],
+    ]);
     testMocks.listInvites.mockResolvedValue([]);
     testMocks.updateMemberRole.mockResolvedValue(updated);
-    testMocks.assignMember.mockRejectedValueOnce(new Error('Project unavailable'));
-    const wrapper = mountMembersView();
-    await flushPromises();
-    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
-    const editor = () => wrapper.getComponent({ name: 'MemberEditForm' });
-    editor().vm.$emit('save', { role: 'member', projectIds: ['project-1'] });
-    await flushPromises();
-    expect(testMocks.updateMemberRole).toHaveBeenCalledBefore(testMocks.assignMember);
-    expect(testMocks.errorToast).toHaveBeenCalledWith('Project unavailable', expect.anything());
-    expect(editor().props('member').role).toBe('member');
+    testMocks.removeAssignment.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Project unavailable'));
+    const wrapper = mountMembersView(workspaceToken('A'), true);
+    try {
+      await flushPromises();
+      const roleFilter = wrapper.getComponent({ name: 'MembersTable' }).findAllComponents({ name: 'Select' })
+        .find((select) => select.props('ariaLabel') === 'Filter members by role')!;
+      roleFilter.vm.$emit('update:modelValue', 'pm');
+      await flushPromises();
+      await wrapper.get(`[data-testid="member-name-${member.id}"]`).trigger('click');
+      const editor = () => wrapper.getComponent({ name: 'MemberEditForm' });
+      editor().getComponent({ name: 'Select' }).vm.$emit('update:modelValue', 'member');
+      for (const project of projects) {
+        await editor().get(`[data-pc-section="chipitem"][aria-label="${project.name}"] [data-pc-section="removeicon"]`).trigger('click');
+      }
+      await editor().get('form').trigger('submit');
+      await flushPromises();
+      expect(testMocks.updateMemberRole).toHaveBeenCalledBefore(testMocks.removeAssignment);
+      expect(testMocks.errorToast).toHaveBeenCalledWith('Project unavailable', expect.anything());
+      expect(editor().getComponent({ name: 'Select' }).props('modelValue')).toBe('member');
+      expect(editor().findAll('[data-pc-section="chipitem"]').map(chip => chip.text())).toEqual([]);
+      expect(roleFilter.props('modelValue')).toBe('pm');
 
-    editor().vm.$emit('save', { projectIds: ['project-1'] });
-    await flushPromises();
-    expect(testMocks.updateMemberRole).toHaveBeenCalledOnce();
-    expect(testMocks.assignMember).toHaveBeenCalledTimes(2);
-    expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
-    wrapper.unmount();
+      await editor().get('form').trigger('submit');
+      await flushPromises();
+      expect(testMocks.updateMemberRole).toHaveBeenCalledOnce();
+      expect(testMocks.removeAssignment.mock.calls).toEqual([
+        ['Orion', member.userId], ['Vega', member.userId], ['Vega', member.userId],
+      ]);
+      expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
+      expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
+      expect(wrapper.find(`[data-testid="member-name-${member.id}"]`).exists()).toBe(false);
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('reconciles an uncertain self-update before retrying and routes to recovery if renewal failed', async () => {
@@ -357,7 +383,7 @@ describe('MembersView', () => {
     await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
     wrapper.getComponent({ name: 'MemberEditForm' }).vm.$emit('save', { role: 'pm' });
     await flushPromises();
-    expect(sync).toHaveBeenCalledWith({ userId: 'user-1', workspaceId: 'A' }, undefined);
+    expect(sync).toHaveBeenCalledWith({ userId: 'user-1', workspaceId: 'A' }, 'pm');
     expect(testMocks.replaceRoute).toHaveBeenCalledWith({ name: 'admin-login' });
     expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(false);
     expect(testMocks.updateMemberRole).toHaveBeenCalledOnce();

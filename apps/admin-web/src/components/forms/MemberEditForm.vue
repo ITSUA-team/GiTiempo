@@ -24,6 +24,7 @@ import type { MemberSettingsInput } from '@/lib/member-management';
 const props = defineProps<{
   canAssignPm?: boolean;
   canRemove?: boolean;
+  initialProjectIds?: string[] | undefined;
   member: WorkspaceMemberResponse;
   projects: ProjectListResponse;
   saving?: boolean;
@@ -70,12 +71,15 @@ const activeProjectOptions = computed(() =>
   activeProjects.value.map((project) => ({ label: project.name, value: project.id })),
 );
 const projectSuggestions = ref<string[]>([]);
-const initialValues = computed<MemberAssignFormInput>(() => ({
-  projectIds: activeProjects.value
+const assignedProjectIds = computed(() =>
+  activeProjects.value
     .filter((project) =>
       project.members.some((projectMember) => projectMember.userId === props.member.userId),
     )
     .map((project) => project.id),
+);
+const initialValues = computed<MemberAssignFormInput>(() => ({
+  projectIds: props.initialProjectIds ?? assignedProjectIds.value,
 }));
 
 interface AutoCompleteCompleteEvent {
@@ -121,7 +125,7 @@ function handleSave({
   if (roleChanged.value) input.role = roleDraft.value;
   if (canEditProjects.value) {
     const { projectIds } = values as MemberAssignFormInput;
-    const original = initialValues.value.projectIds;
+    const original = assignedProjectIds.value;
     if (!roleChanged.value || projectIds.length !== original.length ||
       projectIds.some((id) => !original.includes(id))) {
       input.projectIds = projectIds;
