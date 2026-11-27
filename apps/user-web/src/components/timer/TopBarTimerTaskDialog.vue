@@ -6,8 +6,8 @@ import Textarea from "primevue/textarea";
 import type { ProjectResponse, TaskResponse } from "@gitiempo/shared";
 import {
   composeGiTiempoAutoCompletePt,
+  composeGiTiempoSelfAppendedAutoCompleteDropdownPt,
   giTiempoDropdownAutoCompletePt,
-  giTiempoSelfAppendedAutoCompleteDropdownPt,
 } from "@gitiempo/web-config/theme";
 import {
   AppDialog,
@@ -156,6 +156,12 @@ const isGitHubProjectSelected = computed(
 const taskSuggestions = shallowRef<TaskPickerOption[]>([]);
 const taskField = useTemplateRef<HTMLDivElement>("taskField");
 const taskOverlayStyle = shallowRef<{ width: string }>();
+const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
+  option: {
+    // Keep force selection from clearing the query before the option click.
+    onMousedown: (event: MouseEvent) => event.preventDefault(),
+  },
+});
 const taskAutoCompletePt = composeGiTiempoAutoCompletePt({
   ...giTiempoDropdownAutoCompletePt,
   listContainer: { class: "overscroll-y-contain" },
@@ -504,7 +510,7 @@ watch(
               :loading="props.isLoadingProjects || props.isLoadingGitHubProjects"
               :model-value="mobileProjectModel"
               placeholder="Search projects"
-              :pt="giTiempoSelfAppendedAutoCompleteDropdownPt"
+              :pt="projectAutoCompletePt"
               :suggestions="projectSuggestions"
               @complete="handleProjectComplete"
               @update:model-value="handleMobileProjectUpdate"
