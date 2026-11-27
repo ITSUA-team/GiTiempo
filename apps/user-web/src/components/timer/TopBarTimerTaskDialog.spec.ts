@@ -334,6 +334,15 @@ describe("TopBarTimerTaskDialog", () => {
       await input.trigger("input");
       await vi.runOnlyPendingTimersAsync();
       expect(optionLabels()).toEqual(["Internal Ops", "Ops roadmap"]);
+
+      const board = wrapper.get('[role="option"][aria-label="Ops roadmap"]');
+      const mouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+      board.element.dispatchEvent(mouseDown);
+      expect(mouseDown.defaultPrevented).toBe(true);
+      await board.trigger("click");
+
+      expect(wrapper.emitted("update:selectedGitHubProjectId")).toEqual([["PVT_board"]]);
+      expect(input.element.value).toBe("Ops roadmap");
     } finally {
       wrapper.unmount();
       vi.useRealTimers();
