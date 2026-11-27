@@ -5,7 +5,7 @@ import type {
 } from '@gitiempo/shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import PrimeVue from 'primevue/config';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MemberEditForm from './MemberEditForm.vue';
 
 const member: WorkspaceMemberResponse = {
@@ -65,7 +65,16 @@ function renderForm(saving = false) {
   });
 }
 
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   document.body.innerHTML = '';
   vi.useRealTimers();
 });
@@ -96,7 +105,7 @@ describe('MemberEditForm with real PrimeVue Form and AutoComplete', () => {
     'preserves native dropdown button %s activation',
     async (code) => {
       const wrapper = renderForm();
-      const dropdown = wrapper.get('[data-pc-section="dropdown"]');
+      const dropdown = wrapper.get('[data-testid="member-edit-project-select"] [data-pc-section="dropdown"]');
       const keydown = new KeyboardEvent('keydown', {
         key: code === 'Space' ? ' ' : code,
         code,

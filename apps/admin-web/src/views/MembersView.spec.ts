@@ -1,12 +1,15 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import { routerKey } from 'vue-router';
+import { ApiError } from '@gitiempo/web-shared/http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 
 import { useAuthStore } from '@/stores/auth';
 
 const testMocks = vi.hoisted(() => ({
+  replaceRoute: vi.fn(),
   assignMember: vi.fn(),
   cancelInvite: vi.fn(),
   errorToast: vi.fn(),
@@ -15,6 +18,7 @@ const testMocks = vi.hoisted(() => ({
   removeAssignment: vi.fn(),
   resendInvite: vi.fn(),
   successToast: vi.fn(),
+  updateMemberRole: vi.fn(),
   updateMemberPermissions: vi.fn(),
   listInvites: vi.fn(),
   listMembers: vi.fn(),
@@ -28,6 +32,7 @@ vi.mock('@/services/admin-members-client', () => ({
     listMembers: testMocks.listMembers,
     removeMember: testMocks.removeMember,
     resendInvite: testMocks.resendInvite,
+    updateMemberRole: testMocks.updateMemberRole,
     updateMemberPermissions: testMocks.updateMemberPermissions,
   },
 }));
@@ -195,37 +200,41 @@ const membersViewStubs = {
   Skeleton: SkeletonStub,
 };
 
-function workspaceToken(workspaceId: string, expires = 1): string {
-  return `header.${btoa(JSON.stringify({ sub: 'user-1', role: 'admin', workspaceId, exp: expires }))}.signature`;
+function workspaceToken(workspaceId: string, expires = 1, userId = 'user-1'): string {
+  return `header.${btoa(JSON.stringify({ sub: userId, role: 'admin', workspaceId, exp: expires }))}.signature`;
 }
 
-function mountMembersView(token = workspaceToken('A')) {
+const adminProfile = {
+  avatarUrl: null,
+  canViewInvoices: true,
+  createdAt: '2026-05-01T10:00:00.000Z',
+  displayName: 'Alex Admin',
+  email: 'alex@example.com',
+  id: 'user-1',
+  role: 'admin' as const,
+  updatedAt: '2026-05-01T10:00:00.000Z',
+};
+
+function mountMembersView(token = workspaceToken('A'), realEditor = false) {
   const pinia = createPinia();
   setActivePinia(pinia);
 
   const authStore = useAuthStore(pinia);
   authStore.accessToken = token;
-  authStore.profile = {
-    avatarUrl: null,
-    canViewInvoices: true,
-    createdAt: '2026-05-01T10:00:00.000Z',
-    displayName: 'Alex Admin',
-    email: 'alex@example.com',
-    id: 'user-1',
-    role: 'admin',
-    updatedAt: '2026-05-01T10:00:00.000Z',
-  };
+  authStore.profile = { ...adminProfile };
 
   return mount(MembersView, {
     global: {
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
-      stubs: membersViewStubs,
+      provide: { [routerKey as symbol]: { replace: testMocks.replaceRoute } },
+      stubs: realEditor ? { ...membersViewStubs, MembersTable: false, MemberEditForm: false } : membersViewStubs,
     },
   });
 }
 
 describe('MembersView', () => {
   beforeEach(() => {
+    testMocks.replaceRoute.mockReset();
     testMocks.assignMember.mockReset();
     testMocks.cancelInvite.mockReset();
     testMocks.listMembers.mockReset();
@@ -238,9 +247,178 @@ describe('MembersView', () => {
     testMocks.resendInvite.mockReset();
     testMocks.successToast.mockReset();
     testMocks.updateMemberPermissions.mockReset();
+    testMocks.updateMemberRole.mockReset();
 
     testMocks.assignMember.mockResolvedValue(undefined);
     testMocks.removeAssignment.mockResolvedValue(undefined);
+  });
+
+  it.each([false, true])('saves roles and shows last-admin errors through the editor (mobile=%s)', async (mobile) => {
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: mobile && query === '(max-width: 639px)', media: query,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(),
+    }));
+    const member = { ...createMember(), workspaceId: 'A' };
+    const updated = { ...member, role: 'admin' };
+    testMocks.listMembers.mockResolvedValue([member]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockResolvedValueOnce(updated).mockRejectedValueOnce(
+      new ApiError('Workspace must have at least one admin', { status: 409 }),
+    );
+    const wrapper = mountMembersView(workspaceToken('A'), true);
+    try {
+      await flushPromises();
+      const name = `[data-testid="member-${mobile ? 'mobile-' : ''}name-${member.id}"]`;
+      async function editRole(role: string) {
+        await wrapper.get(name).trigger('click');
+        const form = wrapper.getComponent({ name: 'MemberEditForm' });
+        form.getComponent({ name: 'Select' }).vm.$emit('update:modelValue', role);
+        await flushPromises();
+        expect(form.get('button[type="submit"]').text()).toBe('Save changes');
+        await form.get('form').trigger('submit');
+        await flushPromises();
+      }
+      await editRole('admin');
+      expect(testMocks.updateMemberRole).toHaveBeenNthCalledWith(1, member.id, { role: 'admin' });
+      expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
+      expect(testMocks.listMembers).toHaveBeenCalledOnce();
+      expect(testMocks.listProjects).toHaveBeenCalledOnce();
+      expect(wrapper.text()).toMatch(/PMs Assigned\s*0/);
+      await editRole('member');
+      expect(wrapper.getComponent({ name: 'MemberEditForm' }).text()).toContain('Has access to all projects');
+      expect(testMocks.errorToast).toHaveBeenCalledWith('Workspace must have at least one admin', expect.anything());
+      expect(testMocks.listMembers).toHaveBeenCalledOnce();
+      expect(testMocks.listProjects).toHaveBeenCalledOnce();
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each(['member', 'pm'])('reconciles a self-demotion to %s before any member list reload', async (role) => {
+    const self = { ...createMember(), userId: 'user-1', workspaceId: 'A', role: 'admin' };
+    testMocks.listMembers.mockResolvedValue([self]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockResolvedValue({ ...self, role });
+    const wrapper = mountMembersView();
+    const sync = vi.spyOn(useAuthStore(), 'reconcileOwnRoleChange').mockResolvedValue('restricted');
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    wrapper.getComponent({ name: 'MemberEditForm' }).vm.$emit('save', { role });
+    await flushPromises();
+    expect(sync).toHaveBeenCalledWith({ userId: 'user-1', workspaceId: 'A' }, role);
+    expect(testMocks.replaceRoute).toHaveBeenCalledWith({ name: 'admin-forbidden' });
+    expect(testMocks.listMembers).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('retries failed project assignments without resending an already saved role', async () => {
+    const member = { ...createMember(), workspaceId: 'A' };
+    const updated = { ...member, role: 'member' };
+    testMocks.listMembers.mockResolvedValueOnce([member]).mockResolvedValue([updated]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockResolvedValue(updated);
+    testMocks.assignMember.mockRejectedValueOnce(new Error('Project unavailable'));
+    const wrapper = mountMembersView();
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    const editor = () => wrapper.getComponent({ name: 'MemberEditForm' });
+    editor().vm.$emit('save', { role: 'member', projectIds: ['project-1'] });
+    await flushPromises();
+    expect(testMocks.updateMemberRole).toHaveBeenCalledBefore(testMocks.assignMember);
+    expect(testMocks.errorToast).toHaveBeenCalledWith('Project unavailable', expect.anything());
+    expect(editor().props('member').role).toBe('member');
+
+    editor().vm.$emit('save', { projectIds: ['project-1'] });
+    await flushPromises();
+    expect(testMocks.updateMemberRole).toHaveBeenCalledOnce();
+    expect(testMocks.assignMember).toHaveBeenCalledTimes(2);
+    expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it('reconciles an uncertain self-update before retrying and routes to recovery if renewal failed', async () => {
+    const self = { ...createMember(), userId: 'user-1', workspaceId: 'A', role: 'admin' };
+    testMocks.listMembers.mockResolvedValue([self]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockRejectedValue(new Error('Connection interrupted'));
+    const wrapper = mountMembersView();
+    const store = useAuthStore();
+    const sync = vi.spyOn(store, 'reconcileOwnRoleChange').mockImplementation(async () => {
+      store.accessToken = null;
+      store.profile = null;
+      return 'unavailable';
+    });
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    wrapper.getComponent({ name: 'MemberEditForm' }).vm.$emit('save', { role: 'pm' });
+    await flushPromises();
+    expect(sync).toHaveBeenCalledWith({ userId: 'user-1', workspaceId: 'A' }, undefined);
+    expect(testMocks.replaceRoute).toHaveBeenCalledWith({ name: 'admin-login' });
+    expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(false);
+    expect(testMocks.updateMemberRole).toHaveBeenCalledOnce();
+    wrapper.unmount();
+  });
+
+  it('clears permission saving on a workspace switch and isolates the next save', async () => {
+    const member = { ...createMember(), workspaceId: 'A' };
+    const oldSave = createDeferred<typeof member>();
+    const newSave = createDeferred<typeof member>();
+    testMocks.listMembers.mockResolvedValue([member]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.updateMemberPermissions.mockReturnValueOnce(oldSave.promise).mockReturnValueOnce(newSave.promise);
+    const wrapper = mountMembersView();
+    const openEditor = () => wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    const toggle = () => wrapper.get('[data-testid="member-edit-invoice-permission-toggle"]').trigger('click');
+    const saving = () => wrapper.getComponent({ name: 'MemberEditForm' }).props('saving');
+    await flushPromises();
+    await openEditor();
+    await toggle();
+    expect(saving()).toBe(true);
+    useAuthStore().accessToken = workspaceToken('B');
+    useAuthStore().accessToken = workspaceToken('A');
+    await flushPromises();
+    await openEditor();
+    expect(saving()).toBe(false);
+    await toggle();
+    const reads = testMocks.listMembers.mock.calls.length;
+    oldSave.resolve(member);
+    await flushPromises();
+    expect(saving()).toBe(true);
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(reads);
+    newSave.resolve(member);
+    await flushPromises();
+    expect(saving()).toBe(false);
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(reads);
+    wrapper.unmount();
+  });
+
+  it.each(['workspace', 'account'])('discards an update after switching %s away and back', async (change) => {
+    const member = { ...createMember(), workspaceId: 'A' };
+    const saved = createDeferred<typeof member>();
+    testMocks.listMembers.mockResolvedValue([member]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockReturnValue(saved.promise);
+    const wrapper = mountMembersView();
+    await flushPromises();
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    wrapper.getComponent({ name: 'MemberEditForm' }).vm.$emit('save', { role: 'admin' });
+    await flushPromises();
+    useAuthStore().accessToken = change === 'workspace' ? workspaceToken('B') : workspaceToken('A', 1, 'user-2');
+    useAuthStore().accessToken = workspaceToken('A');
+    await flushPromises();
+    const reads = testMocks.listMembers.mock.calls.length;
+    saved.resolve({ ...member, role: 'admin' });
+    await flushPromises();
+    expect(wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0].member.role).toBe('pm');
+    expect(testMocks.listMembers).toHaveBeenCalledTimes(reads);
+    wrapper.unmount();
   });
 
   it('keeps self removal unavailable while the destination profile is pending', async () => {
@@ -252,11 +430,7 @@ describe('MembersView', () => {
     useAuthStore().accessToken = workspaceToken('B');
     useAuthStore().profile = null;
     await flushPromises();
-    const row = wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0];
-    expect(row.canManage).toBe(false);
-    expect(row.canAssignPm).toBe(false);
-    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
-    expect(wrapper.find('[data-testid="member-edit-remove"]').exists()).toBe(false);
+    expect(wrapper.find('[data-testid="members-table"]').exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -549,6 +723,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -591,6 +766,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -694,7 +870,7 @@ describe('MembersView', () => {
     expect(testMocks.successToast).not.toHaveBeenCalled();
   });
 
-  it('opens member settings from the table edit intent, saves assignments, refreshes, and collapses', async () => {
+  it('updates project counts and filters after saving assignments without a reload', async () => {
     const member = createMember();
     const project = {
       color: null,
@@ -719,9 +895,7 @@ describe('MembersView', () => {
       workspaceId: member.workspaceId,
     };
 
-    testMocks.listMembers
-      .mockResolvedValueOnce([member])
-      .mockResolvedValueOnce([member]);
+    testMocks.listMembers.mockResolvedValue([member]);
     testMocks.listProjects.mockResolvedValue([project]);
     testMocks.listInvites.mockResolvedValue([]);
 
@@ -739,12 +913,35 @@ describe('MembersView', () => {
     await flushPromises();
 
     expect(testMocks.removeAssignment).toHaveBeenCalledWith('project-1', 'user-2');
-    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    const table = wrapper.getComponent({ name: 'MembersTable' });
+    expect(table.props('rows')[0]).toMatchObject({
+      projectsAssignedLabel: '0 projects',
+      member: { projectsAssignedCount: 0 },
+    });
+    table.vm.$emit('update:filters', { projectIds: ['project-1'] });
+    await wrapper.vm.$nextTick();
+    expect(table.props('rows')).toHaveLength(0);
+    table.vm.$emit('update:filters', { projectIds: [] });
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
+    await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+    wrapper.getComponent({ name: 'MemberEditForm' }).vm.$emit('save', { projectIds: ['project-1'] });
+    await flushPromises();
+
+    expect(testMocks.assignMember).toHaveBeenCalledWith('project-1', 'user-2');
+    table.vm.$emit('update:filters', { projectIds: ['project-1'] });
+    await wrapper.vm.$nextTick();
+    expect(table.props('rows')).toEqual([expect.objectContaining({
+      projectsAssignedLabel: '1 project',
+      member: expect.objectContaining({ projectsAssignedCount: 1 }),
+    })]);
+    expect(testMocks.listMembers).toHaveBeenCalledOnce();
+    expect(testMocks.listProjects).toHaveBeenCalledOnce();
     expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
   });
 
-  it('updates the invoice view permission from the member settings toggle, refreshes, and toasts success', async () => {
+  it('updates the invoice view permission from the member settings toggle without a reload', async () => {
     const member = createMember();
 
     testMocks.listMembers.mockResolvedValue([member]);
@@ -771,7 +968,9 @@ describe('MembersView', () => {
       { canViewInvoices: true },
     );
     expect(testMocks.successToast).not.toHaveBeenCalled();
-    expect(testMocks.listMembers).toHaveBeenCalledTimes(2);
+    expect(testMocks.listMembers).toHaveBeenCalledOnce();
+    expect(testMocks.listProjects).toHaveBeenCalledOnce();
+    expect(wrapper.getComponent({ name: 'MemberEditForm' }).props('member').canViewInvoices).toBe(true);
     expect(testMocks.errorToast).not.toHaveBeenCalled();
   });
 
@@ -884,6 +1083,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -953,6 +1153,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -996,6 +1197,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -1044,6 +1246,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {
@@ -1099,6 +1302,7 @@ describe('MembersView', () => {
 
     const authStore = useAuthStore(pinia);
     authStore.accessToken = workspaceToken('A');
+    authStore.profile = { ...adminProfile };
 
     const wrapper = mount(MembersView, {
       global: {

@@ -17,13 +17,15 @@ import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMemberAssignmentActions } from '@/composables/members/useMemberAssignmentActions';
 import { useMemberPermissionActions } from '@/composables/members/useMemberPermissionActions';
+import { useMemberRoleActions } from '@/composables/members/useMemberRoleActions';
 import { useMemberRemovalAction } from '@/composables/members/useMemberRemovalAction';
 import { usePendingInviteActions } from '@/composables/members/usePendingInviteActions';
 import { usePendingInvitesData } from '@/composables/members/usePendingInvitesData';
 import { useWorkspaceMembersData } from '@/composables/members/useWorkspaceMembersData';
 import { useMembersTableState } from '@/composables/useMembersTableState';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
-import { deriveMemberManagementStats } from '@/lib/member-management';
+import { deriveMemberManagementStats, type MemberSettingsInput } from '@/lib/member-management';
+import type { MembersTableRow } from '@/lib/members-table';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -36,7 +38,8 @@ const inviteDialogVisible = ref(false);
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
 const canManageMembers = computed(() => Boolean(
-  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin' &&
+  authStore.profile?.role === 'admin' && authStore.profile.id === scope.value.userId,
 ));
 const visit = ref(0);
 const getVisit = () => visit.value;
@@ -59,6 +62,7 @@ function notifyMembersError(
 }
 
 const {
+  applyAssignmentChanges,
   resetMembersData,
   initialLoaded,
   loadError,
@@ -67,6 +71,7 @@ const {
   members,
   projects,
   refreshMembers,
+  updateMember,
 } = useWorkspaceMembersData({
   accessToken,
   onError: notifyMembersError,
@@ -110,20 +115,54 @@ const memberStats = computed(() =>
   }),
 );
 
-const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
+const { handleAssignmentsSubmitted } =
   useMemberAssignmentActions({
     accessToken,
     getVisit,
-    collapseMemberRow,
+    onSaved(member, changes) {
+      applyAssignmentChanges(member, changes);
+      collapseMemberRow(member);
+    },
     onError: notifyMembersError,
     projects,
     refreshMembers,
   });
 
-const { handleUpdateInvoicePermission } = useMemberPermissionActions({
+const { saveRole } = useMemberRoleActions({
+  getVisit,
+  onError: notifyMembersError,
+});
+const savingMemberSettings = ref(false);
+
+async function saveMemberSettings(row: MembersTableRow, input: MemberSettingsInput): Promise<void> {
+  if (!canManageMembers.value || savingMemberSettings.value || updatingPermissionMemberId.value) return;
+
+  const visitAtSubmit = getVisit();
+  savingMemberSettings.value = true;
+  try {
+    let member = row.member;
+    if (input.role && input.role !== member.role) {
+      const updated = await saveRole(member, input.role);
+      if (!updated || visitAtSubmit !== getVisit()) return;
+      member = updated;
+      updateMember(updated);
+    }
+
+    if (input.projectIds && row.canAssignPm && member.role !== 'admin') {
+      await handleAssignmentsSubmitted({ ...row, member }, { projectIds: input.projectIds });
+    } else {
+      collapseMemberRow(member);
+    }
+  } finally {
+    if (visitAtSubmit === getVisit()) savingMemberSettings.value = false;
+  }
+}
+
+const { handleUpdateInvoicePermission, updatingPermissionMemberId } = useMemberPermissionActions({
   accessToken,
   getVisit,
   onError: notifyMembersError,
+  onSaved: updateMember,
   refreshMembers,
 });
 
@@ -173,7 +212,7 @@ watch(
     () => scope.value.workspaceId,
     () => scope.value.userId,
     () => scope.value.role,
-    () => Boolean(accessToken.value),
+    canManageMembers,
   ],
   () => {
     visit.value += 1;
@@ -188,7 +227,8 @@ watch(
       role: null,
       lastActive: 'any',
     });
-    savingMemberAssignmentId.value = null;
+    updatingPermissionMemberId.value = null;
+    savingMemberSettings.value = false;
     cancelingInviteId.value = null;
     resendingInviteId.value = null;
     dismissConfirmation?.();
@@ -201,7 +241,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div
+    v-if="canManageMembers"
+    class="flex flex-col gap-6"
+  >
     <template v-if="loading && !initialLoaded">
       <ManagementPageSkeleton variant="members" />
     </template>
@@ -231,7 +274,6 @@ watch(
       </div>
 
       <SurfaceCard
-        v-if="canManageMembers"
         padding-class="p-6"
       >
         <MembersTable
@@ -259,9 +301,9 @@ watch(
                 :can-remove="row.canManage"
                 :member="row.member"
                 :projects="projects"
-                :saving="savingMemberAssignmentId === row.id"
-                @remove="handleRemoveMember(row.member)"
-                @save="handleAssignmentsSubmitted(row, $event)"
+                :saving="savingMemberSettings || updatingPermissionMemberId !== null"
+                @remove="row.canManage && handleRemoveMember(row.member)"
+                @save="saveMemberSettings(row, $event)"
                 @update:can-view-invoices="handleUpdateInvoicePermission(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
@@ -283,7 +325,6 @@ watch(
     </template>
 
     <MemberInviteDialog
-      v-if="canManageMembers"
       :key="visit"
       v-model:visible="inviteDialogVisible"
       @created="handleInviteCreated"

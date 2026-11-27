@@ -168,7 +168,7 @@ describe('useMembersTableState', () => {
   it('disables management when the current identity is unknown', () => {
     const { state, currentUserId } = createState();
     currentUserId.value = null;
-    expect(state.rows.value.every((row) => !row.canManage && !row.canAssignPm)).toBe(true);
+    expect(state.rows.value.every((row) => !row.canOpenSettings && !row.canManage && !row.canAssignPm)).toBe(true);
   });
 
   it('derives member table rows, action flags, filter options, and empty copy', () => {
@@ -178,6 +178,7 @@ describe('useMembersTableState', () => {
     expect(state.rows.value[0]).toMatchObject({
       avatarLabel: 'PP',
       canAssignPm: true,
+      canOpenSettings: true,
       canManage: true,
       lastActiveLabel: expect.any(String),
       projectsAssignedLabel: '1 project',
@@ -186,6 +187,7 @@ describe('useMembersTableState', () => {
     });
     expect(state.rows.value[1]).toMatchObject({
       canAssignPm: false,
+      canOpenSettings: true,
       canManage: false,
       roleLabel: 'Admin',
     });

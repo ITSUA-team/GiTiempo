@@ -57,7 +57,7 @@ export class MembersController {
     @Param('id') id: string,
     @Body() body: UpdateWorkspaceMemberRoleDto,
   ): Promise<WorkspaceMemberResponseDto> {
-    return this.members.updateMemberRole(user.workspaceId, id, body);
+    return this.members.updateMemberRole(user.workspaceId, user.sub, id, body);
   }
 
   @Patch(':id/permissions')
@@ -83,6 +83,6 @@ export class MembersController {
     @CurrentUser() user: AuthUser,
     @Param('id') id: string,
   ): Promise<void> {
-    return this.members.removeMember(user.workspaceId, id);
+    return this.members.removeMember(user.workspaceId, user.sub, id);
   }
 }

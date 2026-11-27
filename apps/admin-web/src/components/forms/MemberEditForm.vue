@@ -5,10 +5,11 @@ import {
   type ProjectListResponse,
   type WorkspaceMemberResponse,
 } from '@gitiempo/shared';
-import { giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
+import { giTiempoSelectPt, giTiempoSelfAppendedMultiAutoCompleteDropdownPt } from '@gitiempo/web-config/theme';
 import {
   DialogFooterActionGroups,
   EditFormPanel,
+  WORKSPACE_ROLE_OPTIONS,
   memberAssignFormSchema,
 } from '@gitiempo/web-shared';
 import type { MemberAssignFormInput } from '@gitiempo/web-shared';
@@ -17,6 +18,8 @@ import { zodResolver } from '@primevue/forms/resolvers/zod';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import Checkbox from 'primevue/checkbox';
+import Select from 'primevue/select';
+import type { MemberSettingsInput } from '@/lib/member-management';
 
 const props = defineProps<{
   canAssignPm?: boolean;
@@ -29,11 +32,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   cancelled: [];
   remove: [];
-  save: [input: MemberAssignFormInput];
+  save: [input: MemberSettingsInput];
   'update:canViewInvoices': [value: boolean];
 }>();
 
 const resolver = zodResolver(memberAssignFormSchema);
+
+const roleDraft = ref(props.member.role);
+const roleChanged = computed(() => roleDraft.value !== props.member.role);
+const canEditProjects = computed(() => props.canAssignPm && roleDraft.value !== WorkspaceRoles.Admin);
+watch([() => props.member.id, () => props.member.role], () => {
+  roleDraft.value = props.member.role;
+});
 
 const isPmMember = computed(() => props.member.role === WorkspaceRoles.PM);
 const canViewInvoicesChecked = ref(props.member.canViewInvoices);
@@ -105,11 +115,20 @@ function handleSave({
   valid: boolean;
   values: Record<string, unknown>;
 }): void {
-  if (!valid || props.saving || !props.canAssignPm) {
-    return;
+  if (props.saving || (canEditProjects.value && !valid)) return;
+
+  const input: MemberSettingsInput = {};
+  if (roleChanged.value) input.role = roleDraft.value;
+  if (canEditProjects.value) {
+    const { projectIds } = values as MemberAssignFormInput;
+    const original = initialValues.value.projectIds;
+    if (!roleChanged.value || projectIds.length !== original.length ||
+      projectIds.some((id) => !original.includes(id))) {
+      input.projectIds = projectIds;
+    }
   }
 
-  emit('save', values as MemberAssignFormInput);
+  if (input.role || input.projectIds) emit('save', input);
 }
 </script>
 
@@ -125,8 +144,43 @@ function handleSave({
         data-testid="member-edit-form-layout"
         class="flex flex-col gap-3"
       >
+        <dl class="grid gap-3 sm:grid-cols-2">
+          <div>
+            <dt class="text-text-dark text-xs font-medium">
+              Name
+            </dt>
+            <dd>{{ member.displayName || '—' }}</dd>
+          </div>
+          <div>
+            <dt class="text-text-dark text-xs font-medium">
+              Email
+            </dt>
+            <dd class="break-all">
+              {{ member.email }}
+            </dd>
+          </div>
+        </dl>
+        <div class="flex flex-col gap-1.5">
+          <label
+            :id="`member-role-label-${member.id}`"
+            :for="`member-role-${member.id}`"
+            class="text-text-dark text-xs font-medium"
+          >Role</label>
+          <Select
+            v-model="roleDraft"
+            :input-id="`member-role-${member.id}`"
+            :aria-labelledby="`member-role-label-${member.id}`"
+            :options="WORKSPACE_ROLE_OPTIONS"
+            option-label="label"
+            option-value="value"
+            :pt="giTiempoSelectPt"
+            :disabled="saving"
+            class="w-full sm:w-48"
+          />
+        </div>
         <div
           v-if="props.canAssignPm"
+          v-show="canEditProjects"
           data-testid="member-edit-project-select"
           class="flex flex-col gap-1.5"
           @keydown.enter="preventProjectSearchSubmit"
@@ -149,7 +203,7 @@ function handleSave({
             :min-length="0"
             placeholder="Search projects..."
             :invalid="$form.projectIds?.invalid"
-            :disabled="saving"
+            :disabled="saving || !canEditProjects"
             :pt="giTiempoSelfAppendedMultiAutoCompleteDropdownPt"
             fluid
             @complete="handleProjectComplete"
@@ -166,18 +220,18 @@ function handleSave({
         </div>
 
         <div
-          v-if="props.canAssignPm && activeProjects.length === 0"
+          v-if="canEditProjects && activeProjects.length === 0"
           class="text-text-muted text-[13px]"
         >
           No active projects available.
         </div>
 
         <div
-          v-if="!props.canAssignPm"
+          v-if="member.role === WorkspaceRoles.Admin || roleDraft === WorkspaceRoles.Admin"
           data-testid="member-edit-assignment-unavailable"
           class="text-text-muted text-[13px]"
         >
-          Project assignments are available only for other non-admin members.
+          Has access to all projects
         </div>
 
         <div
@@ -189,6 +243,7 @@ function handleSave({
             <Checkbox
               :input-id="`member-settings-${member.id}-can-view-invoices`"
               :model-value="canViewInvoicesChecked"
+              :disabled="saving || roleChanged"
               binary
               @update:model-value="handleCanViewInvoicesChange"
             />
@@ -224,14 +279,14 @@ function handleSave({
             severity="secondary"
             variant="outlined"
             class="w-full sm:w-auto"
+            :disabled="saving"
             @click="emit('cancelled')"
           />
           <Button
-            v-if="props.canAssignPm"
             type="submit"
             label="Save changes"
             class="w-full sm:w-auto"
-            :disabled="saving"
+            :disabled="saving || (!roleChanged && !canEditProjects)"
             :loading="saving"
           />
         </DialogFooterActionGroups>

@@ -297,7 +297,7 @@ function getRoleClass(role: WorkspaceRole): string {
         data-testid="member-mobile-card"
       >
         <Button
-          v-if="row.canManage"
+          v-if="row.canOpenSettings"
           type="button"
           unstyled
           :aria-expanded="Boolean(expandedRows[row.id])"
@@ -482,7 +482,7 @@ function getRoleClass(role: WorkspaceRole): string {
     <Column :pt="adminTableColumnPt">
       <template #body="{ data }">
         <Button
-          v-if="data.canManage"
+          v-if="data.canOpenSettings"
           type="button"
           unstyled
           :aria-expanded="Boolean(expandedRows[data.id])"

@@ -1,4 +1,4 @@
-import { effectScope, ref, watch, type ComputedRef, type Ref } from 'vue';
+import { effectScope, watch, type ComputedRef, type Ref } from 'vue';
 import type {
   ProjectListResponse,
   WorkspaceMemberResponse,
@@ -10,14 +10,14 @@ import {
   type AdminProjectsClient,
 } from '@/services/admin-projects-client';
 import type { MembersTableRow } from '@/lib/members-table';
-import { diffMemberProjectAssignments } from '@/lib/member-management';
+import { diffMemberProjectAssignments, type MemberProjectAssignmentDiff } from '@/lib/member-management';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
 
 interface UseMemberAssignmentActionsOptions {
   getVisit?: () => number;
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminProjectsClient, 'assignMember' | 'removeAssignment'>;
-  collapseMemberRow: (member: WorkspaceMemberResponse) => void;
+  onSaved: (member: WorkspaceMemberResponse, changes: MemberProjectAssignmentDiff) => void;
   onError: (message: string, error: unknown, action: string) => void;
   projects: Ref<ProjectListResponse>;
   refreshMembers: () => Promise<void>;
@@ -31,13 +31,11 @@ export function useMemberAssignmentActions({
   accessToken,
   getVisit = () => 0,
   client = adminProjectsClient,
-  collapseMemberRow,
+  onSaved,
   onError,
   projects,
   refreshMembers,
 }: UseMemberAssignmentActionsOptions) {
-  const savingMemberAssignmentId = ref<string | null>(null);
-
   async function handleAssignmentsSubmitted(
     row: MembersTableRow,
     input: MemberAssignFormInput,
@@ -48,7 +46,7 @@ export function useMemberAssignmentActions({
     }
 
     const { member } = row;
-    const { projectIdsToAdd, projectIdsToRemove } = diffMemberProjectAssignments({
+    const changes = diffMemberProjectAssignments({
       member,
       nextProjectIds: input.projectIds,
       projects: projects.value,
@@ -67,33 +65,28 @@ export function useMemberAssignmentActions({
       { flush: 'sync' },
     ));
     const visit = getVisit();
-    savingMemberAssignmentId.value = member.id;
-
     try {
-      for (const projectId of projectIdsToAdd) {
+      for (const projectId of changes.projectIdsToAdd) {
         await client.assignMember(projectId, member.userId);
         if (!mutationEligible) return;
       }
-      for (const projectId of projectIdsToRemove) {
+      for (const projectId of changes.projectIdsToRemove) {
         await client.removeAssignment(projectId, member.userId);
         if (!mutationEligible) return;
       }
 
       if (!mutationEligible || visit !== getVisit()) return;
-      collapseMemberRow(member);
-      await refreshMembers();
-      if (!mutationEligible || visit !== getVisit()) return;
+      onSaved(member, changes);
     } catch (error) {
       if (!mutationEligible || visit !== getVisit()) return;
       onError(getErrorMessage(error), error, 'save-project-assignments');
+      await refreshMembers();
     } finally {
       mutationScope.stop();
-      if (mutationEligible && visit === getVisit()) savingMemberAssignmentId.value = null;
     }
   }
 
   return {
     handleAssignmentsSubmitted,
-    savingMemberAssignmentId,
   };
 }

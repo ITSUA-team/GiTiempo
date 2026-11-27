@@ -2,8 +2,10 @@ import { ref, type ComputedRef, type Ref } from 'vue';
 import type {
   ProjectListResponse,
   WorkspaceMemberListResponse,
+  WorkspaceMemberResponse,
 } from '@gitiempo/shared';
 
+import type { MemberProjectAssignmentDiff } from '@/lib/member-management';
 import {
   adminMembersClient,
   type AdminMembersClient,
@@ -96,7 +98,37 @@ export function useWorkspaceMembersData({
     await loadMembersData({ errorAction: 'refresh-members' });
   }
 
+  function updateMember(updated: WorkspaceMemberResponse): void {
+    members.value = members.value.map((member) => member.id === updated.id ? updated : member);
+  }
+
+  function applyAssignmentChanges(
+    member: WorkspaceMemberResponse,
+    { projectIdsToAdd, projectIdsToRemove }: MemberProjectAssignmentDiff,
+  ): void {
+    if (!projectIdsToAdd.length && !projectIdsToRemove.length) return;
+
+    const { userId, displayName, email, avatarUrl, role } = member;
+    const projectMember = { userId, displayName, email, avatarUrl, role };
+    const added = new Set(projectIdsToAdd);
+    const removed = new Set(projectIdsToRemove);
+    projects.value = projects.value.map((project) => {
+      if (added.has(project.id) && !project.members.some((item) => item.userId === userId)) {
+        return { ...project, members: [...project.members, projectMember] };
+      }
+      if (removed.has(project.id)) {
+        return { ...project, members: project.members.filter((item) => item.userId !== userId) };
+      }
+      return project;
+    });
+    updateMember({
+      ...member,
+      projectsAssignedCount: member.projectsAssignedCount + added.size - removed.size,
+    });
+  }
+
   return {
+    applyAssignmentChanges,
     resetMembersData,
     initialLoaded,
     loadError,
@@ -105,5 +137,6 @@ export function useWorkspaceMembersData({
     members,
     projects,
     refreshMembers,
+    updateMember,
   };
 }

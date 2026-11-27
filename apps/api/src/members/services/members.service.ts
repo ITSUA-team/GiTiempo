@@ -66,8 +66,9 @@ export class MembersService {
   async resolveActiveMembership(
     userId: string,
     workspaceId: string,
+    db: Pick<DrizzleDB, 'select'> = this.db,
   ): Promise<ActiveMembership | null> {
-    const [row] = await this.db
+    const [row] = await db
       .select({
         id: workspaceMembers.id,
         userId: workspaceMembers.userId,
@@ -209,22 +210,17 @@ export class MembersService {
 
   async updateMemberRole(
     workspaceId: string,
+    actorUserId: string,
     memberId: string,
     input: UpdateWorkspaceMemberRoleInput,
   ): Promise<WorkspaceMemberResponse> {
     return this.db.transaction(async (tx) => {
-      const [target] = await tx
-        .select({ role: workspaceMembers.role })
-        .from(workspaceMembers)
-        .where(
-          and(
-            eq(workspaceMembers.id, memberId),
-            eq(workspaceMembers.workspaceId, workspaceId),
-          ),
-        )
-        .limit(1);
-
-      if (!target) throw new NotFoundException('Member not found');
+      const target = await this.lockWorkspaceAndGetMember(
+        tx,
+        workspaceId,
+        actorUserId,
+        memberId,
+      );
       await this.assertCanLoseAdminRole(
         tx,
         workspaceId,
@@ -270,20 +266,18 @@ export class MembersService {
     });
   }
 
-  async removeMember(workspaceId: string, memberId: string): Promise<void> {
+  async removeMember(
+    workspaceId: string,
+    actorUserId: string,
+    memberId: string,
+  ): Promise<void> {
     await this.db.transaction(async (tx) => {
-      const [target] = await tx
-        .select({ role: workspaceMembers.role })
-        .from(workspaceMembers)
-        .where(
-          and(
-            eq(workspaceMembers.id, memberId),
-            eq(workspaceMembers.workspaceId, workspaceId),
-          ),
-        )
-        .limit(1);
-
-      if (!target) throw new NotFoundException('Member not found');
+      const target = await this.lockWorkspaceAndGetMember(
+        tx,
+        workspaceId,
+        actorUserId,
+        memberId,
+      );
       await this.assertCanLoseAdminRole(tx, workspaceId, target.role, null);
 
       await tx
@@ -335,6 +329,42 @@ export class MembersService {
     };
   }
 
+  private async lockWorkspaceAndGetMember(
+    tx: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    actorUserId: string,
+    memberId: string,
+  ) {
+    // Promotions, demotions and removals must see each other's committed role.
+    await tx
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .for('update');
+    // A competing change can demote the actor after the request guard ran.
+    const actor = await this.resolveActiveMembership(
+      actorUserId,
+      workspaceId,
+      tx,
+    );
+    if (!actor) throw new UnauthorizedException('Unauthorized');
+    if (actor.role !== 'admin') throw new ForbiddenException('Forbidden');
+
+    const [target] = await tx
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(
+        and(
+          eq(workspaceMembers.id, memberId),
+          eq(workspaceMembers.workspaceId, workspaceId),
+        ),
+      )
+      .limit(1);
+
+    if (!target) throw new NotFoundException('Member not found');
+    return target;
+  }
+
   private async assertCanLoseAdminRole(
     db: Pick<DrizzleDB, 'select'>,
     workspaceId: string,
@@ -342,17 +372,6 @@ export class MembersService {
     nextRole: WorkspaceRole | null,
   ): Promise<void> {
     if (currentRole !== 'admin' || nextRole === 'admin') return;
-
-    await db
-      .select({ id: workspaceMembers.id })
-      .from(workspaceMembers)
-      .where(
-        and(
-          eq(workspaceMembers.workspaceId, workspaceId),
-          eq(workspaceMembers.role, 'admin'),
-        ),
-      )
-      .for('update');
 
     const [row] = await db
       .select({ value: count() })

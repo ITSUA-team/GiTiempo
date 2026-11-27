@@ -204,6 +204,7 @@ export function useMembersTableState({
       avatarImage: member.avatarUrl ?? undefined,
       avatarLabel: member.avatarUrl ? undefined : getInitials(member),
       canAssignPm: unref(currentUserId) !== null && !self && member.role !== 'admin',
+      canOpenSettings: unref(currentUserId) !== null,
       canManage: unref(currentUserId) !== null && !self,
       email: member.email,
       id: member.id,

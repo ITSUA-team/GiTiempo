@@ -114,6 +114,7 @@ function createRows(members = createMembers()): MembersTableRow[] {
       .map((part) => part.charAt(0))
       .join(''),
     canAssignPm: member.role !== 'admin' && member.userId !== 'user-1',
+    canOpenSettings: true,
     canManage: member.userId !== 'user-1',
     email: member.email,
     id: member.id,
@@ -391,10 +392,15 @@ describe('MembersTable', () => {
     expect(wrapper.find('[data-testid="edit-panel"]').exists()).toBe(false);
   });
 
-  it('renders unmanaged rows with static names and no row actions', () => {
-    const wrapper = mountMembersTable({ rows: [createRows()[1]!] });
+  it.each([false, true])('opens the current admin settings (mobile=%s) without additional row actions', async (isMobileViewport) => {
+    const self = createRows()[1]!;
+    const wrapper = mountMembersTable({ rows: [self], isMobileViewport });
+    const nameId = isMobileViewport ? 'member-mobile-name-member-2' : 'member-name-member-2';
+    const open = wrapper.get(`[data-testid="${nameId}"]`);
 
-    expect(wrapper.find('[data-testid="member-name-member-2"]').exists()).toBe(false);
+    expect(open.attributes('aria-label')).toBe('Edit member Alex Admin');
+    await open.trigger('click');
+    expect(wrapper.emitted('edit-member')).toEqual([[self.member]]);
     expect(wrapper.text()).toContain('Alex Admin');
     expect(wrapper.find('[data-testid="member-assign-pm-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-2"]').exists()).toBe(false);
