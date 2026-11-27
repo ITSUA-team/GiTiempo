@@ -51,6 +51,8 @@ export function createAuthSessionCore({
   let refreshAccessPromise: Promise<string> | null = null;
 
   let sessionGeneration = 0;
+  let appliedRefreshToken: string | null = null;
+  let localSessionInvalidated = false;
 
   function changeSessionContext(): void {
     sessionGeneration += 1;
@@ -66,15 +68,32 @@ export function createAuthSessionCore({
   const isAuthenticated = computed(() => accessToken.value !== null);
 
   function applyTokenPair(tokenPair: TokenPairResponse): void {
+    localSessionInvalidated = false;
     accessToken.value = tokenPair.accessToken;
+    appliedRefreshToken = tokenPair.refreshToken;
     setRefreshToken(tokenPair.refreshToken);
   }
 
-  function clearSession(): void {
+  function storedSessionChanged(): boolean {
+    return appliedRefreshToken !== null && appliedRefreshToken !== getRefreshToken();
+  }
+
+  function clearSessionState(): void {
     changeSessionContext();
+    appliedRefreshToken = null;
     accessToken.value = null;
     profile.value = null;
     onClearSession?.();
+  }
+
+  function invalidateLocalSession(): void {
+    localSessionInvalidated = true;
+    completeBootstrap();
+    clearSessionState();
+  }
+
+  function clearSession(): void {
+    clearSessionState();
     clearRefreshToken();
   }
 
@@ -146,6 +165,7 @@ export function createAuthSessionCore({
   }
 
   async function refreshStoredAccessToken(): Promise<string> {
+    if (localSessionInvalidated) throw new SessionContextChangedError();
     const refreshToken = getRefreshToken();
 
     if (!refreshToken) {
@@ -398,7 +418,9 @@ export function createAuthSessionCore({
   return {
     ...baseSession,
     baseSession,
+    invalidateLocalSession,
     clearSession,
+    storedSessionChanged,
     loginWithFirebaseToken,
     updateProfile,
   };

@@ -6,26 +6,6 @@ import {
 import { describe, expect, it, vi } from 'vitest';
 import { MembersService } from './members.service';
 
-function makeLockAndCountSelect(lockRows: unknown[], countRows: unknown[]) {
-  const forFn = vi.fn().mockResolvedValue(lockRows);
-  const lockFrom = vi.fn().mockReturnValue({
-    where: vi.fn().mockReturnValue({ for: forFn }),
-  });
-  const lockCall = vi.fn().mockReturnValue({ from: lockFrom });
-
-  const countWhere = vi.fn().mockResolvedValue(countRows);
-  const countFrom = vi.fn().mockReturnValue({ where: countWhere });
-  const countCall = vi.fn().mockReturnValue({ from: countFrom });
-
-  return {
-    select: vi
-      .fn()
-      .mockReturnValueOnce(lockCall())
-      .mockReturnValueOnce(countCall()),
-    forFn,
-  };
-}
-
 function makeMembershipSelect(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const where = vi.fn().mockReturnValue({ limit });
@@ -33,13 +13,72 @@ function makeMembershipSelect(rows: unknown[]) {
   return { select: vi.fn().mockReturnValue({ from }) };
 }
 
+function makeAuthorizedSelect() {
+  return vi
+    .fn()
+    .mockReturnValueOnce({
+      from: () => ({ where: () => ({ for: () => Promise.resolve() }) }),
+    })
+    .mockReturnValueOnce(makeMembershipSelect([{ role: 'admin' }]).select());
+}
+
 describe('MembersService', () => {
+  it.each(
+    Object.entries({
+      'change role': (service: MembersService) =>
+        service.updateMemberRole('workspace', 'actor', 'target', {
+          role: 'admin',
+        }),
+      'change permissions': (service: MembersService) =>
+        service.updateMemberPermissions('workspace', 'actor', 'target', {
+          canViewInvoices: true,
+        }),
+      remove: (service: MembersService) =>
+        service.removeMember('workspace', 'actor', 'target'),
+    }),
+  )(
+    'rechecks the actor after acquiring the workspace lock before %s',
+    async (_label, run) => {
+      let releaseLock!: () => void;
+      const lock = new Promise<void>((resolve) => {
+        releaseLock = resolve;
+      });
+      const tx = {
+        select: vi.fn().mockReturnValueOnce({
+          from: () => ({ where: () => ({ for: () => lock }) }),
+        }),
+        update: vi.fn(),
+        delete: vi.fn(),
+      };
+      const service = new MembersService({
+        transaction: (run: (db: typeof tx) => unknown) => run(tx),
+      } as never);
+      const membership = vi
+        .spyOn(service, 'resolveActiveMembership')
+        .mockResolvedValue({
+          id: 'actor-membership',
+          userId: 'actor',
+          workspaceId: 'workspace',
+          role: 'pm',
+          canViewInvoices: false,
+        });
+      const result = run(service);
+      expect(membership).not.toHaveBeenCalled();
+      releaseLock();
+      await expect(result).rejects.toBeInstanceOf(ForbiddenException);
+      expect(membership).toHaveBeenCalledWith('actor', 'workspace', tx);
+      expect(tx.update).not.toHaveBeenCalled();
+      expect(tx.delete).not.toHaveBeenCalled();
+    },
+  );
+
   it('prevents demoting the last workspace admin', async () => {
-    const { select } = makeLockAndCountSelect(
-      [{ id: 'admin-1' }],
-      [{ value: 1 }],
-    );
-    const tx = { select };
+    const count = 1;
+    const tx = {
+      select: () => ({
+        from: () => ({ where: async () => [{ value: count }] }),
+      }),
+    };
     const service = new MembersService(tx as never);
     const assertCanLoseAdminRole = (
       service as unknown as {
@@ -58,11 +97,12 @@ describe('MembersService', () => {
   });
 
   it('allows demoting when more than one admin exists', async () => {
-    const { select } = makeLockAndCountSelect(
-      [{ id: 'admin-1' }, { id: 'admin-2' }],
-      [{ value: 2 }],
-    );
-    const tx = { select };
+    const count = 2;
+    const tx = {
+      select: () => ({
+        from: () => ({ where: async () => [{ value: count }] }),
+      }),
+    };
     const service = new MembersService(tx as never);
     const assertCanLoseAdminRole = (
       service as unknown as {
@@ -78,29 +118,6 @@ describe('MembersService', () => {
     await expect(
       assertCanLoseAdminRole(tx, 'workspace-1', 'admin', 'member'),
     ).resolves.toBeUndefined();
-  });
-
-  it('acquires a FOR UPDATE lock on admin rows before counting', async () => {
-    const { select, forFn } = makeLockAndCountSelect(
-      [{ id: 'admin-1' }],
-      [{ value: 2 }],
-    );
-    const tx = { select };
-    const service = new MembersService(tx as never);
-    const assertCanLoseAdminRole = (
-      service as unknown as {
-        assertCanLoseAdminRole: (
-          db: typeof tx,
-          workspaceId: string,
-          currentRole: 'admin' | 'pm' | 'member',
-          nextRole: 'admin' | 'pm' | 'member' | null,
-        ) => Promise<void>;
-      }
-    ).assertCanLoseAdminRole.bind(service);
-
-    await assertCanLoseAdminRole(tx, 'workspace-1', 'admin', 'member');
-
-    expect(forFn).toHaveBeenCalledWith('update');
   });
 
   it('rejects role checks against the current database membership', async () => {
@@ -147,7 +164,7 @@ describe('MembersService', () => {
     const joinWhere = vi.fn().mockReturnValue({ limit });
     const innerJoin = vi.fn().mockReturnValue({ where: joinWhere });
     const from = vi.fn().mockReturnValue({ innerJoin });
-    const select = vi.fn().mockReturnValue({ from });
+    const select = makeAuthorizedSelect().mockReturnValue({ from });
     const db = {
       transaction: async (
         handler: (tx: { select: unknown; update: unknown }) => unknown,
@@ -157,6 +174,7 @@ describe('MembersService', () => {
 
     const result = await service.updateMemberPermissions(
       'workspace-1',
+      'actor',
       'membership-1',
       { canViewInvoices: true },
     );
@@ -179,12 +197,12 @@ describe('MembersService', () => {
     const db = {
       transaction: async (
         handler: (tx: { select: unknown; update: unknown }) => unknown,
-      ) => handler({ select: vi.fn(), update }),
+      ) => handler({ select: makeAuthorizedSelect(), update }),
     };
     const service = new MembersService(db as never);
 
     await expect(
-      service.updateMemberPermissions('workspace-1', 'missing', {
+      service.updateMemberPermissions('workspace-1', 'actor', 'missing', {
         canViewInvoices: true,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);

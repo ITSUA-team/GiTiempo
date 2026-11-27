@@ -89,7 +89,22 @@ export function useMembersTableState({
   const filters = reactive<MembersTableFilters>(createDefaultFilters());
   const expandedRows = ref<MembersTableExpandedRows>({});
 
+  const pendingAssignmentEdit = ref<{ memberId: string; projectIds: string[] } | null>(null);
+
+  function retainAssignmentEdit(member: WorkspaceMemberResponse, projectIds: string[]): void {
+    if (expandedRows.value[member.id]) {
+      pendingAssignmentEdit.value = { memberId: member.id, projectIds };
+    }
+  }
+
+  watch(expandedRows, (next) => {
+    if (pendingAssignmentEdit.value && !next[pendingAssignmentEdit.value.memberId]) {
+      pendingAssignmentEdit.value = null;
+    }
+  }, { flush: 'sync' });
+
   function updateFilters(update: MembersTableFilterUpdate): void {
+    pendingAssignmentEdit.value = null;
     if ('global' in update) {
       filters.global = update.global ?? '';
     }
@@ -204,6 +219,7 @@ export function useMembersTableState({
       avatarImage: member.avatarUrl ?? undefined,
       avatarLabel: member.avatarUrl ? undefined : getInitials(member),
       canAssignPm: unref(currentUserId) !== null && !self && member.role !== 'admin',
+      canOpenSettings: unref(currentUserId) !== null,
       canManage: unref(currentUserId) !== null && !self,
       email: member.email,
       id: member.id,
@@ -218,12 +234,13 @@ export function useMembersTableState({
 
   const visibleMembers = computed(() =>
     members.value.filter(
-      (member) =>
+      (member) => member.id === pendingAssignmentEdit.value?.memberId || (
         matchesGlobalSearch(member) &&
         matchesMemberQuery(member) &&
         (!filters.role || member.role === filters.role) &&
         matchesProjectFilter(member) &&
-        matchesLastActiveFilter(member),
+        matchesLastActiveFilter(member)
+      ),
     ),
   );
 
@@ -279,6 +296,8 @@ export function useMembersTableState({
     expandedRows,
     filters,
     lastActiveFilterOptions,
+    pendingAssignmentEdit,
+    retainAssignmentEdit,
     projectFilterOptions,
     roleFilterOptions,
     rows,

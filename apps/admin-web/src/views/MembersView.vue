@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import type { WorkspaceMemberResponse } from '@gitiempo/shared';
 import {
   StatCard,
   SurfaceCard,
@@ -17,13 +16,15 @@ import { useConfirmation } from '@/composables/feedback/useConfirmation';
 import { useToasts } from '@/composables/feedback/useToasts';
 import { useMemberAssignmentActions } from '@/composables/members/useMemberAssignmentActions';
 import { useMemberPermissionActions } from '@/composables/members/useMemberPermissionActions';
+import { useMemberRoleActions } from '@/composables/members/useMemberRoleActions';
 import { useMemberRemovalAction } from '@/composables/members/useMemberRemovalAction';
 import { usePendingInviteActions } from '@/composables/members/usePendingInviteActions';
 import { usePendingInvitesData } from '@/composables/members/usePendingInvitesData';
 import { useWorkspaceMembersData } from '@/composables/members/useWorkspaceMembersData';
 import { useMembersTableState } from '@/composables/useMembersTableState';
 import { getAdminServerStateScope } from '@/lib/server-state-scope';
-import { deriveMemberManagementStats } from '@/lib/member-management';
+import { deriveMemberManagementStats, type MemberSettingsInput } from '@/lib/member-management';
+import type { MembersTableRow } from '@/lib/members-table';
 import { useAuthStore } from '@/stores/auth';
 
 const authStore = useAuthStore();
@@ -36,7 +37,8 @@ const inviteDialogVisible = ref(false);
 const accessToken = computed(() => authStore.accessToken);
 const scope = computed(() => getAdminServerStateScope(accessToken.value));
 const canManageMembers = computed(() => Boolean(
-  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin',
+  accessToken.value && scope.value.workspaceId && scope.value.userId && scope.value.role === 'admin' &&
+  authStore.profile?.role === 'admin' && authStore.profile.id === scope.value.userId,
 ));
 const visit = ref(0);
 const getVisit = () => visit.value;
@@ -59,6 +61,7 @@ function notifyMembersError(
 }
 
 const {
+  applyAssignmentChanges,
   resetMembersData,
   initialLoaded,
   loadError,
@@ -67,6 +70,7 @@ const {
   members,
   projects,
   refreshMembers,
+  updateMember,
 } = useWorkspaceMembersData({
   accessToken,
   onError: notifyMembersError,
@@ -90,6 +94,8 @@ const {
   expandedRows: memberTableExpandedRows,
   filters: memberTableFilters,
   lastActiveFilterOptions,
+  pendingAssignmentEdit,
+  retainAssignmentEdit,
   projectFilterOptions,
   roleFilterOptions,
   rows: memberTableRows,
@@ -110,22 +116,57 @@ const memberStats = computed(() =>
   }),
 );
 
-const { handleAssignmentsSubmitted, savingMemberAssignmentId } =
+const { handleAssignmentsSubmitted } =
   useMemberAssignmentActions({
     accessToken,
     getVisit,
-    collapseMemberRow,
+    onSaved(member, changes) {
+      applyAssignmentChanges(member, changes);
+      collapseMemberRow(member);
+    },
     onError: notifyMembersError,
     projects,
     refreshMembers,
   });
 
-const { handleUpdateInvoicePermission } = useMemberPermissionActions({
+const { saveRole } = useMemberRoleActions({
+  getVisit,
+  onError: notifyMembersError,
+});
+const { handleUpdateInvoicePermission, updatingPermissionMemberId } = useMemberPermissionActions({
   accessToken,
   getVisit,
   onError: notifyMembersError,
+  onSaved: updateMember,
   refreshMembers,
 });
+const savingMemberSettingsId = ref<string | null>(null);
+const pendingMemberEditId = computed(() => savingMemberSettingsId.value ?? updatingPermissionMemberId.value);
+
+async function saveMemberSettings(row: MembersTableRow, input: MemberSettingsInput): Promise<void> {
+  if (!canManageMembers.value || pendingMemberEditId.value !== null) return;
+
+  const visitAtSubmit = getVisit();
+  savingMemberSettingsId.value = row.id;
+  try {
+    let member = row.member;
+    if (input.role && input.role !== member.role) {
+      const updated = await saveRole(member, input.role);
+      if (!updated || visitAtSubmit !== getVisit()) return;
+      member = updated;
+      updateMember(updated);
+    }
+
+    if (input.projectIds && row.canAssignPm && member.role !== 'admin') {
+      retainAssignmentEdit(member, input.projectIds);
+      await handleAssignmentsSubmitted({ ...row, member }, { projectIds: input.projectIds });
+    } else {
+      collapseMemberRow(member);
+    }
+  } finally {
+    if (visitAtSubmit === getVisit()) savingMemberSettingsId.value = null;
+  }
+}
 
 const { handleRemoveMember } = useMemberRemovalAction({
   accessToken,
@@ -164,16 +205,23 @@ async function fetchAll(): Promise<void> {
   ]);
 }
 
-function handleEditMember(member: WorkspaceMemberResponse): void {
-  toggleMemberExpansion(member);
+// A save can start before Vue propagates the disabled prop to the table.
+function whenMemberEditorIdle<T>(action: (value: T) => void) {
+  return (value: T) => {
+    if (pendingMemberEditId.value === null) action(value);
+  };
 }
+
+const handleEditMember = whenMemberEditorIdle(toggleMemberExpansion);
+const handleExpandedRows = whenMemberEditorIdle(setMemberTableExpandedRows);
+const handleTableFilters = whenMemberEditorIdle(updateMemberTableFilters);
 
 watch(
   [
     () => scope.value.workspaceId,
     () => scope.value.userId,
     () => scope.value.role,
-    () => Boolean(accessToken.value),
+    canManageMembers,
   ],
   () => {
     visit.value += 1;
@@ -188,7 +236,8 @@ watch(
       role: null,
       lastActive: 'any',
     });
-    savingMemberAssignmentId.value = null;
+    updatingPermissionMemberId.value = null;
+    savingMemberSettingsId.value = null;
     cancelingInviteId.value = null;
     resendingInviteId.value = null;
     dismissConfirmation?.();
@@ -201,7 +250,10 @@ watch(
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
+  <div
+    v-if="canManageMembers"
+    class="flex flex-col gap-6"
+  >
     <template v-if="loading && !initialLoaded">
       <ManagementPageSkeleton variant="members" />
     </template>
@@ -231,7 +283,6 @@ watch(
       </div>
 
       <SurfaceCard
-        v-if="canManageMembers"
         padding-class="p-6"
       >
         <MembersTable
@@ -241,13 +292,14 @@ watch(
           :is-mobile-viewport="isMobileViewport"
           :last-active-filter-options="lastActiveFilterOptions"
           :loading="loading"
+          :member-editing-disabled="pendingMemberEditId !== null"
           :project-filter-options="projectFilterOptions"
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
           @edit-member="handleEditMember"
           @invite-member="canManageMembers && (inviteDialogVisible = true)"
-          @update:expanded-rows="setMemberTableExpandedRows"
-          @update:filters="updateMemberTableFilters"
+          @update:expanded-rows="handleExpandedRows"
+          @update:filters="handleTableFilters"
         >
           <template #row-expansion="{ row }">
             <div
@@ -258,11 +310,12 @@ watch(
                 :can-assign-pm="row.canAssignPm"
                 :can-remove="row.canManage"
                 :member="row.member"
+                :initial-project-ids="pendingAssignmentEdit && pendingAssignmentEdit.memberId === row.id ? pendingAssignmentEdit.projectIds : undefined"
                 :projects="projects"
-                :saving="savingMemberAssignmentId === row.id"
-                @remove="handleRemoveMember(row.member)"
-                @save="handleAssignmentsSubmitted(row, $event)"
-                @update:can-view-invoices="handleUpdateInvoicePermission(row, $event)"
+                :saving="pendingMemberEditId === row.id"
+                @remove="row.canManage && handleRemoveMember(row.member)"
+                @save="saveMemberSettings(row, $event)"
+                @update:can-view-invoices="pendingMemberEditId === null && handleUpdateInvoicePermission(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
             </div>
@@ -283,7 +336,6 @@ watch(
     </template>
 
     <MemberInviteDialog
-      v-if="canManageMembers"
       :key="visit"
       v-model:visible="inviteDialogVisible"
       @created="handleInviteCreated"

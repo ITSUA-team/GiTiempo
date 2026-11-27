@@ -45,6 +45,11 @@ export function deriveMemberManagementStats({
   };
 }
 
+export interface MemberSettingsInput {
+  role?: WorkspaceMemberResponse['role'];
+  projectIds?: string[];
+}
+
 export function diffMemberProjectAssignments({
   member,
   nextProjectIds,

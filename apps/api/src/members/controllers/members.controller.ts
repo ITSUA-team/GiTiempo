@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseUUIDPipe,
   Patch,
   UseGuards,
 } from '@nestjs/common';
@@ -54,10 +55,10 @@ export class MembersController {
   @ZodSerializerDto(WorkspaceMemberResponseDto)
   updateRole(
     @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateWorkspaceMemberRoleDto,
   ): Promise<WorkspaceMemberResponseDto> {
-    return this.members.updateMemberRole(user.workspaceId, id, body);
+    return this.members.updateMemberRole(user.workspaceId, user.sub, id, body);
   }
 
   @Patch(':id/permissions')
@@ -68,10 +69,15 @@ export class MembersController {
   @ZodSerializerDto(WorkspaceMemberResponseDto)
   updatePermissions(
     @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() body: UpdateWorkspaceMemberPermissionsDto,
   ): Promise<WorkspaceMemberResponseDto> {
-    return this.members.updateMemberPermissions(user.workspaceId, id, body);
+    return this.members.updateMemberPermissions(
+      user.workspaceId,
+      user.sub,
+      id,
+      body,
+    );
   }
 
   @Delete(':id')
@@ -81,8 +87,8 @@ export class MembersController {
   @ApiForbiddenResponse({ description: 'Admin role required' })
   removeMember(
     @CurrentUser() user: AuthUser,
-    @Param('id') id: string,
+    @Param('id', ParseUUIDPipe) id: string,
   ): Promise<void> {
-    return this.members.removeMember(user.workspaceId, id);
+    return this.members.removeMember(user.workspaceId, user.sub, id);
   }
 }

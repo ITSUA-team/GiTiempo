@@ -114,6 +114,7 @@ function createRows(members = createMembers()): MembersTableRow[] {
       .map((part) => part.charAt(0))
       .join(''),
     canAssignPm: member.role !== 'admin' && member.userId !== 'user-1',
+    canOpenSettings: true,
     canManage: member.userId !== 'user-1',
     email: member.email,
     id: member.id,
@@ -203,6 +204,31 @@ describe('MembersTable', () => {
     await nameButton.trigger('click');
 
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
+  });
+
+  it.each([false, true])('disables member editing while saving (mobile %s)', async (isMobileViewport) => {
+    const wrapper = mountMembersTable({ isMobileViewport });
+    await wrapper.setProps({ memberEditingDisabled: true });
+    const button = wrapper.get<HTMLButtonElement>('button[aria-label="Edit member Pat PM"]');
+
+    expect(button.element.disabled).toBe(true);
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Search members"]').element.disabled).toBe(true);
+    expect(wrapper.getComponent(AutoComplete).props('disabled')).toBe(true);
+    expect(wrapper.getComponent(MultiSelect).props('disabled')).toBe(true);
+    expect(wrapper.findAllComponents(Select).map((select) => select.props('disabled'))).toEqual([true, true]);
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="members-table-invite"]').element.disabled).toBe(false);
+    wrapper.getComponent(MultiSelect).vm.$emit('update:modelValue', ['project-1']);
+    expect(wrapper.emitted('update:filters')).toBeUndefined();
+    button.element.click();
+    expect(wrapper.emitted('edit-member')).toBeUndefined();
+    if (!isMobileViewport) {
+      wrapper.getComponent(ManagementTableShell).vm.$emit('update:expandedRows', {});
+      expect(wrapper.emitted('update:expandedRows')).toBeUndefined();
+    }
+
+    await wrapper.setProps({ memberEditingDisabled: false });
+    button.element.click();
+    expect(wrapper.emitted('edit-member')).toEqual([[createMembers()[0]]]);
   });
 
   it('emits filter updates without deriving or mutating the supplied rows', async () => {
@@ -391,10 +417,15 @@ describe('MembersTable', () => {
     expect(wrapper.find('[data-testid="edit-panel"]').exists()).toBe(false);
   });
 
-  it('renders unmanaged rows with static names and no row actions', () => {
-    const wrapper = mountMembersTable({ rows: [createRows()[1]!] });
+  it.each([false, true])('opens the current admin settings (mobile=%s) without additional row actions', async (isMobileViewport) => {
+    const self = createRows()[1]!;
+    const wrapper = mountMembersTable({ rows: [self], isMobileViewport });
+    const nameId = isMobileViewport ? 'member-mobile-name-member-2' : 'member-name-member-2';
+    const open = wrapper.get(`[data-testid="${nameId}"]`);
 
-    expect(wrapper.find('[data-testid="member-name-member-2"]').exists()).toBe(false);
+    expect(open.attributes('aria-label')).toBe('Edit member Alex Admin');
+    await open.trigger('click');
+    expect(wrapper.emitted('edit-member')).toEqual([[self.member]]);
     expect(wrapper.text()).toContain('Alex Admin');
     expect(wrapper.find('[data-testid="member-assign-pm-member-2"]').exists()).toBe(false);
     expect(wrapper.find('[data-testid="member-edit-member-2"]').exists()).toBe(false);

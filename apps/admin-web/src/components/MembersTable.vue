@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { ChevronDownIcon, UserPlusIcon } from '@heroicons/vue/24/outline';
+import { UserPlusIcon } from '@heroicons/vue/24/outline';
 import type {
   WorkspaceMemberResponse,
   WorkspaceRole,
@@ -18,7 +18,6 @@ import {
   managementTableFilterMultiSelectPt,
 } from '@gitiempo/web-shared';
 import Avatar from 'primevue/avatar';
-import Button from 'primevue/button';
 import Column from 'primevue/column';
 import IconField from 'primevue/iconfield';
 import InputIcon from 'primevue/inputicon';
@@ -34,6 +33,7 @@ import {
   adminTableHeaderClass,
   adminTableMinWidthClass,
 } from '@/lib/admin-table-classes';
+import MemberIdentityButton from '@/components/MemberIdentityButton.vue';
 import MobileRecordMetadataList from '@/components/MobileRecordMetadataList.vue';
 import { membersTableColumns } from '@/lib/management-table-columns';
 import type {
@@ -56,6 +56,7 @@ const props = defineProps<{
   isMobileViewport: boolean;
   lastActiveFilterOptions: MembersTableFilterOption<MemberLastActiveFilter>[];
   loading: boolean;
+  memberEditingDisabled?: boolean;
   projectFilterOptions: MembersTableFilterOption[];
   roleFilterOptions: MembersTableFilterOption<WorkspaceRole>[];
   rows: MembersTableRow[];
@@ -87,7 +88,7 @@ const emit = defineEmits<{
 }>();
 
 function updateFilters(filters: MembersTableFilterUpdate): void {
-  emit('update:filters', filters);
+  if (!props.memberEditingDisabled) emit('update:filters', filters);
 }
 
 function updateGlobalFilter(value: string | undefined): void {
@@ -113,7 +114,7 @@ function updateLastActiveFilter(
 }
 
 function updateExpandedRows(value: MembersTableExpandedRows | undefined): void {
-  emit('update:expandedRows', value);
+  if (!props.memberEditingDisabled) emit('update:expandedRows', value);
 }
 
 const columns = Object.values(membersTableColumns);
@@ -134,6 +135,7 @@ function getRoleClass(role: WorkspaceRole): string {
           <IconField class="w-full sm:w-[280px]">
             <InputIcon class="pi pi-search text-text-muted" />
             <InputText
+              :disabled="memberEditingDisabled"
               :model-value="filters.global"
               aria-label="Search members"
               class="h-[38px] w-full rounded-[6px] text-[14px]"
@@ -162,6 +164,7 @@ function getRoleClass(role: WorkspaceRole): string {
         class="text-text-muted text-[12px] font-medium"
       >Member</label>
       <FilterAutoComplete
+        :disabled="memberEditingDisabled"
         append-to="self"
         input-id="mobile-member-name-filter"
         :model-value="filters.memberQuery"
@@ -180,6 +183,7 @@ function getRoleClass(role: WorkspaceRole): string {
         >Role</label>
         <Select
           id="mobile-member-role-filter"
+          :disabled="memberEditingDisabled"
           :model-value="filters.role"
           :options="roleFilterOptions"
           option-label="label"
@@ -198,6 +202,7 @@ function getRoleClass(role: WorkspaceRole): string {
         >Last active</label>
         <Select
           id="mobile-member-last-active-filter"
+          :disabled="memberEditingDisabled"
           :model-value="filters.lastActive"
           :options="lastActiveFilterOptions"
           option-label="label"
@@ -214,6 +219,7 @@ function getRoleClass(role: WorkspaceRole): string {
         class="text-text-muted text-[12px] font-medium"
       >Projects assigned</label>
       <MultiSelect
+        :disabled="memberEditingDisabled"
         input-id="mobile-member-projects-filter"
         :model-value="filters.projectIds"
         :options="projectFilterOptions"
@@ -296,52 +302,15 @@ function getRoleClass(role: WorkspaceRole): string {
         :key="row.id"
         data-testid="member-mobile-card"
       >
-        <Button
-          v-if="row.canManage"
-          type="button"
-          unstyled
-          :aria-expanded="Boolean(expandedRows[row.id])"
-          :aria-label="`Edit member ${row.primaryLabel}`"
+        <MemberIdentityButton
+          v-if="row.canOpenSettings"
+          :row="row"
+          :disabled="memberEditingDisabled"
+          :expanded="Boolean(expandedRows[row.id])"
           :data-testid="`member-mobile-name-${row.id}`"
-          :pt="{
-            root: {
-              class:
-                'group flex w-full cursor-pointer items-start gap-3 rounded-none border-0 bg-transparent p-0 text-left shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-            },
-          }"
-          @click="emit('edit-member', row.member)"
-        >
-          <Avatar
-            :image="row.avatarImage"
-            :label="row.avatarLabel"
-            shape="circle"
-            class="size-9 shrink-0"
-            :pt="{
-              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
-            }"
-          />
-          <span class="min-w-0 flex-1">
-            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[15px] leading-none font-semibold">
-              <span class="truncate">{{ row.primaryLabel }}</span>
-              <span
-                aria-hidden="true"
-                class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
-                :class="expandedRows[row.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
-              >
-                <ChevronDownIcon
-                  class="size-[11px] stroke-[2.5] transition-all duration-200"
-                  :class="expandedRows[row.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
-                />
-              </span>
-            </span>
-            <span
-              v-if="row.secondaryLabel"
-              class="text-text-muted block truncate text-[12px]"
-            >
-              {{ row.secondaryLabel }}
-            </span>
-          </span>
-        </Button>
+          mobile
+          @edit="emit('edit-member', row.member)"
+        />
         <div
           v-else
           class="flex items-start gap-3"
@@ -416,6 +385,7 @@ function getRoleClass(role: WorkspaceRole): string {
       >
         <div class="min-w-0 flex-1 px-3">
           <FilterAutoComplete
+            :disabled="memberEditingDisabled"
             :model-value="filters.memberQuery"
             aria-label="Filter members by name or email"
             placeholder="Filter name or email"
@@ -430,6 +400,7 @@ function getRoleClass(role: WorkspaceRole): string {
           :style="getManagementTableColumnStyle(membersTableColumns.role)"
         >
           <Select
+            :disabled="memberEditingDisabled"
             :model-value="filters.role"
             :options="roleFilterOptions"
             aria-label="Filter members by role"
@@ -447,6 +418,7 @@ function getRoleClass(role: WorkspaceRole): string {
           :style="getManagementTableColumnStyle(membersTableColumns.projects)"
         >
           <MultiSelect
+            :disabled="memberEditingDisabled"
             :model-value="filters.projectIds"
             :options="projectFilterOptions"
             aria-label="Filter members by assigned projects"
@@ -466,6 +438,7 @@ function getRoleClass(role: WorkspaceRole): string {
           :style="getManagementTableColumnStyle(membersTableColumns.lastActive)"
         >
           <Select
+            :disabled="memberEditingDisabled"
             :model-value="filters.lastActive"
             :options="lastActiveFilterOptions"
             aria-label="Filter members by last active"
@@ -481,50 +454,14 @@ function getRoleClass(role: WorkspaceRole): string {
     <!-- Member: avatar + name + email -->
     <Column :pt="adminTableColumnPt">
       <template #body="{ data }">
-        <Button
-          v-if="data.canManage"
-          type="button"
-          unstyled
-          :aria-expanded="Boolean(expandedRows[data.id])"
-          :aria-label="`Edit member ${data.primaryLabel}`"
+        <MemberIdentityButton
+          v-if="data.canOpenSettings"
+          :row="data"
+          :disabled="memberEditingDisabled"
+          :expanded="Boolean(expandedRows[data.id])"
           :data-testid="`member-name-${data.id}`"
-          :pt="{
-            root: {
-              class:
-                'group flex w-full cursor-pointer items-center gap-3 rounded-none border-0 bg-transparent p-0 text-left shadow-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
-            },
-          }"
-          @click="emit('edit-member', data.member)"
-        >
-          <Avatar
-            :image="data.avatarImage"
-            :label="data.avatarLabel"
-            shape="circle"
-            class="size-8 shrink-0"
-            :pt="{
-              root: 'bg-accent-tint text-brand text-[13px] font-semibold',
-            }"
-          />
-          <span class="flex min-w-0 flex-col">
-            <span class="text-brand inline-flex max-w-full items-center gap-1.5 font-sans text-[14px] leading-none font-semibold">
-              <span class="truncate">{{ data.primaryLabel }}</span>
-              <span
-                aria-hidden="true"
-                class="flex size-[18px] shrink-0 items-center justify-center rounded-full transition-colors duration-200"
-                :class="expandedRows[data.id] ? 'bg-accent-tint' : 'bg-app-bg group-hover:bg-accent-tint'"
-              >
-                <ChevronDownIcon
-                  class="size-[11px] stroke-[2.5] transition-all duration-200"
-                  :class="expandedRows[data.id] ? 'text-brand rotate-180' : 'text-text-muted group-hover:text-brand'"
-                />
-              </span>
-            </span>
-            <span
-              v-if="data.secondaryLabel"
-              class="text-text-muted text-[12px]"
-            >{{ data.secondaryLabel }}</span>
-          </span>
-        </Button>
+          @edit="emit('edit-member', data.member)"
+        />
         <div
           v-else
           class="flex items-center gap-3"

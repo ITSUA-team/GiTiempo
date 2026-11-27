@@ -16,7 +16,7 @@ function setup() {
     projectsAssignedCount: 1, role: 'pm', userId: 'pm', workspaceId: 'A',
   };
   const row: MembersTableRow = {
-    avatarImage: undefined, avatarLabel: 'PM', canAssignPm: true, canManage: true,
+    avatarImage: undefined, avatarLabel: 'PM', canAssignPm: true, canOpenSettings: true, canManage: true,
     email: member.email, id: member.id, lastActiveLabel: 'Never', member,
     primaryLabel: 'PM', projectsAssignedLabel: '1 project', roleLabel: 'PM', secondaryLabel: null,
   };
@@ -37,15 +37,15 @@ function setup() {
   };
   const accessToken = ref<string | null>(token());
   const visit = ref(1);
-  const collapseMemberRow = vi.fn();
+  const onSaved = vi.fn();
   const refreshMembers = vi.fn().mockResolvedValue(undefined);
   const onError = vi.fn();
   const owner = effectScope();
   const actions = owner.run(() => useMemberAssignmentActions({
     accessToken, getVisit: () => visit.value, client, projects,
-    collapseMemberRow, refreshMembers, onError,
+    onSaved, refreshMembers, onError,
   }))!;
-  return { ...actions, accessToken, visit, row, resolveFirst, client, owner, collapseMemberRow, refreshMembers, onError };
+  return { ...actions, accessToken, visit, row, resolveFirst, client, owner, onSaved, refreshMembers, onError };
 }
 
 describe('useMemberAssignmentActions', () => {
@@ -59,7 +59,7 @@ describe('useMemberAssignmentActions', () => {
     await pending;
     expect(state.client.assignMember).toHaveBeenNthCalledWith(2, 'new-2', 'pm');
     expect(state.client.removeAssignment).toHaveBeenCalledExactlyOnceWith('old-project', 'pm');
-    expect(state.collapseMemberRow).not.toHaveBeenCalled();
+    expect(state.onSaved).not.toHaveBeenCalled();
     expect(state.refreshMembers).not.toHaveBeenCalled();
     expect(state.onError).not.toHaveBeenCalled();
   });
@@ -86,9 +86,11 @@ describe('useMemberAssignmentActions', () => {
     await pending;
     expect(state.client.assignMember).toHaveBeenCalledTimes(2);
     expect(state.client.removeAssignment).toHaveBeenCalledOnce();
-    expect(state.collapseMemberRow).toHaveBeenCalledExactlyOnceWith(state.row.member);
-    expect(state.refreshMembers).toHaveBeenCalledOnce();
-    expect(state.savingMemberAssignmentId.value).toBeNull();
+    expect(state.onSaved).toHaveBeenCalledExactlyOnceWith(state.row.member, {
+      projectIdsToAdd: ['new-1', 'new-2'],
+      projectIdsToRemove: ['old-project'],
+    });
+    expect(state.refreshMembers).not.toHaveBeenCalled();
     state.owner.stop();
   });
 });
