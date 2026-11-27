@@ -1,4 +1,8 @@
-import { BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DomainError } from '../errors/domain-error';
@@ -129,6 +133,63 @@ describe('AllExceptionsFilter', () => {
         method: 'GET',
       }),
       'Unhandled exception',
+    );
+  });
+
+  it('labels intentional HttpException 5xx as server error response, not unhandled', () => {
+    const loggerError = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const response = createResponse();
+    const host = createHost(createRequest(), response);
+    const filter = createFilter('production');
+
+    const exception = new ServiceUnavailableException(
+      'GitHub API request failed',
+    );
+    filter.catch(exception, host as never);
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(response.json).toHaveBeenCalledWith({
+      statusCode: 503,
+      error: 'InternalServerError',
+      message: 'Internal server error',
+      requestId: 'request-1',
+    });
+    expect(loggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: exception,
+        requestId: 'request-1',
+      }),
+      'Server error response',
+    );
+  });
+
+  it('handles duck-typed HttpException 5xx with server error response label', () => {
+    const loggerError = vi
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
+    const response = createResponse();
+    const host = createHost(createRequest(), response);
+    const filter = createFilter('production');
+
+    const duckTyped = {
+      getStatus: () => 503,
+      getResponse: () => ({
+        message: 'GitHub API request failed',
+        error: 'Service Unavailable',
+      }),
+      name: 'ServiceUnavailableException',
+    };
+    filter.catch(duckTyped, host as never);
+
+    expect(response.status).toHaveBeenCalledWith(503);
+    expect(loggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: duckTyped,
+        requestId: 'request-1',
+      }),
+      'Server error response',
     );
   });
 

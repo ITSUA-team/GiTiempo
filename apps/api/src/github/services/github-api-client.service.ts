@@ -405,6 +405,7 @@ export class GithubApiClientService {
         page: String(page),
       },
       'rest-page',
+      'GitHub repository not found',
     );
     return {
       items: result.body

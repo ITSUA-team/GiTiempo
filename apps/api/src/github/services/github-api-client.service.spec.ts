@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -363,6 +364,39 @@ describe('GithubApiClientService', () => {
     expect(requestUrl.pathname).toBe('/search/issues');
     expect(requestUrl.searchParams.get('q')).toContain('repo:octo/repo');
     expect(result.items[0]?.state).toBe('closed');
+  });
+
+  it('throws NotFoundException with message when the repository does not exist', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: 'Not Found' }, { status: 404 }),
+    );
+
+    const operation = service.listRepositoryIssues({
+      accessToken,
+      owner: 'octo',
+      repo: 'missing',
+      state: 'open',
+      limit: 30,
+    });
+    await expect(operation).rejects.toThrow(NotFoundException);
+    await expect(operation).rejects.toThrow('GitHub repository not found');
+  });
+
+  it('keeps ServiceUnavailableException for search API 404 (search returns 200 for missing repos, 404 is an API issue)', async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse({ message: 'Not Found' }, { status: 404 }),
+    );
+
+    await expect(
+      service.listRepositoryIssues({
+        accessToken,
+        owner: 'octo',
+        repo: 'missing',
+        state: 'all',
+        q: 'timer',
+        limit: 30,
+      }),
+    ).rejects.toThrow(ServiceUnavailableException);
   });
 
   it('normalizes Project V2 issue items and skipped counts', async () => {

@@ -18,6 +18,7 @@ import {
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -67,6 +68,9 @@ export class TasksController {
   @ApiOkResponse({ type: GithubRepositoryIssueListResponseDto })
   @ApiNotFoundResponse({
     description: 'Project or GitHub repository not found',
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'GitHub API is temporarily unavailable',
   })
   @ZodSerializerDto(GithubRepositoryIssueListResponseDto)
   listProjectGitHubIssues(

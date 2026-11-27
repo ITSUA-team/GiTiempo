@@ -14,6 +14,7 @@ import {
   REGISTRATION_ERROR_MESSAGES,
 } from '../../auth/registration-errors';
 import type { Env } from '../../config/env.validation';
+import { DomainError } from '../errors/domain-error';
 
 /**
  * Wire format of all error responses returned by the API.
@@ -72,7 +73,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
           path: request.url,
           method: request.method,
         },
-        'Unhandled exception',
+        this.isHttpException(exception)
+          ? 'Server error response'
+          : 'Unhandled exception',
       );
     } else {
       this.logger.debug(
@@ -87,6 +90,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
     }
 
     response.status(payload.statusCode).json(payload);
+  }
+
+  // DomainError extends HttpException but represents internal domain
+  // failures that share alerting semantics with unhandled errors, so it
+  // is deliberately excluded from the "server error response" label.
+  private isHttpException(exception: unknown): boolean {
+    if (exception instanceof DomainError) {
+      return false;
+    }
+    return (
+      exception instanceof HttpException ||
+      (typeof exception === 'object' &&
+        exception !== null &&
+        typeof (exception as { getStatus?: unknown }).getStatus ===
+          'function' &&
+        typeof (exception as { getResponse?: unknown }).getResponse ===
+          'function')
+    );
   }
 
   private buildPayload(
