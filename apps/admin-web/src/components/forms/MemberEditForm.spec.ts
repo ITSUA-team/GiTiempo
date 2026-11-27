@@ -254,7 +254,9 @@ describe('MemberEditForm with real PrimeVue Form and AutoComplete', () => {
     await wrapper.get('input[role="combobox"]').trigger('focus');
     await flushPromises();
     await wrapper.get('[role="option"][aria-label="QA513"]').trigger('click');
-    await wrapper.get('input[type="checkbox"]').setValue(true);
+    const permission = wrapper.get<HTMLInputElement>('input[type="checkbox"]');
+    expect(permission.element.labels?.[0]?.textContent?.trim()).toBe('Allow viewing invoices');
+    await permission.setValue(true);
     expect(wrapper.emitted('update:canViewInvoices')).toEqual([[true]]);
     await wrapper.setProps({
       member: { ...member, canViewInvoices: true },

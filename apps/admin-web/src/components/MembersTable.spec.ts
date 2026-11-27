@@ -206,6 +206,31 @@ describe('MembersTable', () => {
     expect(wrapper.emitted('edit-member')).toEqual([[row.member]]);
   });
 
+  it.each([false, true])('disables member editing while saving (mobile %s)', async (isMobileViewport) => {
+    const wrapper = mountMembersTable({ isMobileViewport });
+    await wrapper.setProps({ memberEditingDisabled: true });
+    const button = wrapper.get<HTMLButtonElement>('button[aria-label="Edit member Pat PM"]');
+
+    expect(button.element.disabled).toBe(true);
+    expect(wrapper.get<HTMLInputElement>('input[aria-label="Search members"]').element.disabled).toBe(true);
+    expect(wrapper.getComponent(AutoComplete).props('disabled')).toBe(true);
+    expect(wrapper.getComponent(MultiSelect).props('disabled')).toBe(true);
+    expect(wrapper.findAllComponents(Select).map((select) => select.props('disabled'))).toEqual([true, true]);
+    expect(wrapper.get<HTMLButtonElement>('[data-testid="members-table-invite"]').element.disabled).toBe(false);
+    wrapper.getComponent(MultiSelect).vm.$emit('update:modelValue', ['project-1']);
+    expect(wrapper.emitted('update:filters')).toBeUndefined();
+    button.element.click();
+    expect(wrapper.emitted('edit-member')).toBeUndefined();
+    if (!isMobileViewport) {
+      wrapper.getComponent(ManagementTableShell).vm.$emit('update:expandedRows', {});
+      expect(wrapper.emitted('update:expandedRows')).toBeUndefined();
+    }
+
+    await wrapper.setProps({ memberEditingDisabled: false });
+    button.element.click();
+    expect(wrapper.emitted('edit-member')).toEqual([[createMembers()[0]]]);
+  });
+
   it('emits filter updates without deriving or mutating the supplied rows', async () => {
     const wrapper = mountMembersTable();
 

@@ -134,13 +134,21 @@ const { saveRole } = useMemberRoleActions({
   getVisit,
   onError: notifyMembersError,
 });
-const savingMemberSettings = ref(false);
+const { handleUpdateInvoicePermission, updatingPermissionMemberId } = useMemberPermissionActions({
+  accessToken,
+  getVisit,
+  onError: notifyMembersError,
+  onSaved: updateMember,
+  refreshMembers,
+});
+const savingMemberSettingsId = ref<string | null>(null);
+const pendingMemberEditId = computed(() => savingMemberSettingsId.value ?? updatingPermissionMemberId.value);
 
 async function saveMemberSettings(row: MembersTableRow, input: MemberSettingsInput): Promise<void> {
-  if (!canManageMembers.value || savingMemberSettings.value || updatingPermissionMemberId.value) return;
+  if (!canManageMembers.value || pendingMemberEditId.value !== null) return;
 
   const visitAtSubmit = getVisit();
-  savingMemberSettings.value = true;
+  savingMemberSettingsId.value = row.id;
   try {
     let member = row.member;
     if (input.role && input.role !== member.role) {
@@ -151,25 +159,15 @@ async function saveMemberSettings(row: MembersTableRow, input: MemberSettingsInp
     }
 
     if (input.projectIds && row.canAssignPm && member.role !== 'admin') {
-      if (input.role || pendingAssignmentEdit.value?.memberId === member.id) {
-        retainAssignmentEdit(member, input.projectIds);
-      }
+      retainAssignmentEdit(member, input.projectIds);
       await handleAssignmentsSubmitted({ ...row, member }, { projectIds: input.projectIds });
     } else {
       collapseMemberRow(member);
     }
   } finally {
-    if (visitAtSubmit === getVisit()) savingMemberSettings.value = false;
+    if (visitAtSubmit === getVisit()) savingMemberSettingsId.value = null;
   }
 }
-
-const { handleUpdateInvoicePermission, updatingPermissionMemberId } = useMemberPermissionActions({
-  accessToken,
-  getVisit,
-  onError: notifyMembersError,
-  onSaved: updateMember,
-  refreshMembers,
-});
 
 const { handleRemoveMember } = useMemberRemovalAction({
   accessToken,
@@ -209,7 +207,7 @@ async function fetchAll(): Promise<void> {
 }
 
 function handleEditMember(member: WorkspaceMemberResponse): void {
-  toggleMemberExpansion(member);
+  if (pendingMemberEditId.value === null) toggleMemberExpansion(member);
 }
 
 watch(
@@ -233,7 +231,7 @@ watch(
       lastActive: 'any',
     });
     updatingPermissionMemberId.value = null;
-    savingMemberSettings.value = false;
+    savingMemberSettingsId.value = null;
     cancelingInviteId.value = null;
     resendingInviteId.value = null;
     dismissConfirmation?.();
@@ -288,13 +286,14 @@ watch(
           :is-mobile-viewport="isMobileViewport"
           :last-active-filter-options="lastActiveFilterOptions"
           :loading="loading"
+          :member-editing-disabled="pendingMemberEditId !== null"
           :project-filter-options="projectFilterOptions"
           :role-filter-options="roleFilterOptions"
           :rows="memberTableRows"
           @edit-member="handleEditMember"
           @invite-member="canManageMembers && (inviteDialogVisible = true)"
-          @update:expanded-rows="setMemberTableExpandedRows"
-          @update:filters="updateMemberTableFilters"
+          @update:expanded-rows="pendingMemberEditId === null && setMemberTableExpandedRows($event)"
+          @update:filters="pendingMemberEditId === null && updateMemberTableFilters($event)"
         >
           <template #row-expansion="{ row }">
             <div
@@ -307,10 +306,10 @@ watch(
                 :member="row.member"
                 :initial-project-ids="pendingAssignmentEdit && pendingAssignmentEdit.memberId === row.id ? pendingAssignmentEdit.projectIds : undefined"
                 :projects="projects"
-                :saving="savingMemberSettings || updatingPermissionMemberId !== null"
+                :saving="pendingMemberEditId === row.id"
                 @remove="row.canManage && handleRemoveMember(row.member)"
                 @save="saveMemberSettings(row, $event)"
-                @update:can-view-invoices="handleUpdateInvoicePermission(row, $event)"
+                @update:can-view-invoices="pendingMemberEditId === null && handleUpdateInvoicePermission(row, $event)"
                 @cancelled="collapseMemberRow(row.member)"
               />
             </div>

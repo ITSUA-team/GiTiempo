@@ -23,6 +23,13 @@ On desktop and mobile, the Members page SHALL let a workspace admin open Member 
 - **AND** if assignment writes fail after the role is saved, the form reports the failure and uses refreshed server state for a retry
 - **AND** selecting Admin displays all-project access and omits assignment changes from the save
 
+#### Scenario: Keep the active editor available during a save
+
+- **GIVEN** an admin saves a member's settings on desktop or mobile
+- **WHEN** that save is pending
+- **THEN** member-name controls and table filters are disabled and the current editor shows the saving state
+- **AND** if the save fails, the controls become available again and the editor stays open with the draft available for retry
+
 #### Scenario: Members role edit expansion form emits save payload
 
 - **GIVEN** the Members page renders role edit expansion content

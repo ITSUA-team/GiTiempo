@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import PrimeVue from 'primevue/config';
+import Tooltip from 'primevue/tooltip';
 import { routerKey } from 'vue-router';
 import { ApiError } from '@gitiempo/web-shared/http';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -225,6 +226,7 @@ function mountMembersView(token = workspaceToken('A'), realEditor = false) {
 
   return mount(MembersView, {
     global: {
+      directives: { tooltip: Tooltip },
       plugins: [pinia, [PrimeVue, giTiempoPrimeVueOptions]],
       provide: { [routerKey as symbol]: { replace: testMocks.replaceRoute } },
       stubs: realEditor ? { ...membersViewStubs, MembersTable: false, MemberEditForm: false } : membersViewStubs,
@@ -314,30 +316,51 @@ describe('MembersView', () => {
     wrapper.unmount();
   });
 
-  it('keeps a filtered editor and its assignment draft until a partial save succeeds on retry', async () => {
+  it.each([false, true])('blocks opening another editor during a save and retains the failed draft (mobile=%s)', async (mobile) => {
     vi.stubGlobal('matchMedia', (media: string) => ({
-      matches: false, media, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+      matches: mobile && media === '(max-width: 639px)', media,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(),
     }));
     const member = { ...createMember(), workspaceId: 'A', projectsAssignedCount: 2 };
+    const otherMember = {
+      ...member,
+      id: 'member-other',
+      userId: 'user-3',
+      displayName: 'Morgan PM',
+      email: 'morgan@example.com',
+      projectsAssignedCount: 0,
+    };
     const updated = { ...member, role: 'member' };
+    const roleSave = createDeferred<typeof updated>();
+    const assignmentSave = createDeferred<void>();
     const projects = ['Orion', 'Vega'].map((name) => ({
       id: name, name, isActive: true, members: [member],
     }));
-    testMocks.listMembers.mockResolvedValueOnce([member]).mockResolvedValue([{ ...updated, projectsAssignedCount: 1 }]);
+    testMocks.listMembers.mockResolvedValueOnce([member, otherMember]).mockResolvedValue([
+      { ...updated, projectsAssignedCount: 1 }, otherMember,
+    ]);
     testMocks.listProjects.mockResolvedValueOnce(projects).mockResolvedValue([
       { ...projects[0], members: [] }, projects[1],
     ]);
     testMocks.listInvites.mockResolvedValue([]);
-    testMocks.updateMemberRole.mockResolvedValue(updated);
-    testMocks.removeAssignment.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Project unavailable'));
+    testMocks.updateMemberRole.mockReturnValueOnce(roleSave.promise);
+    testMocks.removeAssignment.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
+      await assignmentSave.promise;
+      throw new Error('Project unavailable');
+    });
     const wrapper = mountMembersView(workspaceToken('A'), true);
     try {
       await flushPromises();
       const roleFilter = wrapper.getComponent({ name: 'MembersTable' }).findAllComponents({ name: 'Select' })
-        .find((select) => select.props('ariaLabel') === 'Filter members by role')!;
+        .find((select) => mobile
+          ? select.attributes('id') === 'mobile-member-role-filter'
+          : select.props('ariaLabel') === 'Filter members by role')!;
       roleFilter.vm.$emit('update:modelValue', 'pm');
       await flushPromises();
-      await wrapper.get(`[data-testid="member-name-${member.id}"]`).trigger('click');
+      const nameSelector = (id: string) => `[data-testid="member-${mobile ? 'mobile-' : ''}name-${id}"]`;
+      const activeName = () => wrapper.get<HTMLButtonElement>(nameSelector(member.id));
+      const otherName = () => wrapper.get<HTMLButtonElement>(nameSelector(otherMember.id));
+      await activeName().trigger('click');
       const editor = () => wrapper.getComponent({ name: 'MemberEditForm' });
       editor().getComponent({ name: 'Select' }).vm.$emit('update:modelValue', 'member');
       for (const project of projects) {
@@ -345,8 +368,31 @@ describe('MembersView', () => {
       }
       await editor().get('form').trigger('submit');
       await flushPromises();
+      expect(editor().props('saving')).toBe(true);
+      expect(activeName().element.disabled).toBe(true);
+      expect(otherName().element.disabled).toBe(true);
+      expect(roleFilter.props('disabled')).toBe(true);
+      activeName().element.click();
+      otherName().element.click();
+      await flushPromises();
+      expect(activeName().attributes('aria-expanded')).toBe('true');
+      expect(otherName().attributes('aria-expanded')).toBe('false');
+      expect(editor().props('member')).toMatchObject({ id: member.id });
+
+      roleSave.resolve(updated);
+      await flushPromises();
       expect(testMocks.updateMemberRole).toHaveBeenCalledBefore(testMocks.removeAssignment);
+      expect(otherName().element.disabled).toBe(true);
+      otherName().element.click();
+      await flushPromises();
+      expect(editor().props('member')).toMatchObject({ id: member.id });
+      expect(editor().props('saving')).toBe(true);
+
+      assignmentSave.resolve();
+      await flushPromises();
       expect(testMocks.errorToast).toHaveBeenCalledWith('Project unavailable', expect.anything());
+      expect(otherName().element.disabled).toBe(false);
+      expect(editor().props('saving')).toBe(false);
       expect(editor().getComponent({ name: 'Select' }).props('modelValue')).toBe('member');
       expect(editor().findAll('[data-pc-section="chipitem"]').map(chip => chip.text())).toEqual([]);
       expect(roleFilter.props('modelValue')).toBe('pm');
@@ -359,7 +405,9 @@ describe('MembersView', () => {
       ]);
       expect(testMocks.listProjects).toHaveBeenCalledTimes(2);
       expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
-      expect(wrapper.find(`[data-testid="member-name-${member.id}"]`).exists()).toBe(false);
+      expect(wrapper.find(nameSelector(member.id)).exists()).toBe(false);
+      await otherName().trigger('click');
+      expect(editor().props('member')).toMatchObject({ id: otherMember.id });
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
@@ -965,6 +1013,38 @@ describe('MembersView', () => {
     expect(testMocks.listProjects).toHaveBeenCalledOnce();
     expect(testMocks.successToast).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="member-edit-panel"]').exists()).toBe(false);
+  });
+
+  it('keeps the editor open when a partial assignment save changes its project filter match', async () => {
+    const member = { ...createMember(), projectsAssignedCount: 2 };
+    const orion = { id: 'project-1', name: 'Orion', isActive: true, members: [member] };
+    const vega = { id: 'project-2', name: 'Vega', isActive: true, members: [member] };
+    testMocks.listMembers.mockResolvedValueOnce([member]).mockResolvedValue([{ ...member, projectsAssignedCount: 1 }]);
+    testMocks.listProjects.mockResolvedValueOnce([orion, vega]).mockResolvedValue([{ ...orion, members: [] }, vega]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.removeAssignment.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error('Vega unavailable'));
+    const wrapper = mountMembersView();
+
+    try {
+      await flushPromises();
+      const table = wrapper.getComponent({ name: 'MembersTable' });
+      table.vm.$emit('update:filters', { projectIds: [orion.id] });
+      await wrapper.get('[data-testid="member-edit-intent"]').trigger('click');
+      await wrapper.get('[data-testid="member-edit-save"]').trigger('click');
+      await flushPromises();
+
+      expect(testMocks.errorToast).toHaveBeenCalledWith('Vega unavailable', expect.anything());
+      expect(wrapper.getComponent({ name: 'MemberEditForm' }).props('saving')).toBe(false);
+      await wrapper.get('[data-testid="member-edit-save"]').trigger('click');
+      await flushPromises();
+
+      expect(testMocks.removeAssignment.mock.calls).toEqual([
+        [orion.id, member.userId], [vega.id, member.userId], [vega.id, member.userId],
+      ]);
+      expect(table.props('rows')).toHaveLength(0);
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it('updates the invoice view permission from the member settings toggle without a reload', async () => {

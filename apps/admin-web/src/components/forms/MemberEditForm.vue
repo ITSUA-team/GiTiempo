@@ -9,6 +9,7 @@ import { giTiempoSelectPt, giTiempoSelfAppendedMultiAutoCompleteDropdownPt } fro
 import {
   DialogFooterActionGroups,
   EditFormPanel,
+  LabeledCheckbox,
   WORKSPACE_ROLE_OPTIONS,
   memberAssignFormSchema,
 } from '@gitiempo/web-shared';
@@ -17,7 +18,6 @@ import { Form } from '@primevue/forms';
 import { zodResolver } from '@primevue/forms/resolvers/zod';
 import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
-import Checkbox from 'primevue/checkbox';
 import Select from 'primevue/select';
 import type { MemberSettingsInput } from '@/lib/member-management';
 
@@ -243,19 +243,15 @@ function handleSave({
           data-testid="member-edit-invoice-permission"
           class="flex flex-col gap-1.5"
         >
-          <div class="flex items-center gap-2">
-            <Checkbox
-              :input-id="`member-settings-${member.id}-can-view-invoices`"
-              :model-value="canViewInvoicesChecked"
-              :disabled="saving || roleChanged"
-              binary
-              @update:model-value="handleCanViewInvoicesChange"
-            />
-            <label
-              :for="`member-settings-${member.id}-can-view-invoices`"
-              class="text-text-dark font-sans text-[12px] leading-none font-medium"
-            >Allow viewing invoices</label>
-          </div>
+          <LabeledCheckbox
+            :input-id="`member-settings-${member.id}-can-view-invoices`"
+            :model-value="canViewInvoicesChecked"
+            :disabled="saving || roleChanged"
+            label="Allow viewing invoices"
+            root-class="flex items-center gap-2"
+            label-class="text-text-dark font-sans text-[12px] leading-none font-medium"
+            @update:model-value="handleCanViewInvoicesChange"
+          />
           <small class="text-text-muted text-xs">
             When enabled, this PM can view and manage invoices for their assigned projects.
           </small>
