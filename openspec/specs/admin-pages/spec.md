@@ -21,7 +21,7 @@ Each admin-facing product page in `admin-web` MUST assume an authenticated shell
 
 #### Scenario: Admin product page loads through authenticated route tree
 
-- **WHEN** a user opens a dashboard, reports, invoices, members, projects, or settings page in the admin-web app
+- **WHEN** a user opens a dashboard, reports, time entries, invoices, members, projects, or settings page in the admin-web app
 - **THEN** the page is reached through the authenticated route tree
 - **AND** the page receives shared shell chrome instead of defining standalone public entry behavior
 
@@ -43,15 +43,16 @@ The authenticated `admin-web` shell MUST render navigation affordances only for 
 
 #### Scenario: Member forbidden recovery does not loop
 
-- **WHEN** an authenticated user with workspace role `member` reaches the standalone admin-web `/403` route
-- **THEN** the primary recovery action switches to the configured user workspace destination
-- **AND** the page does not render `Back to dashboard` as the primary recovery action for the member role
+- **GIVEN** an authenticated user with workspace role `member` is on the standalone admin-web `/403` page
+- **WHEN** the user activates the primary `Back to dashboard` action
+- **THEN** the browser opens the dashboard at the root of the configured user-web origin for the active workspace
+- **AND** this action is available even when the member has only one workspace membership
 
 #### Scenario: Admin and PM forbidden recovery can return to dashboard
 
-- **WHEN** an authenticated user with workspace role `admin` or `pm` reaches the standalone admin-web `/403` route
-- **THEN** the page may render `Back to dashboard` as the primary recovery action
-- **AND** that primary action targets an admin product route available to the current role
+- **GIVEN** an authenticated user with workspace role `admin` or `pm` is on the standalone admin-web `/403` page
+- **WHEN** the user activates the primary `Back to dashboard` action
+- **THEN** the admin dashboard opens for the active workspace
 
 #### Scenario: PM sees only PM-allowed product navigation
 
@@ -70,6 +71,11 @@ The authenticated `admin-web` shell MUST render navigation affordances only for 
 - **WHEN** a user's workspace role does not allow a hidden admin-web navigation destination and the user enters that destination URL directly
 - **THEN** route-level authorization redirects the user to `/403`
 - **AND** the shell does not rely on hidden navigation as the only access control mechanism
+
+#### Scenario: Time Entries navigation uses workspace management roles
+- **GIVEN** an authenticated Admin or PM, including a PM without invoice viewing permission
+- **WHEN** the desktop sidebar or mobile navigation renders
+- **THEN** it offers an accessible Time Entries link and marks it active on the Time Entries page
 
 ### Requirement: Admin Dashboard Summary
 

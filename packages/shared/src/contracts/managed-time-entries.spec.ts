@@ -8,6 +8,7 @@ import {
   managementTimeEntriesQuerySchema,
   managementTimeEntryMembersQuerySchema,
   managementTimeEntryTasksQuerySchema,
+  managementTimeEntryTasksResponseSchema,
   updateManagedTimeEntrySchema,
 } from './time-entries.js';
 
@@ -37,6 +38,26 @@ describe('management time-entry contracts', () => {
       managementTimeEntryMembersQuerySchema.safeParse({ purpose: 'other' })
         .success,
     ).toBe(false);
+    expect(
+      managementTimeEntryMembersQuerySchema.parse({ purpose: 'create', taskId })
+        .taskId,
+    ).toBe(taskId);
+    expect(
+      managementTimeEntryMembersQuerySchema.safeParse({
+        purpose: 'filter',
+        taskId,
+      }).success,
+    ).toBe(false);
+    expect(
+      managementTimeEntryMembersQuerySchema.safeParse({
+        purpose: 'create',
+        taskId: 'other',
+      }).success,
+    ).toBe(false);
+    expect(managementTimeEntryTasksQuerySchema.parse({})).toEqual({
+      page: 1,
+      limit: 20,
+    });
     expect(managementTimeEntryTasksQuerySchema.parse({ userId }).userId).toBe(
       userId,
     );
@@ -44,6 +65,22 @@ describe('management time-entry contracts', () => {
       managementTimeEntryTasksQuerySchema.safeParse({ userId: 'other' })
         .success,
     ).toBe(false);
+  });
+
+  it('preserves assignment on an empty owner task page', () => {
+    const emptyPage = {
+      items: [],
+      meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    };
+    expect(managementTimeEntryTasksResponseSchema.parse(emptyPage)).toEqual(
+      emptyPage,
+    );
+    for (const isOwnerAssigned of [true, false]) {
+      const response = { ...emptyPage, isOwnerAssigned };
+      expect(managementTimeEntryTasksResponseSchema.parse(response)).toEqual(
+        response,
+      );
+    }
   });
 
   it('accepts composed filters and validates the interval and query scope', () => {
@@ -99,24 +136,44 @@ describe('management time-entry contracts', () => {
       updateManagedTimeEntrySchema.safeParse({ startedAt, endedAt: startedAt })
         .success,
     ).toBe(false);
-    for (const field of ['userId', 'projectId', 'workspaceId', 'invoiceId']) {
+    const immutableFields = { workspaceId: userId, invoiceId: userId, source: 'manual' };
+    for (const [field, value] of Object.entries(immutableFields)) {
       expect(
         updateManagedTimeEntrySchema.safeParse({
           description: null,
-          [field]: userId,
+          [field]: value,
         }).success,
       ).toBe(false);
     }
   });
 
-  it.each(['time_entry_running', 'time_entry_invoiced'])(
+  it('accepts managed reassignment fields as optional UUIDs', () => {
+    const projectId = '60000000-0000-4000-8000-000000000006';
+    expect(updateManagedTimeEntrySchema.parse({ userId })).toEqual({ userId });
+    expect(updateManagedTimeEntrySchema.parse({ projectId, taskId })).toEqual({
+      projectId,
+      taskId,
+    });
+    expect(
+      updateManagedTimeEntrySchema.safeParse({ projectId: 'invalid' }).success,
+    ).toBe(false);
+    expect(
+      updateManagedTimeEntrySchema.safeParse({ userId: 'invalid' }).success,
+    ).toBe(false);
+  });
+
+  it.each([
+    'time_entry_running',
+    'time_entry_invoiced',
+    'time_entry_concurrent_update',
+  ])(
     'parses the %s conflict',
     (code) => {
       expect(
         managedTimeEntryConflictSchema.parse({
           statusCode: 409,
           code,
-          message: 'The record is locked',
+          message: 'The update conflicts with the current record',
           error: 'Conflict',
         }).code,
       ).toBe(code);

@@ -404,7 +404,9 @@ describe("WorkspaceHeader", () => {
     expect(centerRow.classes()).toContain("row-start-2");
     expect(centerRow.classes()).toContain("sm:row-start-1");
     expect(profileRegion.classes()).toContain("row-start-1");
-    expect(profileRegion.classes()).toContain("col-start-3");
+    expect(centerRow.classes()).toContain("col-span-2");
+    expect(profileRegion.classes()).toContain("col-start-2");
+    expect(profileRegion.classes()).toContain("sm:col-start-3");
     expect(timerStrip.element.children[0]).toBe(timerActions.element);
     expect(timerStrip.element.children[1]).toBe(metadata.element);
     expect(primaryAction.attributes("disabled")).toBeUndefined();

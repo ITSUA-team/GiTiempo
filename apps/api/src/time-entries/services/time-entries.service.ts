@@ -182,7 +182,7 @@ export class TimeEntriesService {
     const endedAt = new Date(input.endedAt);
     const durationSeconds = calculateDurationSeconds(startedAt, endedAt);
 
-    const entryId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const { task } = await this.tasks.requireTrackableTaskForUpdate(
         user,
         input.taskId,
@@ -208,10 +208,9 @@ export class TimeEntriesService {
           'Failed to create time entry',
         );
       }
-      return row.id;
+      return this.requireEntryResponse(tx, row.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, entryId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -236,7 +235,7 @@ export class TimeEntriesService {
       input.endedAt !== undefined ||
       input.isBillable !== undefined;
 
-    const updatedId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const [row] = await tx
         .select(timeEntryRowSelection)
         .from(timeEntries)
@@ -286,7 +285,7 @@ export class TimeEntriesService {
             'Failed to update time entry',
           );
         }
-        return updated.id;
+        return this.requireEntryResponse(tx, updated.id);
       }
 
       const nextTaskId =
@@ -330,10 +329,9 @@ export class TimeEntriesService {
           'Failed to update time entry',
         );
       }
-      return updated.id;
+      return this.requireEntryResponse(tx, updated.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, updatedId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -344,19 +342,26 @@ export class TimeEntriesService {
       throw new ConflictException('Stop the timer before deleting it');
     }
 
-    await this.db.delete(timeEntries).where(eq(timeEntries.id, row.id));
+    const [deleted] = await this.db
+      .delete(timeEntries)
+      .where(
+        and(
+          eq(timeEntries.id, row.id),
+          eq(timeEntries.workspaceId, user.workspaceId),
+          eq(timeEntries.userId, user.sub),
+        ),
+      )
+      .returning({ id: timeEntries.id });
+    if (!deleted) throw new NotFoundException('Time entry not found');
     void this.usersActivity.touchLastActive(user.sub);
   }
 
   async getCurrentTimer(user: AuthUser): Promise<CurrentTimeEntryResponse> {
-    const [row] = await this.db
-      .select({ id: timeEntries.id })
-      .from(timeEntries)
-      .where(and(eq(timeEntries.userId, user.sub), isNull(timeEntries.endedAt)))
-      .limit(1);
-
-    if (!row) return { timeEntry: null };
-    return { timeEntry: await this.requireEntryResponse(this.db, row.id) };
+    const timeEntry = await this.findEntryResponse(this.db, [
+      eq(timeEntries.userId, user.sub),
+      isNull(timeEntries.endedAt),
+    ]);
+    return { timeEntry };
   }
 
   async startTimer(
@@ -429,7 +434,7 @@ export class TimeEntriesService {
     }
 
     try {
-      const entryId = await this.db.transaction(async (tx) => {
+      const result = await this.db.transaction(async (tx) => {
         // Locks serialize membership removal/role changes and assignment deletion
         // against materialization, including changes committed during provider IO.
         const [membership] = await tx
@@ -527,10 +532,9 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return entry.id;
+        return this.requireEntryResponse(tx, entry.id);
       });
 
-      const result = await this.requireEntryResponse(this.db, entryId);
       void this.usersActivity.touchLastActive(user.sub);
       return result;
     } catch (error) {
@@ -618,7 +622,10 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return { managed: false as const, entryId: entry.id };
+        return {
+          managed: false as const,
+          entry: await this.requireEntryResponse(tx, entry.id),
+        };
       });
 
       if (result.managed) {
@@ -627,9 +634,8 @@ export class TimeEntriesService {
           issueNumber: input.issueNumber,
         });
       }
-      const response = await this.requireEntryResponse(this.db, result.entryId);
       void this.usersActivity.touchLastActive(user.sub);
-      return response;
+      return result.entry;
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -731,7 +737,7 @@ export class TimeEntriesService {
     user: AuthUser,
     input: StopTimerInput,
   ): Promise<TimeEntryResponse> {
-    const entryId = await this.db.transaction(async (tx) => {
+    const result = await this.db.transaction(async (tx) => {
       const expectedTimerId = input.expectedTimerId;
       const [row] = await tx
         .select(timeEntryRowSelection)
@@ -779,10 +785,9 @@ export class TimeEntriesService {
 
         throw new NotFoundException('No running timer found');
       }
-      return updated.id;
+      return this.requireEntryResponse(tx, updated.id);
     });
 
-    const result = await this.requireEntryResponse(this.db, entryId);
     void this.usersActivity.touchLastActive(user.sub);
     return result;
   }
@@ -794,7 +799,7 @@ export class TimeEntriesService {
     description: string | null = null,
   ): Promise<TimeEntryResponse> {
     try {
-      const entryId = await this.db.transaction(async (tx) => {
+      return await this.db.transaction(async (tx) => {
         const task = await this.requireTaskForTimerStart(tx, user, taskId);
         const [row] = await tx
           .insert(timeEntries)
@@ -814,10 +819,8 @@ export class TimeEntriesService {
             'Failed to start timer',
           );
         }
-        return row.id;
+        return this.requireEntryResponse(tx, row.id);
       });
-
-      return this.requireEntryResponse(this.db, entryId);
     } catch (error) {
       this.handleRunningTimerConflict(error);
       throw error;
@@ -989,15 +992,17 @@ export class TimeEntriesService {
     entryId: string,
     extraConditions: SQL[] = [],
   ): Promise<TimeEntryResponse> {
-    const row = await this.findEntryResponse(db, entryId, extraConditions);
+    const row = await this.findEntryResponse(db, [
+      eq(timeEntries.id, entryId),
+      ...extraConditions,
+    ]);
     if (!row) throw new NotFoundException('Time entry not found');
     return row;
   }
 
   private async findEntryResponse(
     db: QueryExecutor,
-    entryId: string,
-    extraConditions: SQL[] = [],
+    conditions: SQL[],
   ): Promise<TimeEntryResponse | null> {
     const [row] = await db
       .select(this.entrySelection())
@@ -1014,7 +1019,7 @@ export class TimeEntriesService {
           eq(taskExternalRefs.externalType, 'issue'),
         ),
       )
-      .where(and(eq(timeEntries.id, entryId), ...extraConditions))
+      .where(and(...conditions))
       .limit(1);
 
     return row ? this.toResponse(row) : null;

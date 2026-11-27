@@ -3554,6 +3554,16 @@
                 "create"
               ]
             }
+          },
+          {
+            "name": "taskId",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -3582,7 +3592,7 @@
             "bearer": []
           }
         ],
-        "summary": "List historical owners for filtering or eligible owners for creating entries",
+        "summary": "List historical owners or eligible owners, optionally scoped to a task",
         "tags": [
           "management-time-entries"
         ]
@@ -3624,7 +3634,7 @@
           },
           {
             "name": "userId",
-            "required": true,
+            "required": false,
             "in": "query",
             "schema": {
               "format": "uuid",
@@ -3659,7 +3669,7 @@
             "bearer": []
           }
         ],
-        "summary": "List tasks an owner can currently track in the managed project",
+        "summary": "List trackable project tasks, optionally scoped to an owner",
         "tags": [
           "management-time-entries"
         ]
@@ -3829,6 +3839,7 @@
     },
     "/management/projects/{projectId}/time-entries/{entryId}": {
       "patch": {
+        "description": "The path identifies the current project. Changing the project in the body requires a task in the destination project.",
         "operationId": "ManagementTimeEntriesController_updateEntry",
         "parameters": [
           {
@@ -3879,7 +3890,7 @@
             "description": "Current workspace role cannot manage time entries"
           },
           "404": {
-            "description": "Project, entry or task not found"
+            "description": "Project, entry or task not found. If both projects and the destination task are in scope, a missing current entry returns code time_entry_not_found."
           },
           "409": {
             "description": "",
@@ -3900,7 +3911,7 @@
             "bearer": []
           }
         ],
-        "summary": "Update a completed unlinked entry in the managed project",
+        "summary": "Update or reassign a completed unlinked entry",
         "tags": [
           "management-time-entries"
         ]
@@ -3936,14 +3947,14 @@
             "description": "Current workspace role cannot manage time entries"
           },
           "404": {
-            "description": "Project or entry not found"
+            "description": "Project or entry not found. A missing entry in the managed project returns code time_entry_not_found."
           },
           "409": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ManagedTimeEntryConflictDto"
+                  "$ref": "#/components/schemas/ManagedTimeEntryDeleteConflictDto"
                 }
               }
             }
@@ -9431,6 +9442,9 @@
               "total",
               "totalPages"
             ]
+          },
+          "isOwnerAssigned": {
+            "type": "boolean"
           }
         },
         "required": [
@@ -9503,12 +9517,53 @@
           },
           "isBillable": {
             "type": "boolean"
+          },
+          "projectId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
           }
         },
         "minProperties": 1,
         "additionalProperties": false
       },
       "ManagedTimeEntryConflictDto": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "number",
+            "enum": [
+              409
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "time_entry_running",
+              "time_entry_invoiced",
+              "time_entry_concurrent_update"
+            ]
+          }
+        },
+        "required": [
+          "statusCode",
+          "error",
+          "message",
+          "code"
+        ]
+      },
+      "ManagedTimeEntryDeleteConflictDto": {
         "type": "object",
         "properties": {
           "statusCode": {

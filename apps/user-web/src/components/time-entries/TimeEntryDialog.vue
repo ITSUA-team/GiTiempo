@@ -135,7 +135,10 @@ const newTaskHint = computed(() => {
 });
 const projectAutoCompletePt = composeGiTiempoSelfAppendedAutoCompleteDropdownPt({
   dropdown: {
-    onMousedown: handleProjectDropdownMouseDown,
+    onMousedown: keepProjectInputFocused,
+  },
+  option: {
+    onMousedown: keepProjectInputFocused,
   },
 });
 
@@ -169,7 +172,8 @@ function refreshProjectSuggestions(query: string): void {
   projectSuggestions.value = buildProjectSuggestions(query);
 }
 
-function handleProjectDropdownMouseDown(event: MouseEvent): void {
+function keepProjectInputFocused(event: MouseEvent): void {
+  // Force selection would otherwise clear the query before the option click.
   event.preventDefault();
 }
 

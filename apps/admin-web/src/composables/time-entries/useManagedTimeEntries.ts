@@ -9,7 +9,7 @@ import type { AdminTimeEntriesClient, ManagementMember, ManagementProject } from
 export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: AdminTimeEntriesClient) {
   const projects = shallowRef<ManagementProject[]>([]);
   const members = shallowRef<ManagementMember[]>([]);
-  const eligibleMembers = shallowRef<ManagementMember[]>([]);
+  const hasEligibleMembers = shallowRef(false);
   const eligibleMembersError = ref('');
   const memberError = ref('');
   const list = shallowRef<TimeEntryListResponse>();
@@ -146,8 +146,8 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     eligibleMembersError.value = '';
     if (!selected?.isActive) return;
     try {
-      const items = await client.members(selected.id, 'create', current);
-      if (current()) eligibleMembers.value = items;
+      const available = await client.hasEligibleMembers(selected.id);
+      if (current()) hasEligibleMembers.value = available;
     } catch (error) {
       if (current()) handleReadFailure(error, eligibleMembersError, 'Unable to load eligible members.');
     }
@@ -199,13 +199,31 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   function applyUpdatedEntry(previous: TimeEntryResponse, updated: TimeEntryResponse) {
     const query = entryQuery.value;
     const loaded = list.value;
+    const movedProject = previous.projectId !== updated.projectId;
+    if (movedProject || previous.userId !== updated.userId) {
+      void loadMembers();
+      void loadEligibleMembers();
+    }
     const affectsPage = previous.startedAt !== updated.startedAt
       || (query.filters.search && previous.task.title !== updated.task.title);
-    if (!loaded || loadedQuery !== query || pendingQuery === query || affectsPage) {
+    if (!loaded || loadedQuery !== query || pendingQuery === query) {
       refreshEntries();
       return false;
     }
     if (!loaded.items.some(entry => entry.id === updated.id)) return false;
+    if (movedProject || (query.filters.userId && query.filters.userId !== updated.userId)) {
+      const total = loaded.meta.total - 1;
+      list.value = {
+        items: loaded.items.filter(entry => entry.id !== updated.id),
+        meta: { ...loaded.meta, total, totalPages: Math.ceil(total / loaded.meta.limit) },
+      };
+      refreshEntries();
+      return false;
+    }
+    if (affectsPage) {
+      refreshEntries();
+      return false;
+    }
     list.value = {
       ...loaded,
       items: loaded.items.map(entry => entry.id === updated.id ? updated : entry),
@@ -226,7 +244,7 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
     projectAccessError.value = '';
     list.value = undefined;
     members.value = [];
-    eligibleMembers.value = [];
+    hasEligibleMembers.value = false;
     memberId.value = undefined;
     page.value = 1;
     entriesError.value = '';
@@ -261,7 +279,7 @@ export function useManagedTimeEntries(scope: Readonly<Ref<string>>, client: Admi
   return {
     projects, project, projectId, members, memberId, search, dates, page, list,
     loadingProjects, loadingEntries, projectError, projectAccessError, checkingProjectAccess, entriesError, memberError,
-    eligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
+    hasEligibleMembers, eligibleMembersError, loadEligibleMembers, loadMembers,
     retryProjects, reloadScope, recheckProjectAccess, refresh, refreshEntries, applyUpdatedEntry,
   };
 }

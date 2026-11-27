@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   HttpStatus,
   Inject,
@@ -6,6 +7,10 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import {
+  managedTimeEntryConcurrentUpdateCode,
+  managedTimeEntryNotFoundCode,
+} from '@gitiempo/shared';
 import {
   and,
   asc,
@@ -75,6 +80,7 @@ const taskSelection = {
 };
 
 const memberLabel = sql`lower(coalesce(nullif(${users.displayName}, ''), ${users.email}))`;
+const maxUpdateAttempts = 3;
 
 @Injectable()
 export class ManagementTimeEntriesService {
@@ -159,7 +165,14 @@ export class ManagementTimeEntriesService {
                       tx
                         .select({ id: tasks.id })
                         .from(tasks)
-                        .where(this.eligibleTaskCondition(tx, project)),
+                        .where(
+                          and(
+                            this.eligibleTaskCondition(tx, project),
+                            query.taskId
+                              ? eq(tasks.id, query.taskId)
+                              : undefined,
+                          ),
+                        ),
                     ),
                   ),
                 ),
@@ -186,6 +199,7 @@ export class ManagementTimeEntriesService {
   ) {
     return this.db.transaction(async (tx) => {
       const project = await this.requireProject(tx, actor, projectId);
+      const userId = query.userId;
       const scope = exists(
         tx
           .select({ id: workspaceMembers.id })
@@ -193,13 +207,13 @@ export class ManagementTimeEntriesService {
           .where(
             and(
               eq(workspaceMembers.workspaceId, project.workspaceId),
-              eq(workspaceMembers.userId, query.userId),
+              userId ? eq(workspaceMembers.userId, userId) : undefined,
               this.eligibleTaskCondition(tx, project),
             ),
           ),
       );
 
-      return this.page(
+      const page = await this.page(
         query,
         tx
           .select(taskSelection)
@@ -210,6 +224,22 @@ export class ManagementTimeEntriesService {
           .offset(this.offset(query)),
         tx.select({ total: count() }).from(tasks).where(scope),
       );
+      if (!userId) return page;
+
+      const [assignment] = await tx
+        .select({ id: projectAssignments.id })
+        .from(projectAssignments)
+        .innerJoin(
+          workspaceMembers,
+          and(
+            eq(workspaceMembers.workspaceId, projectAssignments.workspaceId),
+            eq(workspaceMembers.userId, projectAssignments.userId),
+          ),
+        )
+        .where(
+          trackingAssignmentCondition(project.workspaceId, project.id, userId),
+        );
+      return { ...page, isOwnerAssigned: Boolean(assignment) };
     });
   }
 
@@ -307,86 +337,131 @@ export class ManagementTimeEntriesService {
     entryId: string,
     input: UpdateManagedTimeEntryDto,
   ) {
-    const result = await this.db.transaction(async (tx) => {
-      const role = await this.requireManager(tx, actor);
-      // Timer starts lock membership before the project. The entry owner is fixed.
-      const owner =
-        input.taskId === undefined
-          ? undefined
-          : await this.lockEntryOwner(
-              tx,
-              actor.workspaceId,
-              projectId,
-              entryId,
-            );
-      const project = await this.lockManageableProject(
-        tx,
-        actor,
-        projectId,
-        role,
-      );
-      const access = owner
-        ? await this.lockTrackingAccess(
-            tx,
-            project,
-            owner.userId,
-            owner.membership,
-          )
-        : undefined;
-      const evidence =
-        access === 'own-time' && owner && input.taskId !== undefined
-          ? ownTaskTimeCondition(
-              project.workspaceId,
-              owner.userId,
-              input.taskId,
-            )
-          : undefined;
-      const { entry, hasOwnTime } = await this.requireEditableEntry(
-        tx,
-        project,
-        entryId,
-        input.taskId,
-        evidence,
-      );
-      if (input.taskId !== undefined && input.taskId !== entry.taskId) {
-        const destination = await this.lockTask(tx, project, input.taskId);
-        if (!destination) throw new NotFoundException('Task not found');
-        this.assertEligibleOwner(
-          project,
-          destination,
-          owner?.membership,
-          access === 'project' || hasOwnTime,
+    const sourceProjectId = projectId.toLowerCase();
+    const destinationProjectId =
+      input.projectId?.toLowerCase() ?? sourceProjectId;
+    const requestedTaskId = input.taskId?.toLowerCase();
+    const requestedOwnerId = input.userId?.toLowerCase();
+    const changesProject = destinationProjectId !== sourceProjectId;
+    const setsAssignment =
+      requestedTaskId !== undefined || requestedOwnerId !== undefined;
+
+    for (let attempt = 0; attempt < maxUpdateAttempts; attempt += 1) {
+      const result = await this.db.transaction(async (tx) => {
+        const role = await this.requireManager(tx, actor);
+        if (changesProject && requestedTaskId === undefined) {
+          throw new BadRequestException(
+            'A project change requires a destination task',
+          );
+        }
+        // Timer starts lock membership before the project. Infer omitted fields first.
+        const assignment =
+          setsAssignment &&
+          (requestedOwnerId === undefined || requestedTaskId === undefined)
+            ? await this.findEntryAssignment(
+                tx,
+                actor.workspaceId,
+                sourceProjectId,
+                entryId,
+              )
+            : undefined;
+        const ownerId = requestedOwnerId ?? assignment?.userId;
+        const taskId = requestedTaskId ?? assignment?.taskId;
+        const owner =
+          ownerId === undefined
+            ? undefined
+            : await this.lockMembership(tx, actor.workspaceId, ownerId);
+        const destinationFirst = destinationProjectId < sourceProjectId;
+        const first = await this.lockManageableProject(
+          tx,
+          actor,
+          destinationFirst ? destinationProjectId : sourceProjectId,
+          role,
         );
+        const second = changesProject
+          ? await this.lockManageableProject(
+              tx,
+              actor,
+              destinationFirst ? sourceProjectId : destinationProjectId,
+              role,
+            )
+          : first;
+        const source = destinationFirst ? second : first;
+        const destination = destinationFirst ? first : second;
+        const access =
+          ownerId === undefined
+            ? undefined
+            : await this.lockTrackingAccess(tx, destination, ownerId, owner);
+        const evidence =
+          access === 'own-time' && ownerId !== undefined && taskId !== undefined
+            ? ownTaskTimeCondition(destination.workspaceId, ownerId, taskId)
+            : undefined;
+        const { entry, hasOwnTime } = await this.requireEditableEntry(
+          tx,
+          source,
+          entryId,
+          requestedTaskId === undefined
+            ? undefined
+            : { project: destination, taskId: requestedTaskId },
+          evidence,
+        );
+        const nextOwnerId = requestedOwnerId ?? entry.userId;
+        const nextTaskId = requestedTaskId ?? entry.taskId;
+        if (
+          setsAssignment &&
+          (ownerId !== nextOwnerId || taskId !== nextTaskId)
+        ) {
+          // Another edit changed an inferred value while we waited for the row lock.
+          return undefined;
+        }
+        if (nextOwnerId !== entry.userId || nextTaskId !== entry.taskId) {
+          const task = await this.lockTask(tx, destination, nextTaskId);
+          if (!task) throw new NotFoundException('Task not found');
+          this.assertEligibleOwner(
+            destination,
+            task,
+            owner,
+            access === 'project' || hasOwnTime,
+          );
+        }
+
+        const startedAt =
+          input.startedAt === undefined
+            ? entry.startedAt
+            : new Date(input.startedAt);
+        const endedAt =
+          input.endedAt === undefined ? entry.endedAt : new Date(input.endedAt);
+        await tx
+          .update(timeEntries)
+          .set({
+            userId: nextOwnerId === entry.userId ? undefined : nextOwnerId,
+            taskId: nextTaskId === entry.taskId ? undefined : nextTaskId,
+            startedAt: input.startedAt === undefined ? undefined : startedAt,
+            endedAt: input.endedAt === undefined ? undefined : endedAt,
+            durationSeconds: calculateDurationSeconds(startedAt, endedAt),
+            description: input.description,
+            isBillable: input.isBillable,
+            updatedAt: new Date(),
+          })
+          .where(eq(timeEntries.id, entry.id));
+
+        return this.timeEntryQueries.getManagedEntryResponse(
+          tx,
+          destination.workspaceId,
+          destination.id,
+          entry.id,
+        );
+      });
+      if (result) {
+        void this.usersActivity.touchLastActive(actor.sub);
+        return result;
       }
-
-      const startedAt =
-        input.startedAt === undefined
-          ? entry.startedAt
-          : new Date(input.startedAt);
-      const endedAt =
-        input.endedAt === undefined ? entry.endedAt : new Date(input.endedAt);
-      await tx
-        .update(timeEntries)
-        .set({
-          taskId: input.taskId === entry.taskId ? undefined : input.taskId,
-          startedAt: input.startedAt === undefined ? undefined : startedAt,
-          endedAt: input.endedAt === undefined ? undefined : endedAt,
-          durationSeconds: calculateDurationSeconds(startedAt, endedAt),
-          description: input.description,
-          isBillable: input.isBillable,
-          updatedAt: new Date(),
-        })
-        .where(eq(timeEntries.id, entry.id));
-
-      return this.timeEntryQueries.getManagedEntryResponse(
-        tx,
-        project.workspaceId,
-        projectId,
-        entry.id,
-      );
-    });
-    void this.usersActivity.touchLastActive(actor.sub);
-    return result;
+    }
+    throw new DomainError(
+      managedTimeEntryConcurrentUpdateCode,
+      'This time entry changed while you were saving. Try saving again.',
+      HttpStatus.CONFLICT,
+    );
   }
 
   async deleteEntry(
@@ -458,13 +533,15 @@ export class ManagementTimeEntriesService {
     tx: Transaction,
     project: Project,
     entryId: string,
-    destinationTaskId?: string,
+    destination?: { project: Project; taskId: string },
     evidence?: SQL,
   ) {
     const destinationScope =
-      destinationTaskId === undefined
+      destination === undefined
         ? undefined
-        : exists(this.projectTaskIds(tx, project, destinationTaskId));
+        : exists(
+            this.projectTaskIds(tx, destination.project, destination.taskId),
+          );
     const eligibleEvidence = evidence && and(evidence, destinationScope);
     // Lock proof before or after the edited row by ID, matching invoice writes.
     const earlierProof =
@@ -473,9 +550,20 @@ export class ManagementTimeEntriesService {
         tx,
         and(eligibleEvidence, lt(timeEntries.id, entryId)),
       ));
+    // A scalar lookup rechecks the current task after waiting on a concurrent retask.
+    const entryProjectId = tx
+      .select({ projectId: tasks.projectId })
+      .from(tasks)
+      .where(
+        and(
+          eq(tasks.workspaceId, project.workspaceId),
+          eq(tasks.id, timeEntries.taskId),
+        ),
+      );
     const [entry] = await tx
       .select({
         id: timeEntries.id,
+        userId: timeEntries.userId,
         taskId: timeEntries.taskId,
         startedAt: timeEntries.startedAt,
         endedAt: timeEntries.endedAt,
@@ -486,12 +574,26 @@ export class ManagementTimeEntriesService {
         and(
           eq(timeEntries.id, entryId),
           eq(timeEntries.workspaceId, project.workspaceId),
-          inArray(timeEntries.taskId, this.projectTaskIds(tx, project)),
+          eq(sql<string>`(${entryProjectId})`, project.id),
           destinationScope,
         ),
       )
       .for('update');
-    if (!entry) throw new NotFoundException('Time entry not found');
+    if (!entry) {
+      if (destination) {
+        const [task] = await this.projectTaskIds(
+          tx,
+          destination.project,
+          destination.taskId,
+        );
+        if (!task) throw new NotFoundException('Task not found');
+      }
+      throw new DomainError(
+        managedTimeEntryNotFoundCode,
+        'Time entry not found',
+        HttpStatus.NOT_FOUND,
+      );
+    }
     if (!entry.endedAt) {
       throw new DomainError(
         'time_entry_running',
@@ -511,7 +613,6 @@ export class ManagementTimeEntriesService {
       hasOwnTime:
         earlierProof ||
         (Boolean(eligibleEvidence) &&
-          destinationTaskId !== entry.taskId &&
           (await this.lockOwnTime(
             tx,
             and(eligibleEvidence, gt(timeEntries.id, entryId)),
@@ -639,14 +740,14 @@ export class ManagementTimeEntriesService {
     return membership;
   }
 
-  private async lockEntryOwner(
+  private async findEntryAssignment(
     tx: Transaction,
     workspaceId: string,
     projectId: string,
     entryId: string,
   ) {
-    const [owner] = await tx
-      .select({ userId: timeEntries.userId })
+    const [assignment] = await tx
+      .select({ userId: timeEntries.userId, taskId: timeEntries.taskId })
       .from(timeEntries)
       .where(
         and(
@@ -658,11 +759,7 @@ export class ManagementTimeEntriesService {
           ),
         ),
       );
-    if (!owner) return undefined;
-    return {
-      userId: owner.userId,
-      membership: await this.lockMembership(tx, workspaceId, owner.userId),
-    };
+    return assignment;
   }
 
   private async lockTask(tx: Transaction, project: Project, taskId: string) {

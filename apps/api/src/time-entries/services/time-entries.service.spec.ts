@@ -513,15 +513,7 @@ describe('TimeEntriesService', () => {
       source: 'web' as const,
       workspaceId: 'workspace-2',
     };
-    const db = {
-      select: vi.fn().mockReturnValue(
-        selectRows([
-          {
-            id: otherWorkspaceRunningEntry.id,
-          },
-        ]),
-      ),
-    };
+    const db = {};
     const service = new TimeEntriesService(
       db as never,
       {} as never,
@@ -531,28 +523,25 @@ describe('TimeEntriesService', () => {
       mockGithubTasks,
       mockGithub(),
     );
-    const requireEntryResponse = vi
+    const findEntryResponse = vi
       .fn()
       .mockResolvedValue(otherWorkspaceRunningEntry);
-    Object.defineProperty(service, 'requireEntryResponse', {
-      value: requireEntryResponse,
+    Object.defineProperty(service, 'findEntryResponse', {
+      value: findEntryResponse,
     });
 
     await expect(service.getCurrentTimer(user)).resolves.toEqual({
       timeEntry: otherWorkspaceRunningEntry,
     });
-    expect(requireEntryResponse).toHaveBeenCalledWith(
-      db,
-      otherWorkspaceRunningEntry.id,
-    );
+    expect(findEntryResponse).toHaveBeenCalledWith(db, [
+      expect.anything(),
+      expect.anything(),
+    ]);
   });
 
   it('returns an empty current timer response when no user timer is running', async () => {
-    const db = {
-      select: vi.fn().mockReturnValue(selectRows([])),
-    };
     const service = new TimeEntriesService(
-      db as never,
+      {} as never,
       {} as never,
       {} as never,
       {} as never,
@@ -560,6 +549,9 @@ describe('TimeEntriesService', () => {
       mockGithubTasks,
       mockGithub(),
     );
+    Object.defineProperty(service, 'findEntryResponse', {
+      value: vi.fn().mockResolvedValue(null),
+    });
 
     await expect(service.getCurrentTimer(user)).resolves.toEqual({
       timeEntry: null,
@@ -779,7 +771,7 @@ describe('TimeEntriesService', () => {
       }),
     );
     expect(requireEntryResponse).toHaveBeenCalledWith(
-      db,
+      tx,
       otherWorkspaceRunningEntry.id,
     );
   });
