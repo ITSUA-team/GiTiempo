@@ -246,10 +246,12 @@ export class MembersService {
 
   async updateMemberPermissions(
     workspaceId: string,
+    actorUserId: string,
     memberId: string,
     input: UpdateWorkspaceMemberPermissionsInput,
   ): Promise<WorkspaceMemberResponse> {
     return this.db.transaction(async (tx) => {
+      await this.lockWorkspaceAndRequireAdmin(tx, workspaceId, actorUserId);
       const [updated] = await tx
         .update(workspaceMembers)
         .set({ canViewInvoices: input.canViewInvoices })
@@ -329,11 +331,10 @@ export class MembersService {
     };
   }
 
-  private async lockWorkspaceAndGetMember(
+  private async lockWorkspaceAndRequireAdmin(
     tx: Pick<DrizzleDB, 'select'>,
     workspaceId: string,
     actorUserId: string,
-    memberId: string,
   ) {
     // Promotions, demotions and removals must see each other's committed role.
     await tx
@@ -349,7 +350,15 @@ export class MembersService {
     );
     if (!actor) throw new UnauthorizedException('Unauthorized');
     if (actor.role !== 'admin') throw new ForbiddenException('Forbidden');
+  }
 
+  private async lockWorkspaceAndGetMember(
+    tx: Pick<DrizzleDB, 'select'>,
+    workspaceId: string,
+    actorUserId: string,
+    memberId: string,
+  ) {
+    await this.lockWorkspaceAndRequireAdmin(tx, workspaceId, actorUserId);
     const [target] = await tx
       .select({ role: workspaceMembers.role })
       .from(workspaceMembers)

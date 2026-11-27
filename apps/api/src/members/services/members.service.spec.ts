@@ -13,10 +13,32 @@ function makeMembershipSelect(rows: unknown[]) {
   return { select: vi.fn().mockReturnValue({ from }) };
 }
 
+function makeAuthorizedSelect() {
+  return vi
+    .fn()
+    .mockReturnValueOnce({
+      from: () => ({ where: () => ({ for: () => Promise.resolve() }) }),
+    })
+    .mockReturnValueOnce(makeMembershipSelect([{ role: 'admin' }]).select());
+}
+
 describe('MembersService', () => {
-  it.each(['change role', 'remove'])(
+  it.each(
+    Object.entries({
+      'change role': (service: MembersService) =>
+        service.updateMemberRole('workspace', 'actor', 'target', {
+          role: 'admin',
+        }),
+      'change permissions': (service: MembersService) =>
+        service.updateMemberPermissions('workspace', 'actor', 'target', {
+          canViewInvoices: true,
+        }),
+      remove: (service: MembersService) =>
+        service.removeMember('workspace', 'actor', 'target'),
+    }),
+  )(
     'rechecks the actor after acquiring the workspace lock before %s',
-    async (action) => {
+    async (_label, run) => {
       let releaseLock!: () => void;
       const lock = new Promise<void>((resolve) => {
         releaseLock = resolve;
@@ -40,12 +62,7 @@ describe('MembersService', () => {
           role: 'pm',
           canViewInvoices: false,
         });
-      const result =
-        action === 'remove'
-          ? service.removeMember('workspace', 'actor', 'target')
-          : service.updateMemberRole('workspace', 'actor', 'target', {
-              role: 'admin',
-            });
+      const result = run(service);
       expect(membership).not.toHaveBeenCalled();
       releaseLock();
       await expect(result).rejects.toBeInstanceOf(ForbiddenException);
@@ -147,7 +164,7 @@ describe('MembersService', () => {
     const joinWhere = vi.fn().mockReturnValue({ limit });
     const innerJoin = vi.fn().mockReturnValue({ where: joinWhere });
     const from = vi.fn().mockReturnValue({ innerJoin });
-    const select = vi.fn().mockReturnValue({ from });
+    const select = makeAuthorizedSelect().mockReturnValue({ from });
     const db = {
       transaction: async (
         handler: (tx: { select: unknown; update: unknown }) => unknown,
@@ -157,6 +174,7 @@ describe('MembersService', () => {
 
     const result = await service.updateMemberPermissions(
       'workspace-1',
+      'actor',
       'membership-1',
       { canViewInvoices: true },
     );
@@ -179,12 +197,12 @@ describe('MembersService', () => {
     const db = {
       transaction: async (
         handler: (tx: { select: unknown; update: unknown }) => unknown,
-      ) => handler({ select: vi.fn(), update }),
+      ) => handler({ select: makeAuthorizedSelect(), update }),
     };
     const service = new MembersService(db as never);
 
     await expect(
-      service.updateMemberPermissions('workspace-1', 'missing', {
+      service.updateMemberPermissions('workspace-1', 'actor', 'missing', {
         canViewInvoices: true,
       }),
     ).rejects.toBeInstanceOf(NotFoundException);

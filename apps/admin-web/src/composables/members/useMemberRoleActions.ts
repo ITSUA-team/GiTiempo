@@ -17,6 +17,7 @@ export function useMemberRoleActions({ getVisit, onError }: Options) {
   const auth = useAuthStore();
   const router = useRouter();
 
+  // Only saves for another member return a row for the current visit to update.
   async function saveRole(
     member: WorkspaceMemberResponse,
     role: WorkspaceRole,
@@ -43,11 +44,13 @@ export function useMemberRoleActions({ getVisit, onError }: Options) {
         updated = await adminMembersClient.updateMemberRole(member.id, { role });
       } catch (error) {
         if (!sameSession) return;
-        if (visit === getVisit()) {
-          onError(getErrorMessage(error, 'Failed to update member role'), error, 'update-member-role');
+        if (!self || isApiErrorStatus(error, [400, 401, 403, 404, 409, 422])) {
+          if (visit === getVisit()) {
+            onError(getErrorMessage(error, 'Failed to update member role'), error, 'update-member-role');
+          }
+          return;
         }
         // An interrupted response can arrive after the server has committed a self-demotion.
-        if (!self || isApiErrorStatus(error, [400, 401, 403, 404, 409, 422])) return;
       }
       if (!sameSession) return;
       if (self) {

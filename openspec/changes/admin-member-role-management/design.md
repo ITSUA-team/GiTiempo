@@ -34,4 +34,4 @@ Update the Members section of `docs/ui/pages-admin.md` and the corresponding Mem
 
 - A concurrent demotion or removal can change who the last admin is. Keep the database transaction authoritative and verify concurrent requests against PostgreSQL.
 - A successful self-demotion requires session renewal and navigation to prevent further admin-only operations.
-- Losing a response can leave the write outcome unknown. Reconcile the current membership before enabling admin actions again or offering to resend a self-role change.
+- Losing a response can leave the write outcome unknown. Reconcile the current membership without showing a save failure. If the requested role remains unconfirmed after session renewal, keep admin actions restricted and use the existing sign-in recovery flow.

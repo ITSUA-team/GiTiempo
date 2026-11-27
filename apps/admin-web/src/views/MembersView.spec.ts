@@ -255,7 +255,7 @@ describe('MembersView', () => {
     testMocks.removeAssignment.mockResolvedValue(undefined);
   });
 
-  it.each([false, true])('saves roles and shows last-admin errors through the editor (mobile=%s)', async (mobile) => {
+  it.each([false, true])('promotes another member and retains their admin role until a demotion succeeds (mobile=%s)', async (mobile) => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: mobile && query === '(max-width: 639px)', media: query,
       addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(),
@@ -290,8 +290,55 @@ describe('MembersView', () => {
       await editRole('member');
       expect(wrapper.getComponent({ name: 'MemberEditForm' }).text()).toContain('Has access to all projects');
       expect(testMocks.errorToast).toHaveBeenCalledWith('Workspace must have at least one admin', expect.anything());
+      const table = wrapper.getComponent({ name: 'MembersTable' });
+      expect(table.props('rows')[0].member.role).toBe('admin');
+
+      testMocks.updateMemberRole.mockResolvedValueOnce({ ...member, role: 'member' });
+      await wrapper.getComponent({ name: 'MemberEditForm' }).get('form').trigger('submit');
+      await flushPromises();
+      expect(testMocks.updateMemberRole).toHaveBeenNthCalledWith(3, member.id, { role: 'member' });
+      expect(table.props('rows')[0].member.role).toBe('member');
+      expect(wrapper.findComponent({ name: 'MemberEditForm' }).exists()).toBe(false);
       expect(testMocks.listMembers).toHaveBeenCalledOnce();
       expect(testMocks.listProjects).toHaveBeenCalledOnce();
+    } finally {
+      wrapper.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each([false, true])('keeps the sole admin session and self-demotion draft after a 409 (mobile=%s)', async (mobile) => {
+    vi.stubGlobal('matchMedia', (media: string) => ({
+      matches: mobile && media === '(max-width: 639px)', media,
+      addEventListener: vi.fn(), removeEventListener: vi.fn(), addListener: vi.fn(), removeListener: vi.fn(),
+    }));
+    const token = workspaceToken('A');
+    const self = { ...createMember(), userId: adminProfile.id, workspaceId: 'A', role: 'admin' };
+    const message = 'Workspace must have at least one admin';
+    testMocks.listMembers.mockResolvedValue([self]);
+    testMocks.listProjects.mockResolvedValue([]);
+    testMocks.listInvites.mockResolvedValue([]);
+    testMocks.updateMemberRole.mockRejectedValueOnce(new ApiError(message, { status: 409 }));
+    const wrapper = mountMembersView(token, true);
+    try {
+      const auth = useAuthStore();
+      const reconcile = vi.spyOn(auth, 'reconcileOwnRoleChange');
+      await flushPromises();
+      await wrapper.get(`[data-testid="member-${mobile ? 'mobile-' : ''}name-${self.id}"]`).trigger('click');
+      const editor = () => wrapper.getComponent({ name: 'MemberEditForm' });
+      editor().getComponent({ name: 'Select' }).vm.$emit('update:modelValue', 'pm');
+      await editor().get('form').trigger('submit');
+      await flushPromises();
+
+      expect(testMocks.updateMemberRole).toHaveBeenCalledWith(self.id, { role: 'pm' });
+      expect(testMocks.errorToast).toHaveBeenCalledWith(message, expect.anything());
+      expect(reconcile).not.toHaveBeenCalled();
+      expect(testMocks.replaceRoute).not.toHaveBeenCalled();
+      expect(auth.accessToken).toBe(token);
+      expect(auth.profile).toEqual(adminProfile);
+      expect(editor().getComponent({ name: 'Select' }).props('modelValue')).toBe('pm');
+      expect(wrapper.getComponent({ name: 'MembersTable' }).props('rows')[0].member.role).toBe('admin');
+      expect(testMocks.listMembers).toHaveBeenCalledOnce();
     } finally {
       wrapper.unmount();
       vi.unstubAllGlobals();
@@ -343,7 +390,6 @@ describe('MembersView', () => {
       { ...projects[0], members: [] }, projects[1],
     ]);
     testMocks.listInvites.mockResolvedValue([]);
-    testMocks.updateMemberRole.mockReturnValueOnce(roleSave.promise);
     testMocks.removeAssignment.mockResolvedValueOnce(undefined).mockImplementationOnce(async () => {
       await assignmentSave.promise;
       throw new Error('Project unavailable');
@@ -366,6 +412,14 @@ describe('MembersView', () => {
       for (const project of projects) {
         await editor().get(`[data-pc-section="chipitem"][aria-label="${project.name}"] [data-pc-section="removeicon"]`).trigger('click');
       }
+      const table = wrapper.getComponent({ name: 'MembersTable' });
+      testMocks.updateMemberRole.mockImplementationOnce(() => {
+        expect(table.props('memberEditingDisabled')).toBe(false);
+        roleFilter.vm.$emit('update:modelValue', 'admin');
+        table.vm.$emit('update:expandedRows', {});
+        otherName().element.click();
+        return roleSave.promise;
+      });
       await editor().get('form').trigger('submit');
       await flushPromises();
       expect(editor().props('saving')).toBe(true);

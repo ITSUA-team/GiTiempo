@@ -29,7 +29,7 @@ describe('MembersController', () => {
     controller = module.get(MembersController);
   });
 
-  it('PATCH /members/:id/permissions forwards workspace, member id, and body', async () => {
+  it('PATCH /members/:id/permissions forwards workspace, actor, member ID and body', async () => {
     const fake = { id: '44444444-4444-4444-4444-444444444444' } as never;
     membersService.updateMemberPermissions.mockResolvedValue(fake);
 
@@ -42,6 +42,7 @@ describe('MembersController', () => {
     ).resolves.toBe(fake);
     expect(membersService.updateMemberPermissions).toHaveBeenCalledWith(
       adminUser.workspaceId,
+      adminUser.sub,
       '44444444-4444-4444-4444-444444444444',
       { canViewInvoices: true },
     );

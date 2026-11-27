@@ -103,6 +103,11 @@ describe('Workspace member roles', () => {
         successor.membership.id,
         'admin',
       ).expect(403);
+      const [afterDenied] = await db
+        .select({ role: workspaceMembers.role })
+        .from(workspaceMembers)
+        .where(eq(workspaceMembers.id, successor.membership.id));
+      expect(afterDenied?.role).toBe(role);
       await setRole(admin.accessToken, successor.membership.id, 'admin').expect(
         200,
       );
@@ -188,8 +193,26 @@ describe('Workspace member roles', () => {
     },
   );
 
-  it('allows demoting another admin', async () => {
+  it('validates member IDs and allows demoting another admin', async () => {
     const admin = await account('admin');
+    const api = request(app.getHttpServer());
+    const invalidMember = '/members/invalid-id';
+    const authorization = bearer(admin.accessToken);
+    await api
+      .patch(invalidMember + '/role')
+      .set('Authorization', authorization)
+      .send({ role: 'member' })
+      .expect(400);
+    await api
+      .patch(invalidMember + '/permissions')
+      .set('Authorization', authorization)
+      .send({ canViewInvoices: true })
+      .expect(400);
+    await api
+      .delete(invalidMember)
+      .set('Authorization', authorization)
+      .expect(400);
+
     const other = await account('admin');
     const response = await setRole(
       admin.accessToken,

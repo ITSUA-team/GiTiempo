@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onScopeDispose, ref, watch } from 'vue';
-import type { WorkspaceMemberResponse } from '@gitiempo/shared';
 import {
   StatCard,
   SurfaceCard,
@@ -206,9 +205,16 @@ async function fetchAll(): Promise<void> {
   ]);
 }
 
-function handleEditMember(member: WorkspaceMemberResponse): void {
-  if (pendingMemberEditId.value === null) toggleMemberExpansion(member);
+// A save can start before Vue propagates the disabled prop to the table.
+function whenMemberEditorIdle<T>(action: (value: T) => void) {
+  return (value: T) => {
+    if (pendingMemberEditId.value === null) action(value);
+  };
 }
+
+const handleEditMember = whenMemberEditorIdle(toggleMemberExpansion);
+const handleExpandedRows = whenMemberEditorIdle(setMemberTableExpandedRows);
+const handleTableFilters = whenMemberEditorIdle(updateMemberTableFilters);
 
 watch(
   [
@@ -292,8 +298,8 @@ watch(
           :rows="memberTableRows"
           @edit-member="handleEditMember"
           @invite-member="canManageMembers && (inviteDialogVisible = true)"
-          @update:expanded-rows="pendingMemberEditId === null && setMemberTableExpandedRows($event)"
-          @update:filters="pendingMemberEditId === null && updateMemberTableFilters($event)"
+          @update:expanded-rows="handleExpandedRows"
+          @update:filters="handleTableFilters"
         >
           <template #row-expansion="{ row }">
             <div
