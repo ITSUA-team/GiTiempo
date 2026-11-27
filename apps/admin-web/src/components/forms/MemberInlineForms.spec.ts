@@ -105,6 +105,14 @@ const projects: ProjectListResponse = [
 ];
 
 const stubs = {
+  Select: {
+    name: 'Select',
+    props: ['modelValue', 'options', 'inputId', 'disabled'],
+    emits: ['update:modelValue'],
+    template: `<select :id="inputId" :value="modelValue" :disabled="disabled" @change="$emit('update:modelValue', $event.target.value)">
+      <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+    </select>`,
+  },
   Button: {
     props: ['disabled', 'label', 'loading', 'type'],
     template:
@@ -115,6 +123,7 @@ const stubs = {
     template: '<section><h2>{{ title }}</h2><slot /></section>',
   },
   Form: {
+    name: 'Form',
     emits: ['submit'],
     props: ['initialValues', 'resolver'],
     template:
@@ -228,9 +237,9 @@ describe('member inline forms', () => {
       'Type to search active projects, then select multiple results.',
     );
     expect(wrapper.text()).not.toContain('Archived Project');
-    expect(wrapper.text()).not.toContain('Name');
-    expect(wrapper.text()).not.toContain('Email');
-    expect(wrapper.text()).not.toContain('Role');
+    expect(wrapper.text()).toContain('Name');
+    expect(wrapper.text()).toContain('Email');
+    expect(wrapper.text()).toContain('Role');
     expect(wrapper.text()).toContain('Remove member');
     expect(wrapper.text()).toContain('Cancel');
     expect(wrapper.text()).toContain('Save changes');
@@ -255,9 +264,41 @@ describe('member inline forms', () => {
     expect(saveButton?.attributes('severity')).toBeUndefined();
     expect(saveButton?.attributes('type')).toBe('submit');
 
-    await wrapper.get('button').trigger('click');
+    await removeButton!.trigger('click');
 
     expect(wrapper.emitted('remove')).toHaveLength(1);
+  });
+
+  it('submits a promotion from the shared Save changes button', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: true, member, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+    expect(wrapper.findAll('button[type="submit"]').map((button) => button.text()))
+      .toEqual(['Save changes']);
+    expect(wrapper.find('[data-footer-actions="destructive"]').exists()).toBe(false);
+    await wrapper.get('select').setValue('admin');
+    expect(wrapper.getComponent({ name: 'AutoComplete' }).props('disabled')).toBe(true);
+    expect(wrapper.text()).toContain('Has access to all projects');
+    await wrapper.findAll('button').find((button) => button.text() === 'Cancel')!.trigger('click');
+    expect(wrapper.emitted('cancelled')).toHaveLength(1);
+    expect(wrapper.emitted('save')).toBeUndefined();
+    await wrapper.get('form').trigger('submit');
+    expect(wrapper.emitted('save')).toEqual([[{ role: 'admin' }]]);
+  });
+
+  it('submits both a changed role and changed projects for a non-admin role', async () => {
+    const wrapper = mount(MemberEditForm, {
+      props: { canAssignPm: true, member, projects },
+      global: { plugins: [createPinia()], stubs },
+    });
+    await wrapper.get('select').setValue('member');
+    expect(wrapper.getComponent({ name: 'AutoComplete' }).props('disabled')).toBe(false);
+    wrapper.getComponent({ name: 'Form' }).vm.$emit('submit', {
+      valid: true,
+      values: { projectIds: ['project-2'] },
+    });
+    expect(wrapper.emitted('save')).toEqual([[{ role: 'member', projectIds: ['project-2'] }]]);
   });
 
   it('submits selected project assignments from the single settings panel', async () => {
@@ -282,7 +323,7 @@ describe('member inline forms', () => {
 
   it('keeps project assignment controls hidden when assignment is not allowed', async () => {
     const wrapper = mount(MemberEditForm, {
-      props: { canAssignPm: false, canRemove: true, member, projects },
+      props: { canAssignPm: false, canRemove: true, member: { ...member, role: 'admin' }, projects },
       global: { plugins: [createPinia()], stubs },
     });
 
@@ -290,11 +331,11 @@ describe('member inline forms', () => {
     expect(wrapper.find('[data-testid="member-edit-project-autocomplete"]').exists()).toBe(false);
     expect(wrapper.findAll('[name="projectIds"]')).toHaveLength(0);
     expect(wrapper.find('[data-testid="member-edit-assignment-unavailable"]').text()).toBe(
-      'Project assignments are available only for other non-admin members.',
+      'Has access to all projects',
     );
     expect(wrapper.text()).toContain('Remove member');
     expect(wrapper.text()).toContain('Cancel');
-    expect(wrapper.text()).not.toContain('Save changes');
+    expect(wrapper.get<HTMLButtonElement>('button[type="submit"]').element.disabled).toBe(true);
 
     await wrapper.get('form').trigger('submit');
 

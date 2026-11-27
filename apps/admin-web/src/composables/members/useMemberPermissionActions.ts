@@ -1,4 +1,5 @@
 import { ref, type ComputedRef, type Ref } from 'vue';
+import type { WorkspaceMemberResponse } from '@gitiempo/shared';
 
 import { getErrorMessage } from '@gitiempo/web-shared';
 
@@ -13,6 +14,7 @@ interface UseMemberPermissionActionsOptions {
   accessToken: Ref<string | null> | ComputedRef<string | null>;
   client?: Pick<AdminMembersClient, 'updateMemberPermissions'>;
   onError: (message: string, error: unknown, action: string) => void;
+  onSaved: (member: WorkspaceMemberResponse) => void;
   refreshMembers: () => Promise<void>;
 }
 
@@ -21,6 +23,7 @@ export function useMemberPermissionActions({
   getVisit = () => 0,
   client = adminMembersClient,
   onError,
+  onSaved,
   refreshMembers,
 }: UseMemberPermissionActionsOptions) {
   const updatingPermissionMemberId = ref<string | null>(null);
@@ -37,13 +40,12 @@ export function useMemberPermissionActions({
     updatingPermissionMemberId.value = row.member.id;
 
     try {
-      await client.updateMemberPermissions(row.member.id, {
+      const updated = await client.updateMemberPermissions(row.member.id, {
         canViewInvoices: value,
       });
       if (visit !== getVisit()) return;
 
-      await refreshMembers();
-      if (visit !== getVisit()) return;
+      onSaved(updated);
     } catch (error) {
       if (visit !== getVisit()) return;
       onError(

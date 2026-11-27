@@ -174,6 +174,138 @@ describe("useAuthStore", () => {
     expectAuthenticatedQueryCacheCleared();
   });
 
+  describe("own role reconciliation", () => {
+    const expected = { userId: "admin-user", workspaceId: "workspace-1" };
+    function token(role: UserResponse["role"]) {
+      return `header.${btoa(JSON.stringify({ sub: expected.userId, workspaceId: expected.workspaceId, role }))}.signature`;
+    }
+
+    async function arrange(role: UserResponse["role"]) {
+      const runtime = createRuntimeMock();
+      const profile = { ...await runtime.getCurrentUser("unused"), id: expected.userId };
+      setAuthRuntimeForTesting(createRuntimeMock({
+        getCurrentUser: async () => ({ ...profile, role }),
+        listCurrentUserWorkspaces: async () => ({
+          items: [{ isCurrent: true, role, workspaceId: expected.workspaceId, workspaceName: "First" }],
+        }),
+        refreshSession: async () => ({
+          accessToken: token(role), refreshToken: "renewed", accessTokenExpiresIn: 900,
+        }),
+      }));
+      const store = useAuthStore();
+      store.profile = profile;
+      store.accessToken = token("admin");
+      setRefreshToken("existing");
+      seedAuthenticatedQueryCache();
+      return store;
+    }
+
+    it.each(["pm", "member"] as const)("applies the saved %s role to token, profile and memberships", async (role) => {
+      const store = await arrange(role);
+      const pending = store.reconcileOwnRoleChange(expected, role);
+      expect(store.profile).toBeNull();
+      expectAuthenticatedQueryCacheCleared();
+      expect(await store.refreshAuthorizationContext()).toBe(false);
+      expect(await pending).toBe("restricted");
+      expect(store.accessToken).toBe(token(role));
+      expect(store.profile?.role).toBe(role);
+      expect(store.workspaceMemberships[0]).toMatchObject({ role, isCurrent: true, workspaceId: expected.workspaceId });
+    });
+
+    it("rotates again when an in-flight refresh returns the old role", async () => {
+      const store = await arrange("member");
+      const nextRuntime = createRuntimeMock();
+      const adminProfile = await nextRuntime.getCurrentUser("unused");
+      let release!: () => void;
+      const beforeSave = new Promise<void>((resolve) => { release = resolve; });
+      const refreshSession = vi.fn<AuthRuntime["refreshSession"]>()
+        .mockImplementationOnce(async () => {
+          await beforeSave;
+          return { accessToken: token("admin"), refreshToken: "first", accessTokenExpiresIn: 900 };
+        })
+        .mockResolvedValue({ accessToken: token("member"), refreshToken: "second", accessTokenExpiresIn: 900 });
+      setAuthRuntimeForTesting(createRuntimeMock({
+        refreshSession,
+        getCurrentUser: async () => ({ ...adminProfile, id: expected.userId, role: "member" }),
+        listCurrentUserWorkspaces: async () => ({
+          items: [{ isCurrent: true, role: "member", workspaceId: expected.workspaceId, workspaceName: "First" }],
+        }),
+      }));
+      const oldRotation = store.refreshAccessToken();
+      const reconciliation = store.reconcileOwnRoleChange(expected, "member");
+      release();
+      await oldRotation;
+      expect(await reconciliation).toBe("restricted");
+      expect(refreshSession).toHaveBeenCalledTimes(2);
+      expect(store.accessToken).toBe(token("member"));
+    });
+
+    it("requires explicit recovery when the requested demotion is still unconfirmed", async () => {
+      const store = await arrange("admin");
+      expect(await store.reconcileOwnRoleChange(expected, "pm")).toBe("unavailable");
+      expect(await store.refreshAuthorizationContext()).toBe(false);
+      expect(store.profile).toBeNull();
+      expect(store.isAuthenticated).toBe(false);
+      expect(getRefreshToken()).toBeNull();
+      expect(store.workspaceMemberships).toEqual([]);
+      expectAuthenticatedQueryCacheCleared();
+    });
+
+    it("keeps a credential that another tab replaced before reconciliation", async () => {
+      const store = await arrange("admin");
+      await store.establishSessionFromTokenPair({
+        accessToken: token("admin"), refreshToken: "original", accessTokenExpiresIn: 900,
+      });
+      setRefreshToken("other-tab");
+      const refreshSession = vi.fn<AuthRuntime["refreshSession"]>();
+      setAuthRuntimeForTesting(createRuntimeMock({ refreshSession }));
+
+      expect(await store.reconcileOwnRoleChange(expected, "member")).toBe("unavailable");
+      await expect(store.refreshAccessToken()).rejects.toThrow("Your session changed");
+      expect(refreshSession).not.toHaveBeenCalled();
+      expect(getRefreshToken()).toBe("other-tab");
+      expect(store.isAuthenticated).toBe(false);
+      expect(store.profile).toBeNull();
+    });
+
+    it.each(["rotation", "authorization context"] as const)(
+      "preserves another tab's credential during %s and clears local access",
+      async (phase) => {
+        const store = await arrange("member");
+        const runtime = createRuntimeMock();
+        const profile = await runtime.getCurrentUser("unused");
+        setAuthRuntimeForTesting(createRuntimeMock({
+          refreshSession: async () => {
+            if (phase === "rotation") setRefreshToken("other-tab");
+            return { accessToken: token("member"), refreshToken: "local", accessTokenExpiresIn: 900 };
+          },
+          getCurrentUser: async () => {
+            if (phase === "authorization context") setRefreshToken("other-tab");
+            return { ...profile, id: expected.userId, role: "member" };
+          },
+          listCurrentUserWorkspaces: async () => ({
+            items: [{ isCurrent: true, role: "member", workspaceId: expected.workspaceId, workspaceName: "First" }],
+          }),
+        }));
+
+        expect(await store.reconcileOwnRoleChange(expected, "member")).toBe("unavailable");
+        expect(getRefreshToken()).toBe("other-tab");
+        expect(store.isAuthenticated).toBe(false);
+        expect(store.profile).toBeNull();
+        expect(store.workspaceMemberships).toEqual([]);
+        expect(await store.refreshAuthorizationContext()).toBe(false);
+      },
+    );
+
+    it("denies access when renewal fails", async () => {
+      const store = await arrange("pm");
+      setAuthRuntimeForTesting(createRuntimeMock({ refreshSession: async () => { throw new Error("offline"); } }));
+      expect(await store.reconcileOwnRoleChange(expected, "pm")).toBe("unavailable");
+      expect(store.profile).toBeNull();
+      expect(store.accessToken).toBeNull();
+    });
+  });
+
   it("invalidates active scoped queries when membership role is unchanged", async () => {
     const authStore = useAuthStore();
     authStore.accessToken = "existing-access-token";

@@ -30,6 +30,7 @@ export interface MembersTableRow {
   avatarImage: string | undefined;
   avatarLabel: string | undefined;
   canAssignPm: boolean;
+  canOpenSettings: boolean;
   canManage: boolean;
   email: string;
   id: string;

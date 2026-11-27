@@ -5,7 +5,7 @@ import type {
 } from '@gitiempo/shared';
 import { giTiempoPrimeVueOptions } from '@gitiempo/web-config/theme';
 import PrimeVue from 'primevue/config';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import MemberEditForm from './MemberEditForm.vue';
 
 const member: WorkspaceMemberResponse = {
@@ -65,7 +65,16 @@ function renderForm(saving = false) {
   });
 }
 
+beforeEach(() => {
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  }));
+});
+
 afterEach(() => {
+  vi.unstubAllGlobals();
   document.body.innerHTML = '';
   vi.useRealTimers();
 });
@@ -96,7 +105,7 @@ describe('MemberEditForm with real PrimeVue Form and AutoComplete', () => {
     'preserves native dropdown button %s activation',
     async (code) => {
       const wrapper = renderForm();
-      const dropdown = wrapper.get('[data-pc-section="dropdown"]');
+      const dropdown = wrapper.get('[data-testid="member-edit-project-select"] [data-pc-section="dropdown"]');
       const keydown = new KeyboardEvent('keydown', {
         key: code === 'Space' ? ' ' : code,
         code,
@@ -245,7 +254,9 @@ describe('MemberEditForm with real PrimeVue Form and AutoComplete', () => {
     await wrapper.get('input[role="combobox"]').trigger('focus');
     await flushPromises();
     await wrapper.get('[role="option"][aria-label="QA513"]').trigger('click');
-    await wrapper.get('input[type="checkbox"]').setValue(true);
+    const permission = wrapper.get<HTMLInputElement>('input[type="checkbox"]');
+    expect(permission.element.labels?.[0]?.textContent?.trim()).toBe('Allow viewing invoices');
+    await permission.setValue(true);
     expect(wrapper.emitted('update:canViewInvoices')).toEqual([[true]]);
     await wrapper.setProps({
       member: { ...member, canViewInvoices: true },
