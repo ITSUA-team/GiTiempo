@@ -174,6 +174,7 @@ function mountDialog(
                 :key="suggestion[dataKey] ?? suggestion.id"
                 :data-testid="inputId + '-option-' + (suggestion[dataKey] ?? suggestion.id)"
                 type="button"
+                @mousedown="pt?.option?.onMousedown?.($event)"
                 @click="$emit('update:modelValue', suggestion)"
               >{{ suggestion[optionLabel] }}</button>
             </div>
@@ -450,7 +451,12 @@ describe("TimeEntryDialog", () => {
     const projectInput = wrapper.get('[data-testid="time-entry-project-input"]');
 
     await projectInput.setValue("admin");
-    await wrapper.get('[data-testid="time-entry-project-option-project-2"]').trigger("click");
+    const projectOption = wrapper.get('[data-testid="time-entry-project-option-project-2"]');
+    const mouseDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+
+    projectOption.element.dispatchEvent(mouseDown);
+    expect(mouseDown.defaultPrevented).toBe(true);
+    await projectOption.trigger("click");
 
     expect((projectInput.element as HTMLInputElement).value).toBe("Admin Web");
     expect(wrapper.emitted("update:projectId")?.at(-1)).toEqual(["project-2"]);
